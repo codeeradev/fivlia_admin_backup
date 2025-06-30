@@ -105,17 +105,26 @@ const Orders = () => {
       }
 
       // Handle Delivery Statuses
-  const statusesData = await statusesRes.json();
-console.log("Delivery Statuses API response:", statusesData);
-if (statusesData.Status && Array.isArray(statusesData.Status)) {
-  setDeliveryStatuses(statusesData.Status.map(status => status.name || status.title || "Unknown"));
-} else {
-  console.error("Invalid delivery statuses data format:", statusesData);
-  setError((prev) => prev + (prev ? ", " : "") + "Failed to load delivery statuses: Invalid data format");
-}
+      const statusesData = await statusesRes.json();
+      console.log("Delivery Statuses API response:", statusesData);
+      if (statusesData.Status && Array.isArray(statusesData.Status)) {
+        const mappedStatuses = statusesData.Status.map(status => status.statusTitle || status.status || status.name || "Unknown");
+        // Ensure common statuses are included
+        const defaultStatuses = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
+        const uniqueStatuses = [...new Set([...mappedStatuses, ...defaultStatuses])].filter(status => status !== "Unknown");
+        setDeliveryStatuses(uniqueStatuses);
+        console.log("Mapped delivery statuses:", uniqueStatuses);
+      } else {
+        console.error("Invalid delivery statuses data format:", statusesData);
+        setError((prev) => prev + (prev ? ", " : "") + "Failed to load delivery statuses: Invalid data format");
+        // Fallback to default statuses
+        setDeliveryStatuses(["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]);
+      }
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to load data. Please try again.");
+      // Fallback for delivery statuses on error
+      setDeliveryStatuses(["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]);
     } finally {
       setLoading(false);
     }
@@ -802,19 +811,18 @@ if (statusesData.Status && Array.isArray(statusesData.Status)) {
                               {order.orderId}
                             </span>
                           </td>
-                       <td className="body-cell order-details-cell">
-                          <span
-                            className="item-link"
-                            onClick={() => setSelectedOrder(order)}
-                            style={{ display: "block", fontWeight: 500 }}
-                          >
-                            ₹{(item?.price || 0) * (item?.quantity || 0)}
-                          </span>
-                          <span style={{ color: "#7b809a", fontSize: "13px" }}>
-                            Quantity: {item?.quantity || 0}
-                          </span>
-                        </td>
-
+                          <td className="body-cell order-details-cell">
+                            <span
+                              className="item-link"
+                              onClick={() => setSelectedOrder(order)}
+                              style={{ display: "block", fontWeight: 500 }}
+                            >
+                              ₹{order.totalPrice?.toFixed(2) || 0}
+                            </span>
+                            <span style={{ color: "#7b809a", fontSize: "13px" }}>
+                              Quantity: {item?.quantity || 0}
+                            </span>
+                          </td>
                           <td className="body-cell address-cell">
                             <span
                               className="item-link"
@@ -922,6 +930,9 @@ if (statusesData.Status && Array.isArray(statusesData.Status)) {
                 <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
                   Order Details - {selectedOrder.orderId}
                 </h3>
+                <div style={{ marginBottom: "16px", fontSize: "14px", color: "#344767" }}>
+                  <strong>Status:</strong> {selectedOrder.orderStatus || "Pending"}
+                </div>
                 <div className="modal-table-container">
                   <table className="modal-table">
                     <thead>

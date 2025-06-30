@@ -168,7 +168,7 @@ function StoreProduct() {
       if (!storeId) return;
       setLoading(true);
       try {
-        const response = await fetch(`https://fivlia.onrender.com/getStore?id=${storeId}`);
+        const response = await fetch(`https://api.fivlia.in/getStore?id=${storeId}`);
         if (response.status === 200) {
           const result = await response.json();
           const { store, categories, products } = result;
