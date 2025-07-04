@@ -14,6 +14,7 @@ function AddStore() {
   const [storeName, setStoreName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedZone, setSelectedZone] = useState([]);
   const [latitude, setLatitude] = useState("");
@@ -285,6 +286,19 @@ function AddStore() {
               />
             </div>
           </div>
+
+          <div className="store-row">
+            <div className="store-input">
+              <label>Password</label>
+              <input
+                type="text"
+                placeholder="Enter Store Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
 
           <div className="store-row">
             <div className="store-input">

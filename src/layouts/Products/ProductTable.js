@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { Button, Menu, MenuItem, IconButton, Switch, Chip, Tooltip, Popover, Typography } from "@mui/material";
@@ -39,6 +38,7 @@ function ProductTable() {
   const [search, setSearch] = useState("");
   const [entries, setEntries] = useState(30);
   const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(""); // New state for category filter
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState([]);
   const [publicStatus, setPublicStatus] = useState({});
@@ -56,18 +56,6 @@ function ProductTable() {
           const res = await result.json();
           const products = res.Product || [];
           setData(products);
-          console.log(products);
-          
-
-          // Debug logging
-          // console.log("API Response:", res);
-          // products.forEach((item, index) => {
-          //   console.log(`Product ${index + 1} (${item.productName || "Unknown"}):`);
-          //   console.log("  Location:", item.location);
-          //   const cities = item.location?.map((loc) => loc.city?.[0]?.name) || [];
-          //   console.log("  Cities:", cities);
-          //   console.log("  Variants:", item.variants);
-          // });
 
           const initialPublicStatus = products.reduce((acc, cur) => {
             acc[cur._id] = cur.status === true;
@@ -106,10 +94,10 @@ function ProductTable() {
 
       if (result.status === 200) {
         alert("Product Deleted Successfully");
-         const result = await fetch("https://api.fivlia.in/getProducts");
-       const res = await result.json();
-          const products = res.products || [];
-          setData(products);
+        const result = await fetch("https://api.fivlia.in/getProducts");
+        const res = await result.json();
+        const products = res.products || [];
+        setData(products);
 
         const updatedStatus = products.reduce((acc, cur) => {
           acc[cur._id] = cur.status === true;
@@ -125,7 +113,7 @@ function ProductTable() {
   };
 
   // Filter and search products
-  const filteredProducts = Array.isArray(data)
+   const filteredProducts = Array.isArray(data)
     ? data
       .filter((item) =>
         selectedCity
@@ -133,15 +121,20 @@ function ProductTable() {
           : true
       )
       .filter((item) =>
+        selectedCategory
+          ? item.category?.some((cat) => cat.name === selectedCategory)
+          : true
+      )
+      .filter((item) =>
         Object.values(item).some((val) =>
           Array.isArray(val)
             ? val.some((v) =>
-              typeof v === "object"
-                ? Object.values(v).some((subVal) =>
-                  String(subVal).toLowerCase().includes(search.toLowerCase())
-                )
-                : String(v).toLowerCase().includes(search.toLowerCase())
-            )
+                typeof v === "object"
+                  ? Object.values(v).some((subVal) =>
+                      String(subVal).toLowerCase().includes(search.toLowerCase())
+                    )
+                  : String(v).toLowerCase().includes(search.toLowerCase())
+              )
             : String(val).toLowerCase().includes(search.toLowerCase())
         )
       )
@@ -306,22 +299,22 @@ function ProductTable() {
     >
       <div style={{ borderRadius: 15, padding: 20, overflowX: "auto" }}>
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-            flexWrap: "wrap",
-          }}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+          flexWrap: "wrap",
+        }}
         >
-          <div>
-            <span style={{ fontWeight: "bold", fontSize: 26 }}>Product List</span>
-            <br />
-            <span style={{ fontSize: 17 }}>View and manage all products</span>
-          </div>
+        <div>
+          <span style={{ fontWeight: "bold", fontSize: 26 }}>Product List</span>
+          <br />
+          <span style={{ fontSize: 17 }}>View and manage all products</span>
+        </div>
           <Button
-            style={{
+           style={{
               backgroundColor: "#00c853",
               height: 45,
               width: 160,
@@ -406,7 +399,28 @@ function ProductTable() {
                 ))}
               </select>
             </div>
-
+            <div>
+              <label style={{ fontSize: 16 }}>Filter by Category:</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{ fontSize: 16, borderRadius: "6px" }}
+              >
+                <option value="">All Categories</option>
+                {Array.from(
+                  new Set(
+                    data.flatMap((p) => p.category?.map((cat) => cat.name)).filter(Boolean)
+                  )
+                ).map((categoryName, idx) => (
+                  <option key={idx} value={categoryName}>
+                    {categoryName}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label style={{ fontSize: 16 }}>Search:</label>
               <br />
@@ -648,14 +662,6 @@ function ProductTable() {
                             Edit
                           </MenuItem>
                           <MenuItem onClick={() => handleDeleteProduct(item._id)}>Delete</MenuItem>
-                          {/* <MenuItem
-                            onClick={() => {
-                              handleMenuClose();
-                              navigate(`/view-product/${item._id}`);
-                            }}
-                          >
-                            View Product
-                          </MenuItem> */}
                         </Menu>
                       </td>
                     </tr>

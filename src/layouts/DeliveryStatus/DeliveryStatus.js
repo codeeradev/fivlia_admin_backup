@@ -23,6 +23,7 @@ export default function StatusManagement() {
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [newStatusCode, setNewStatusCode] = useState("");
   const [newStatusTitle, setNewStatusTitle] = useState("");
+  const [newImage, setNewImage] = useState(null);
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,6 +92,48 @@ export default function StatusManagement() {
     } catch (error) {
       alert("Failed to update status. Try again.");
       console.error("Toggle status error:", error);
+    }
+  };
+
+  const handleAddStatus = async () => {
+    if (!newStatusTitle) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("statusCode", newStatusCode);
+      formData.append("statusTitle", newStatusTitle);
+      formData.append("status", "true");
+      if (newImage) formData.append("image", newImage);
+
+      const response = await fetch("https://api.fivlia.in/deliveryStatus", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to add status");
+
+      setStatuses((prev) => [
+        ...prev,
+        {
+          id: data.newStatus._id,
+          statusCode: newStatusCode,
+          statusTitle: newStatusTitle,
+          isActive: true,
+          image: data.newStatus.image || "",
+        },
+      ]);
+
+      setModalOpen(false);
+      setNewStatusCode("");
+      setNewStatusTitle("");
+      setNewImage(null);
+    } catch (error) {
+      alert("Failed to add status. Try again.");
+      console.error("Add status error:", error);
     }
   };
 
@@ -190,6 +233,20 @@ export default function StatusManagement() {
               Manage order statuses
             </p>
           </div>
+          <Button
+            variant="contained"
+ ominantColor
+            onClick={() => setModalOpen(true)}
+            style={{
+              backgroundColor: "#007BFF",
+              color: "white",
+              height:"60px",
+              width:"150px",
+              borderRadius: "6px",
+            }}
+          >
+            Add Status
+          </Button>
         </div>
 
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
@@ -350,6 +407,38 @@ export default function StatusManagement() {
           </div>
         </div>
       </div>
+
+      {/* Add Status Modal */}
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Status</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            label="Status Title"
+            fullWidth
+            margin="normal"
+            value={newStatusTitle}
+            onChange={(e) => setNewStatusTitle(e.target.value)}
+            placeholder="e.g., Pending"
+          />
+          <div style={{ marginTop: 16 }}>
+            <label style={{ fontSize: 16, fontWeight: "bold" }}>Upload Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setNewImage(e.target.files[0])}
+              style={{ marginTop: 8 }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModalOpen(false)} color="error">
+            Cancel
+          </Button>
+          <Button onClick={handleAddStatus} color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edit Modal */}
       <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>

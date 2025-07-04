@@ -28,6 +28,11 @@ const Orders = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [driverUpdating, setDriverUpdating] = useState(false);
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [pendingOrderId, setPendingOrderId] = useState(null);
+
+  const restrictedStatuses = ["Going to Pickup", "Picked", "On the Way", "Delivered"];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -40,7 +45,7 @@ const Orders = () => {
         fetch("https://api.fivlia.in/getDriver"),
         fetch("https://api.fivlia.in/getdeliveryStatus"),
       ]);
-
+console.log(statusesRes)
       // Handle Orders
       const ordersData = await ordersRes.json();
       console.log("Orders API response:", ordersData);
@@ -108,23 +113,23 @@ const Orders = () => {
       const statusesData = await statusesRes.json();
       console.log("Delivery Statuses API response:", statusesData);
       if (statusesData.Status && Array.isArray(statusesData.Status)) {
-        const mappedStatuses = statusesData.Status.map(status => status.statusTitle || status.status || status.name || "Unknown");
-        // Ensure common statuses are included
-        const defaultStatuses = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
-        const uniqueStatuses = [...new Set([...mappedStatuses, ...defaultStatuses])].filter(status => status !== "Unknown");
+        const mappedStatuses = statusesData.Status
+          .map(status => (status.statusTitle || status.status || status.name || "").trim().toLowerCase())
+          .filter(status => status);
+        const uniqueStatuses = [...new Set(mappedStatuses)]
+          .map(status => status.charAt(0).toUpperCase() + status.slice(1))
+          .sort();
         setDeliveryStatuses(uniqueStatuses);
         console.log("Mapped delivery statuses:", uniqueStatuses);
       } else {
         console.error("Invalid delivery statuses data format:", statusesData);
         setError((prev) => prev + (prev ? ", " : "") + "Failed to load delivery statuses: Invalid data format");
-        // Fallback to default statuses
-        setDeliveryStatuses(["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]);
+        setDeliveryStatuses([]);
       }
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to load data. Please try again.");
-      // Fallback for delivery statuses on error
-      setDeliveryStatuses(["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]);
+      setDeliveryStatuses([]);
     } finally {
       setLoading(false);
     }
@@ -160,6 +165,28 @@ const Orders = () => {
         return 0;
       })
     );
+  };
+
+  const handleStatusChange = (orderId, newStatus) => {
+    const order = orders.find(o => o._id === orderId);
+    if (restrictedStatuses.includes(newStatus) && !order.driver?.driverId && !order.driverId) {
+      setPendingOrderId(orderId);
+      setPendingStatus(newStatus);
+      setShowDriverModal(true);
+      return;
+    }
+    handleOrderUpdate(orderId, newStatus, undefined);
+  };
+
+  const handleDriverSelection = async (driverId) => {
+    if (!driverId) {
+      setShowDriverModal(false);
+      return;
+    }
+    await handleOrderUpdate(pendingOrderId, pendingStatus, driverId);
+    setShowDriverModal(false);
+    setPendingOrderId(null);
+    setPendingStatus(null);
   };
 
   const handleOrderUpdate = async (id, status, driverId) => {
@@ -490,6 +517,18 @@ const Orders = () => {
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
             overflow: hidden;
           }
+          .driver-modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            margin: 48px auto;
+            position: relative;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            overflow: hidden;
+            font-family: 'Urbanist', sans-serif;
+          }
           .modal-table-container {
             overflow-y: auto;
             max-height: 400px;
@@ -587,7 +626,7 @@ const Orders = () => {
             word-break: break-word;
             font-size: 14px;
           }
-          .refresh-button, .export-button {
+          .refresh-button, .export-button, .modal-button {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -601,9 +640,15 @@ const Orders = () => {
             text-decoration: none;
             transition: background 0.3s, transform 0.2s;
           }
-          .refresh-button:hover, .export-button:hover {
+          .refresh-button:hover, .export-button:hover, .modal-button:hover {
             background: #0056b3;
             transform: translateY(-1px);
+          }
+          .modal-button.cancel {
+            background: #dc3545;
+          }
+          .modal-button.cancel:hover {
+            background: #c82333;
           }
           .loading-overlay {
             position: absolute;
@@ -643,7 +688,7 @@ const Orders = () => {
               width: 100%;
               max-width: none;
             }
-            .modal-content, .address-modal-content {
+            .modal-content, .address-modal-content, .driver-modal-content {
               margin: 24px;
               max-width: 95%;
               padding: 20px;
@@ -880,9 +925,9 @@ const Orders = () => {
                           <td className="body-cell">
                             <select
                               className="status-select"
-                              value={order.orderStatus || "Pending"}
-                              onChange={(e) => handleOrderUpdate(order._id, e.target.value, undefined)}
-                              disabled={statusUpdating}
+                              value={order.orderStatus || ""}
+                              onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                              disabled={statusUpdating || !deliveryStatuses.length}
                             >
                               {deliveryStatuses.map((status) => (
                                 <option key={status} value={status}>{status}</option>
@@ -931,7 +976,7 @@ const Orders = () => {
                   Order Details - {selectedOrder.orderId}
                 </h3>
                 <div style={{ marginBottom: "16px", fontSize: "14px", color: "#344767" }}>
-                  <strong>Status:</strong> {selectedOrder.orderStatus || "Pending"}
+                  <strong>Status:</strong> {selectedOrder.orderStatus || ""}
                 </div>
                 <div className="modal-table-container">
                   <table className="modal-table">
@@ -1065,6 +1110,46 @@ const Orders = () => {
                 </div>
               </>
             )}
+          </div>
+        </Modal>
+
+        <Modal open={showDriverModal} onClose={() => setShowDriverModal(false)}>
+          <div className="driver-modal-content">
+            <span className="modal-close" onClick={() => setShowDriverModal(false)}>×</span>
+            <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
+              Select Delivery Driver
+            </h3>
+            <p style={{ fontSize: "14px", color: "#7b809a", marginBottom: "16px" }}>
+              A driver must be assigned to change the status to {pendingStatus}.
+            </p>
+            <div className="control-item" style={{ marginBottom: "24px" }}>
+              <label style={{ fontSize: "15px", fontWeight: 600, color: "#344767" }}>Driver</label>
+              <select
+                className="driver-select"
+                onChange={(e) => handleDriverSelection(e.target.value)}
+                defaultValue=""
+              >
+                <option value="" disabled>Select a driver</option>
+                {drivers.map((driver) => (
+                  <option key={driver.id} value={driver.driverId}>{driver.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: "16px", justifyContent: "flex-end" }}>
+              <button
+                className="modal-button cancel"
+                onClick={() => setShowDriverModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="modal-button"
+                onClick={() => handleDriverSelection("")}
+                disabled={!drivers.length}
+              >
+                Not Now
+              </button>
+            </div>
           </div>
         </Modal>
       </MDBox>

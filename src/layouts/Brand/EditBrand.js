@@ -12,6 +12,7 @@ function EditBrand() {
     const navigate = useNavigate();
     const [image, setImage] = useState(null);
     const [name, setName] = useState('');
+    const [featured, setFeatured] = useState(false); // Default to false
     const [description, setDescription] = useState('');
     const [id,setId]=useState('')
     const location=useLocation();
@@ -30,30 +31,32 @@ function EditBrand() {
     setDescription(branddetails.description)
     setImage(branddetails.brandLogo)
     setId(branddetails._id)
+    setFeatured(branddetails.featured === "true")
    },[])
 
     const handleBrand = async () => {
-        try {
-            const formData = new FormData();
-            formData.append("brandName", name);
-            formData.append("description", description);
-            formData.append("image", document.querySelector('input[type="file"]').files[0]);
+  try {
+    const formData = new FormData();
+    formData.append("brandName", name);
+    formData.append("description", description);
+    formData.append("image", document.querySelector('input[type="file"]').files[0]);
+    formData.append("featured", featured.toString()); // Added featured field
 
-            const result = await fetch(`https://api.fivlia.in/editBrand/${id}`, {
-                method: "PUT",
-                body: formData,
-            });
+    const result = await fetch(`https://api.fivlia.in/editBrand/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
 
-            if (result.status === 200) {
-                alert('Brand Updated Successfully');
-                navigate(-1)
-            } else {
-                alert('Something went wrong');
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    if (result.status === 200) {
+      alert("Brand Updated Successfully");
+      navigate(-1);
+    } else {
+      alert("Something went wrong");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
 
     return (
         <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "20px" }}>
@@ -136,7 +139,21 @@ function EditBrand() {
                     </div>
                 </div>
 
-
+                {/* Is Featured */}
+                <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
+                  <div>
+                    <label style={{ fontWeight: "500" }}>Is Featured</label>
+                  </div>
+                  <div style={{ width: "58%" }}>
+                    <input
+                      type="checkbox"
+                      checked={featured}
+                      onChange={(e) => setFeatured(e.target.checked)}
+                      style={{ width: "20px", height: "20px", marginRight: "10px" }}
+                    />
+                    <span>{featured ? "Yes" : "No"}</span>
+                  </div>
+                </div>
 
                 {/* Submit Button */}
                 <div style={{ textAlign: "center", }}>

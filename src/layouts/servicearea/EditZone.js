@@ -47,7 +47,7 @@ function EditZone() {
   useEffect(() => {
     if (initialZone) {
       setId(initialZone._id);
-      setAreaTitle(initialZone.address || "");
+      setAreaTitle(initialZone.address);
       setZoneTitle(initialZone.zoneTitle)
       if (initialZone.latitude && initialZone.longitude) {
         const coords = {

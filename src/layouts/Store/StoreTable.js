@@ -10,7 +10,13 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
 
@@ -38,6 +44,10 @@ function StoreTabel() {
   const [selectedZones, setSelectedZones] = useState([]);
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
   const [actionStore, setActionStore] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,7 +67,6 @@ function StoreTabel() {
     getAllStores();
   }, []);
 
-  // handle popper open/close for zones
   const handleZonesClick = (event, zones) => {
     if (anchorEl && anchorEl === event.currentTarget) {
       setAnchorEl(null);
@@ -73,9 +82,6 @@ function StoreTabel() {
     setSelectedZones([]);
   };
 
-  const open = Boolean(anchorEl);
-
-  // handle 3-dot action menu open/close
   const handleActionClick = (event, store) => {
     setActionAnchorEl(event.currentTarget);
     setActionStore(store);
@@ -85,8 +91,6 @@ function StoreTabel() {
     setActionAnchorEl(null);
     setActionStore(null);
   };
-
-  const openActionMenu = Boolean(actionAnchorEl);
 
   return (
     <MDBox
@@ -191,14 +195,24 @@ function StoreTabel() {
                             No Image
                           </div>
                         )}
-                        <span style={{marginLeft:'30px'}}>{store.storeName}</span>
+                        <span style={{ marginLeft: "30px" }}>{store.storeName}</span>
                       </div>
                     </td>
 
                     <td style={bodyCell}>
-                      <div>
+                      <div
+                        style={{
+                          cursor: "pointer",
+                          color: "#007bff",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() => {
+                          setSelectedStore(store);
+                          setShowPassword(false);
+                          setViewModalOpen(true);
+                        }}
+                      >
                         <strong>{store.ownerName || "N/A"}</strong>
-                        <br />
                       </div>
                     </td>
 
@@ -227,7 +241,7 @@ function StoreTabel() {
                           )}
 
                           <Popper
-                            open={open && selectedZones === store.zone}
+                            open={Boolean(anchorEl) && selectedZones === store.zone}
                             anchorEl={anchorEl}
                             placement="bottom-start"
                             style={{ zIndex: 1500 }}
@@ -253,7 +267,6 @@ function StoreTabel() {
 
                     <td style={bodyCell}>{store.Category?.length || 0}</td>
 
-                    {/* Action cell with 3-dot menu */}
                     <td style={{ ...bodyCell, width: 150, textAlign: "center" }}>
                       <IconButton onClick={(e) => handleActionClick(e, store)} size="small">
                         <MoreVertIcon />
@@ -261,7 +274,7 @@ function StoreTabel() {
 
                       <Menu
                         anchorEl={actionAnchorEl}
-                        open={openActionMenu && actionStore?._id === store._id}
+                        open={Boolean(actionAnchorEl) && actionStore?._id === store._id}
                         onClose={handleActionClose}
                         anchorOrigin={{
                           vertical: "bottom",
@@ -283,7 +296,7 @@ function StoreTabel() {
                         <MenuItem
                           onClick={() => {
                             handleActionClose();
-                            navigate('/store-login',{state:store._id})
+                            navigate("/store-login", { state: store._id });
                           }}
                         >
                           Login
@@ -296,6 +309,51 @@ function StoreTabel() {
             </table>
           </div>
         </div>
+
+        {/* Owner Info Modal */}
+        <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Owner Info</DialogTitle>
+          <DialogContent dividers>
+            {selectedStore && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                <TextField
+                  label="Owner Name"
+                  value={selectedStore.ownerName || ""}
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                />
+                <TextField
+                  label="Phone Number"
+                  value={selectedStore.PhoneNumber || selectedStore.phone || ""}
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                />
+                <TextField
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  value={selectedStore.password || ""}
+                  fullWidth
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: (
+                      <span
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ cursor: "pointer", marginLeft: 8 }}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </span>
+                    ),
+                  }}
+                />
+              </div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setViewModalOpen(false)} color="primary">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </MDBox>
   );

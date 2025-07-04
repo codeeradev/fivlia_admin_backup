@@ -18,6 +18,8 @@ function EditProduct() {
   const [activeVariant, setActiveVariant] = useState("");
   const [filterValues, setFilterValues] = useState([]);
   const [selectedFilterValue, setSelectedFilterValue] = useState("");
+  const [variantImages, setVariantImages] = useState({}); // Added for variant image handling
+  const thumbnailInputRef = useRef(null); // Added for thumbnail handling
 
   const sectionIds = ["basicinfo", "imagesection", "category-section", "citysection", "taxsection"];
 
@@ -86,6 +88,41 @@ function EditProduct() {
   const [originalFilterData, setOriginalFilterData] = useState([]);
 
   const maxSize = 500 * 1024; // 500KB
+
+  // Handle variant image change
+  const handleVariantImageChange = (variantName, e) => {
+    const file = e.target.files[0];
+    if (file && file.size <= maxSize) {
+      setVariantImages((prev) => ({
+        ...prev,
+        [variantName]: { file, preview: URL.createObjectURL(file) },
+      }));
+    } else {
+      setError("Variant image must be less than 500KB.");
+    }
+  };
+
+  // Handle thumbnail image change
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size <= maxSize) {
+      setThumbnailImage(file);
+      setPreview(URL.createObjectURL(file));
+      setThumbnailError("");
+    } else {
+      setThumbnailError("Thumbnail image must be less than 500KB.");
+    }
+  };
+
+  // Handle thumbnail removal
+  const handleRemoveThumbnail = () => {
+    setThumbnailImage(null);
+    setPreview(null);
+    setThumbnailError("");
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = "";
+    }
+  };
 
   const handleFilterValueChange = (e) => {
     const selectedId = e.target.value;
@@ -529,7 +566,6 @@ function EditProduct() {
     );
   };
 
-
   useEffect(() => {
     const fetchFilters = async () => {
       try {
@@ -573,8 +609,6 @@ function EditProduct() {
           const data = await result.json();
           const rawFilters = data.response.filter || [];
 
-          // Build selected tags structure for the selected category
-
           const selectedByFilter = {};
           rawFilters.forEach((f) => {
             if (f.selected && f.selected.length > 0) {
@@ -582,13 +616,11 @@ function EditProduct() {
                 _id: s._id,
                 name: s.name,
               }));
-
             }
           });
 
           setSelectedValuesByFilter(selectedByFilter);
 
-          // If a filter is selected, fetch its values
           if (filterTypeName) {
             const filterRes = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);
             if (filterRes.status === 200) {
@@ -611,7 +643,6 @@ function EditProduct() {
 
     getsingleCategory();
   }, [selecetdcategory]);
-
 
   useEffect(() => {
     const getCategory = async () => {
@@ -693,8 +724,6 @@ function EditProduct() {
         return;
       }
       const data = location.state;
-      console.log(data);
-
 
       setId(data._id || "");
       setName(data.productName || "");
@@ -778,9 +807,7 @@ function EditProduct() {
         setAttributeValue(newAttributeValue);
         const firstatt = newAttributeValue[0];
         if (firstatt) {
-          setAttributeData(firstatt._id)
-          console.log(firstatt._id);
-
+          setAttributeData(firstatt._id);
         }
 
         const newVariantPrices = {};
@@ -791,6 +818,18 @@ function EditProduct() {
           };
         });
         setVariantPrices(newVariantPrices);
+
+        // Initialize variantImages with existing variant images
+        const newVariantImages = {};
+        data.variants.forEach((variant, index) => {
+          if (variant.image) {
+            newVariantImages[variant.variantValue.split(" ")[0]] = {
+              file: null,
+              preview: variant.image,
+            };
+          }
+        });
+        setVariantImages(newVariantImages);
 
         const colorVariants = data.variants.filter(
           (variant) => variant.attributeName.toLowerCase() === "color" && variant.hexCode
@@ -807,63 +846,61 @@ function EditProduct() {
         }
       }
 
+      if (data.filter?.length > 0) {
+        const groupedFilters = {};
+        const selectedByFilter = {};
 
-     if (data.filter?.length > 0) {
-  const groupedFilters = {};
-  const selectedByFilter = {};
+        const originalFilters = data.filter.map((item) => ({
+          _id: item._id,
+          Filter_name: item.Filter_name,
+          selected: item.selected?.map((s) => ({ _id: s._id, name: s.name })) || [],
+        }));
+        setOriginalFilterData(originalFilters);
 
-  // Store the original filter data
-  const originalFilters = data.filter.map((item) => ({
-    _id: item._id,
-    Filter_name: item.Filter_name,
-    selected: item.selected?.map((s) => ({ _id: s._id, name: s.name })) || [],
-  }));
-  setOriginalFilterData(originalFilters);
+        data.filter.forEach((item) => {
+          const filterId = item._id;
+          const filterName = item.Filter_name;
+          const selectedArray = item.selected || [];
 
-  data.filter.forEach((item) => {
-    const filterId = item._id;
-    const filterName = item.Filter_name;
-    const selectedArray = item.selected || [];
+          if (!filterId || !filterName) return;
 
-    if (!filterId || !filterName) return;
+          if (!groupedFilters[filterId]) {
+            groupedFilters[filterId] = {
+              _id: filterId,
+              Filter_name: filterName,
+              values: [],
+            };
+          }
 
-    if (!groupedFilters[filterId]) {
-      groupedFilters[filterId] = {
-        _id: filterId,
-        Filter_name: filterName,
-        values: [],
-      };
-    }
+          if (!selectedByFilter[filterId]) {
+            selectedByFilter[filterId] = [];
+          }
 
-    if (!selectedByFilter[filterId]) {
-      selectedByFilter[filterId] = [];
-    }
+          selectedArray.forEach((selected) => {
+            if (selected?._id && selected?.name) {
+              const val = { _id: selected._id, name: selected.name };
+              groupedFilters[filterId].values.push(val);
+              selectedByFilter[filterId].push(val);
+            }
+          });
+        });
 
-    selectedArray.forEach((selected) => {
-      if (selected?._id && selected?.name) {
-        const val = { _id: selected._id, name: selected.name };
-        groupedFilters[filterId].values.push(val);
-        selectedByFilter[filterId].push(val);
+        const filterArray = Object.values(groupedFilters);
+        setFilters(filterArray);
+        setSelectedValuesByFilter(selectedByFilter);
+
+        if (filterArray.length > 0) {
+          const firstFilter = filterArray[0];
+          setFilterTypeName(firstFilter._id);
+          setFilterValues(firstFilter.values || []);
+
+          if ((firstFilter.values || []).length > 0) {
+            setSelectedFilterValue(firstFilter.values[0]._id);
+          } else {
+            setSelectedFilterValue("");
+          }
+        }
       }
-    });
-  });
-
-  const filterArray = Object.values(groupedFilters);
-  setFilters(filterArray);
-  setSelectedValuesByFilter(selectedByFilter);
-
-  if (filterArray.length > 0) {
-    const firstFilter = filterArray[0];
-    setFilterTypeName(firstFilter._id);
-    setFilterValues(firstFilter.values || []);
-
-    if ((firstFilter.values || []).length > 0) {
-      setSelectedFilterValue(firstFilter.values[0]._id);
-    } else {
-      setSelectedFilterValue("");
-    }
-  }
-}
       setSubCategory(data.subCategory?.[0]?._id || "");
       setSubSubCategory(data.subSubCategory?.[0]?._id || "");
     };
@@ -891,42 +928,25 @@ function EditProduct() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-
   const handelProduct = async () => {
-    if (!name || !description || !sku || !category.length || !unitname || !cgst) {
-      alert("Please fill all required fields.");
-      return;
-    }
-    if (selectedCities.length === 0 || Object.values(cityZones).every(zones => zones.length === 0)) {
-      alert("Please select at least one city with zones.");
-      return;
-    }
-  
     const selectedFilterIds = Object.keys(selectedValuesByFilter)
-  .filter((filterId) => {
-    const selectedArray = selectedValuesByFilter[filterId];
-    return Array.isArray(selectedArray) && selectedArray.length > 0;
-  })
-  .map((filterId) => filterId);
-   const newformdata1=new FormData()
-    newformdata1.append('filterIds',selectedFilterIds)
+      .filter((filterId) => {
+        const selectedArray = selectedValuesByFilter[filterId];
+        return Array.isArray(selectedArray) && selectedArray.length > 0;
+      })
+      .map((filterId) => filterId);
+    const newformdata1 = new FormData();
+    newformdata1.append('filterIds', JSON.stringify(selectedFilterIds));
 
-    const res=await fetch(`https://api.fivlia.in/addFilterInCategory/${selecetdcategory}`,{
-      method:"PUT",
-      body:newformdata1,
-      headers:{
-        "Content-Type":"application/json"
-      }
-    })
-    if(res.status===200){
+    const res = await fetch(`https://api.fivlia.in/addFilterInCategory/${selecetdcategory}`, {
+      method: "PUT",
+      body: newformdata1,
+    });
+    if (res.status === 200) {
       console.log('Success');
-      
-    }
-    else{
+    } else {
       console.log('Something wrong');
-      
     }
-    
 
     const formData = new FormData();
 
@@ -1016,7 +1036,7 @@ function EditProduct() {
 
     if (attributeValue.length > 0) {
       const variants = attributeValue
-        .map((item) => {
+        .map((item, index) => {
           const prices = variantPrices[item.variantName];
           if (!prices || !prices.mrp || !prices.sell_price) {
             return null;
@@ -1026,6 +1046,7 @@ function EditProduct() {
             variantValue: `${item.variantName}${item.unit ? ` ${item.unit}` : ''}`,
             mrp: parseFloat(prices.mrp) || 0,
             sell_price: parseFloat(prices.sell_price) || 0,
+            imageKey: `var${index + 1}`,
             ...(item.attributeName.toLowerCase() === "color" && colorHexCodes[item.variantName]
               ? { hexCode: colorHexCodes[item.variantName] }
               : {}),
@@ -1035,56 +1056,45 @@ function EditProduct() {
       if (variants.length > 0) {
         formData.append("variants", JSON.stringify(variants));
       }
+
+      attributeValue
+        .filter((item) => variantPrices[item.variantName])
+        .forEach((item, index) => {
+          if (variantImages[item.variantName]?.file) {
+            formData.append(`var${index + 1}`, variantImages[item.variantName].file);
+          }
+        });
     }
 
-    // Combine original filter data with selectedValuesByFilter
-const combinedFilterData = {};
+    const combinedFilterData = {};
+    originalFilterData.forEach((filter) => {
+      if (filter._id && filter.selected?.length > 0) {
+        combinedFilterData[filter._id] = {
+          _id: filter._id,
+          selected: filter.selected.map((s) => s._id).filter(Boolean),
+        };
+      }
+    });
 
-// Include original filters
-originalFilterData.forEach((filter) => {
-  if (filter._id && filter.selected?.length > 0) {
-    combinedFilterData[filter._id] = {
-      _id: filter._id,
-      selected: filter.selected.map((s) => s._id).filter(Boolean),
-    };
-  }
-});
+    Object.keys(selectedValuesByFilter).forEach((filterId) => {
+      const filter = filters.find((f) => f._id === filterId);
+      if (filter && filter._id) {
+        const selectedIds = selectedValuesByFilter[filterId]
+          .map((val) => val._id)
+          .filter(Boolean);
+        if (selectedIds.length > 0) {
+          combinedFilterData[filterId] = {
+            _id: filter._id,
+            selected: selectedIds,
+          };
+        }
+      }
+    });
 
-// Override or add new selections from selectedValuesByFilter
-Object.keys(selectedValuesByFilter).forEach((filterId) => {
-  const filter = filters.find((f) => f._id === filterId);
-  if (filter && filter._id) {
-    const selectedIds = selectedValuesByFilter[filterId]
-      .map((val) => val._id)
-      .filter(Boolean);
-    if (selectedIds.length > 0) {
-      combinedFilterData[filterId] = {
-        _id: filter._id,
-        selected: selectedIds,
-      };
+    const filterData = Object.values(combinedFilterData).filter(Boolean);
+    if (filterData.length > 0) {
+      formData.append("filter", JSON.stringify(filterData));
     }
-  }
-});
-
-// Convert to array and append to formData
-const filterData = Object.values(combinedFilterData).filter(Boolean);
-if (filterData.length > 0) {
-  formData.append("filter", JSON.stringify(filterData));
-}
-
-   console.log("======= Logging FormData =======");
-for (let pair of formData.entries()) {
-  if (pair[1] instanceof File) {
-    console.log(`${pair[0]}: [File] Name = ${pair[1].name}, Size = ${pair[1].size} bytes`);
-  } else {
-    try {
-      const parsed = JSON.parse(pair[1]);
-      console.log(`${pair[0]}:`, JSON.stringify(parsed, null, 2));
-    } catch (e) {
-      console.log(`${pair[0]}: ${pair[1]}`);
-    }
-  }
-}
 
     try {
       const result = await fetch(`https://api.fivlia.in/updateProduct/${id}`, {
@@ -1113,65 +1123,22 @@ for (let pair of formData.entries()) {
       const newvalue = await fetch(`https://api.fivlia.in/editFilter/${filterTypeName}`, {
         method: "PATCH",
         body: JSON.stringify({
-          Filter: [
-            { name: newFilterValue }
-          ]
+          Filter: [{ name: newFilterValue }],
         }),
         headers: {
           "Content-Type": "application/json",
         },
-      })
+      });
       if (newvalue.status === 200) {
-        alert('Success')
-        if (newvalue.status === 200) {
-          const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);
-          const data = await res.json();
-          setFilterValues(data.result?.Filter || []);
-        }
+        alert('Success');
+        const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);
+        const data = await res.json();
+        setFilterValues(data.result?.Filter || []);
       }
     } catch (err) {
       console.log(err);
     }
   };
-
-  // const handleFilter = async () => {
-  //   const addfilternew = await fetch(`https://api.fivlia.in/addFilter`, {
-  //     method: 'POST',
-  //     body: JSON.stringify({
-  //       Filter_name: addfilter,
-  //     }),
-  //     headers: {
-  //       "Content-type": "application/json",
-  //     },
-  //   })
-  //   if (addfilternew.status === 200) {
-  //     console.log("success");
-  //   }
-  //   else {
-  //     console.log('error');
-  //   }
-
-  //   try {
-  //     const result = await fetch(`https://node-m8jb.onrender.com/addfilterincategory/${selecetdcategory}`, {
-  //       method: "PUT",
-  //       body: JSON.stringify({
-  //         Filter_name: addfilter,
-  //       }),
-  //       headers: {
-  //         "Content-type": "application/json",
-  //       },
-  //     });
-  //     if (result.status === 200) {
-  //       alert("Filter Added Successfully");
-  //       setShowFilterPopup(false);
-  //       setAddFilter("");
-  //     } else {
-  //       alert("Something Wrong");
-  //     }
-  //   } catch (err) {
-  //     console.log(err);
-  //   }
-  // };
 
   return (
     <MDBox
@@ -1260,7 +1227,44 @@ for (let pair of formData.entries()) {
               Images
             </span>
             <div className="row-section">
-              <div style={{ display: "flex", flexDirection: "row" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                <div>
+                  <label>
+                    Thumbnail Image <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={thumbnailInputRef}
+                    onChange={handleThumbnailChange}
+                    className="input-field"
+                    style={{ backgroundColor: "white" }}
+                  />
+                  {thumbnailError && <p style={{ color: "red", fontSize: "12px" }}>{thumbnailError}</p>}
+                  {preview && (
+                    <div style={{ marginTop: "10px" }}>
+                      <img
+                        src={preview}
+                        alt="thumbnail-preview"
+                        style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
+                      />
+                      <button
+                        onClick={handleRemoveThumbnail}
+                        style={{
+                          background: "red",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          padding: "4px 8px",
+                          cursor: "pointer",
+                          marginLeft: "10px",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div>
                   <label>
                     Product Images <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
@@ -1334,7 +1338,6 @@ for (let pair of formData.entries()) {
                   const selectedCat = categories.find((cat) => cat._id === selectedValue);
                   const allSubCats = selectedCat?.subcat || [];
                   const allAttributes = selectedCat?.attribute || [];
-
 
                   setSubCategories(allSubCats);
                   setFilteredAttributes(allAttributes);
@@ -1693,7 +1696,6 @@ for (let pair of formData.entries()) {
                 <select
                   className="input-field"
                   value={filterTypeName}
-
                   onChange={async (e) => {
                     const selectedId = e.target.value;
                     setFilterTypeName(selectedId);
@@ -1727,40 +1729,6 @@ for (let pair of formData.entries()) {
                     </option>
                   ))}
                 </select>
-                {console.log("filtertypename", filterTypeName)
-                }
-
-                {/* <h3
-                  style={{
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    color: "green",
-                    marginTop: "10px",
-                    marginLeft: "5px",
-                  }}
-                  onClick={() => setShowFilterPopup(true)}
-                >
-                  + ADD FILTER
-                </h3> */}
-                {/* {filterpopup && (
-                  <div className="popup-backdrop">
-                    <div className="popup-content">
-                      <input
-                        type="text"
-                        placeholder="Enter Filter Name"
-                        value={addfilter}
-                        onChange={(e) => setAddFilter(e.target.value)}
-                        style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-                      />
-                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                        <Button onClick={handleFilter}>Save</Button>
-                        <Button onClick={() => setShowFilterPopup(false)}>Cancel</Button>
-                      </div>
-                    </div>
-                  </div>
-                )} */}
-
-
               </div>
               <div className="input-container">
                 <label>Select Filter Value</label>
@@ -1814,7 +1782,6 @@ for (let pair of formData.entries()) {
                 )}
               </div>
             </div>
-            {/* Display all selected filters and their values */}
             <div
               style={{
                 marginTop: "20px",
@@ -1868,8 +1835,6 @@ for (let pair of formData.entries()) {
                 );
               })}
             </div>
-
-
           </div>
 
           {/* Attributes & Variants */}
@@ -2069,6 +2034,44 @@ for (let pair of formData.entries()) {
                       onChange={(e) => handlePriceChange(item.variantName, "sell_price", e.target.value)}
                     />
 
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleVariantImageChange(item.variantName, e)}
+                      className="input-field"
+                      style={{ backgroundColor: "white", marginTop: "10px" }}
+                    />
+
+                    {variantImages[item.variantName]?.preview && (
+                      <div style={{ marginTop: "10px" }}>
+                        <img
+                          src={variantImages[item.variantName].preview}
+                          alt={`variant-preview-${item.variantName}`}
+                          style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
+                        />
+                        <button
+                          onClick={() =>
+                            setVariantImages((prev) => {
+                              const updated = { ...prev };
+                              delete updated[item.variantName];
+                              return updated;
+                            })
+                          }
+                          style={{
+                            background: "red",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            marginLeft: "10px",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+
                     {item.attributeName.toLowerCase() === "color" && (
                       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                         <input
@@ -2086,7 +2089,6 @@ for (let pair of formData.entries()) {
                 );
               })}
             </div>
-
 
             {isColorAttribute && (
               <div className="input-container" style={{ width: "100%", padding: "20px" }}>

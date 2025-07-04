@@ -35,7 +35,8 @@ function BrandTable() {
       try {
         const res = await fetch("https://api.fivlia.in/getBrand");
         const data = await res.json();
-        setBrands(data);
+        // Use allBrands from the API response
+        setBrands(data.allBrands || []);
       } catch (err) {
         console.error("Error fetching brands:", err);
       }
@@ -143,7 +144,7 @@ function BrandTable() {
             }}
           >
             <div style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 16 }}>Show Entries</span>&nbsp;
+              <span style={{ fontSize: 16 }}>Show Entries</span> 
               <select value={entriesToShow} onChange={handleEntriesChange}>
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -195,8 +196,14 @@ function BrandTable() {
                   <tr key={item._id}>
                     <td style={bodyCell}>{startIndex + index + 1}</td>
                     <td style={bodyCell}>{item.brandName}</td>
-                    <td style={{...bodyCell,textAlign:'center'}}>
-                      <img src={item.brandLogo} alt="logo" width='70' height="70" style={{ borderRadius: "100%" }} />
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <img
+                        src={item.brandLogo}
+                        alt="logo"
+                        width="70"
+                        height="70"
+                        style={{ borderRadius: "100%" }}
+                      />
                     </td>
                     <td style={bodyCell}>
                       <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
@@ -209,7 +216,7 @@ function BrandTable() {
                             borderRadius: "6px",
                             cursor: "pointer",
                           }}
-                          onClick={() => navigate(`/edit-brand`,{state:item})}
+                          onClick={() => navigate("/edit-brand", { state: item })}
                         >
                           Edit
                         </button>
