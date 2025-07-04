@@ -241,7 +241,7 @@ export default function App() {
                   <Route path="/add-filter" element={<AddFilter />} />
                   <Route path="/edit-filter" element={<EditFilter />} />
                   <Route path="/store-login" element={<StoreLogin />} />
-
+                  <Route path="/edit-store" element={<AddStore />} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
 
 
@@ -324,6 +324,7 @@ export default function App() {
               <Route path="/add-filter" element={<AddFilter />} />
               <Route path="/edit-filter" element={<EditFilter />} />
               <Route path="/store-login" element={<StoreLogin />} />
+              <Route path="/edit-store" element={<AddStore />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
 
               {/* Store Routes */}

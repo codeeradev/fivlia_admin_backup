@@ -3,7 +3,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import "./AddStore.css";
 import { Button, Switch } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function AddStore() {
   const [controller] = useMaterialUIController();
@@ -31,6 +31,32 @@ function AddStore() {
   const inputRef = useRef(null);
   const markerRef = useRef(null);
   const mapInstance = useRef(null);
+
+  const location = useLocation();
+  const storedetails = location.state;
+  const [id, setId] = useState('')
+
+  useEffect(() => {
+    if (storedetails && storedetails.store) {
+      const zoneIds = Array.isArray(storedetails?.store?.zone)
+        ? storedetails.store.zone.map((zone) => zone._id)
+        : [];
+      setId(storedetails.store._id);
+      setStoreName(storedetails.store.storeName);
+      setOwnerName(storedetails.store.ownerName);
+      setPhone(storedetails.store.PhoneNumber);
+      setPassword(storedetails.store.password);
+      setSelectedCity(storedetails.store.city?._id);
+      setSelectedZone(zoneIds);
+      setLatitude(storedetails.store.Latitude);
+      setLongitude(storedetails.store.Longitude);
+      setDescription(storedetails.store.Description);
+      setIsAuthorized(storedetails.store.Authorized_Store);
+      setSelectedImage(storedetails.store.image);
+      setSelectedCategory(storedetails.store.Category);
+    }
+  }, [selectedZone]);
+
 
   useEffect(() => {
     const getMainCategory = async () => {
@@ -76,7 +102,7 @@ function AddStore() {
       setAvailableZones([]);
       setSelectedZone([]);
     }
-  }, [selectedCity, cities]);
+  }, [selectedCity, availableZones, cities]);
 
   useEffect(() => {
     const loadScript = (url) => {
@@ -225,11 +251,19 @@ function AddStore() {
         formData.append("image", file);
       }
 
-      const response = await fetch("https://api.fivlia.in/createStore", {
-        method: "POST",
-        body: formData,
-      });
-
+      let response;
+      if (storedetails && storedetails.store) {
+        response = await fetch(`https://api.fivlia.in/storeEdit/${id}`, {
+          method: "PUT",
+          body: formData,
+        });
+      } else {
+        response = await fetch("https://api.fivlia.in/createStore", {
+          method: "POST",
+          body: formData,
+        });
+      }
+      console.log(response, 34567);
       if (response.status === 201) {
         alert("Store added successfully!");
         navigate(-1);
@@ -343,9 +377,10 @@ function AddStore() {
                 <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   {selectedZone.map((zoneId) => {
                     const zone = availableZones.find((z) => z._id === zoneId);
+                    if (!zone) return null;
                     return (
                       <span
-                        key={zoneId}
+                        key={zone._id}
                         style={{
                           backgroundColor: "#e0e0e0",
                           padding: "5px 10px",
@@ -355,7 +390,7 @@ function AddStore() {
                           fontSize: "14px",
                           cursor: "pointer",
                         }}
-                        onClick={() => handleRemoveZone(zoneId)}
+                        onClick={() => handleRemoveZone(zone._id)}
                       >
                         {zone ? (zone.zoneTitle || zone.address || "Unnamed Zone") : zoneId}
                         <span style={{ marginLeft: "5px", color: "#ff0000", fontWeight: "bold" }}>
