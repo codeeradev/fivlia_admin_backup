@@ -28,6 +28,113 @@ const AddCategories = () => {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
 
+  // filter related 
+  const [filtertype, setFilterTypes] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState("");
+  const [filterpopup, setFilterPopup] = useState(false);
+  const [filterdropdown, setFilterDropdown] = useState(false);
+  const [showfilterdropdown, setShowFilterDropdown] = useState(false);
+  const [filterName, setFilterName] = useState("");
+  const [addFilterValue, setAddFilterValue] = useState("");
+  const [filterValues, setFilterValues] = useState([]);
+  const [selectedfilterarray, setSelectedFilterArray] = useState([]);
+  const [allFilters, setAllFilters] = useState([]);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const res = await fetch("https://api.fivlia.in/getFilter");
+        const data = await res.json();
+        setFilterTypes(data);
+      } catch (err) {
+        console.error("Error fetching Filters:", err);
+      }
+    };
+    fetchFilters();
+  }, []);
+
+  const handleFilterChange = (e) => {
+    const filterId = e.target.value;
+    setSelectedFilter(filterId);
+    const selectedFilterObj = filtertype.find((f) => f._id === filterId);
+    setFilterValues(selectedFilterObj?.Filter || []);
+  };
+
+  const handleFilterValueToggle = (valueId) => {
+    setAllFilters((prev) => {
+      const existingFilter = prev.find((f) => f._id === selectedFilter);
+      if (existingFilter) {
+        const updatedSelected = existingFilter.selected.includes(valueId)
+          ? existingFilter.selected.filter((id) => id !== valueId)
+          : [...existingFilter.selected, valueId];
+        return prev.map((f) =>
+          f._id === selectedFilter ? { ...f, selected: updatedSelected } : f
+        );
+      } else {
+        return [...prev, { _id: selectedFilter, selected: [valueId] }];
+      }
+    });
+    setSelectedFilterArray((prev) =>
+      prev.includes(valueId)
+        ? prev.filter((id) => id !== valueId)
+        : [...prev, valueId]
+    );
+  };
+
+  const handleFilter = async () => {
+    try {
+      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+        method: "POST",
+        body: JSON.stringify({ Filter_name: filterName }),
+        headers: { "Content-type": "application/json" },
+      });
+      if (result.status === 200) {
+        alert("Filter Added Successfully");
+        setFilterPopup(false);
+        setFilterName("");
+      } else {
+        alert("Something went wrong");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const handleFilterType = async () => {
+    if (!selectedFilter || !addFilterValue.trim()) {
+      alert("Please select a filter and enter a value");
+      return;
+    }
+
+    try {
+      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+        method: "POST",
+        body: JSON.stringify({
+          _id: selectedFilter,
+          Filter: [{ name: addFilterValue }],
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (result.status === 200) {
+        alert("Filter Value Added Successfully");
+        setShowFilterDropdown(false);
+        setAddFilterValue("");
+      } else {
+        alert("Something went wrong");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const handleRemoveFilterValue = (valueId) => {
+    setSelectedFilterArray((prev) => prev.filter((v) => v !== valueId));
+  };
+
+  const removeFilter = (filterId) => {
+    setAllFilters((prev) => prev.filter((f) => f._id !== filterId));
+  };
+
   useEffect(() => {
     const getMainCategory = async () => {
       try {
@@ -60,23 +167,23 @@ const AddCategories = () => {
     fetchAttribute();
   }, []);
 
-useEffect(() => {
-  if (type === "Main Category") {
-    const allAttributeNames = attribute.map(item => item.Attribute_name);
-    setAttributeArray(allAttributeNames);
-  } else {
-    setAttributeArray([]);
-  }
-}, [type, attribute]);
+  useEffect(() => {
+    if (type === "Main Category") {
+      const allAttributeNames = attribute.map(item => item.Attribute_name);
+      setAttributeArray(allAttributeNames);
+    } else {
+      setAttributeArray([]);
+    }
+  }, [type, attribute]);
 
-useEffect(() => {
-  if (type === "Main Category") {
-    const filterNames = filterData.map(item => item.Filter_name);
-    setSelectedFilters(filterNames);
-  } else {
-    setSelectedFilters([]);
-  }
-}, [type, filterData]);
+  useEffect(() => {
+    if (type === "Main Category") {
+      const filterNames = filterData.map(item => item.Filter_name);
+      setSelectedFilters(filterNames);
+    } else {
+      setSelectedFilters([]);
+    }
+  }, [type, filterData]);
 
 
 
@@ -346,6 +453,269 @@ useEffect(() => {
             </div>
           </div>
         )}
+
+        <div className="" id="filter-type">
+          <span style={{ marginLeft: "20px", fontWeight: "bold", marginBottom: "10px" }}>
+            Filters & Types
+          </span>
+          <div className="row-section">
+            <div className="input-container">
+              <label>
+                Select Filter (Type){" "}
+                <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+              </label>
+              <select
+                className="input-field"
+                value={selectedFilter}
+                onChange={handleFilterChange}
+              >
+                <option value="">--Select Filter--</option>
+                {filtertype.map((filter) => (
+                  <option key={filter._id} value={filter._id}>
+                    {filter.Filter_name}
+                  </option>
+                ))}
+              </select>
+
+              <h3
+                style={{
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  color: "green",
+                  marginTop: "10px",
+                  marginLeft: "5px",
+                }}
+                onClick={() => setFilterPopup(true)}
+              >
+                + ADD FILTER
+              </h3>
+
+              {filterpopup && (
+                <div
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 1000,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "white",
+                      padding: 20,
+                      borderRadius: 5,
+                      minWidth: 300,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Enter Filter Name"
+                      value={filterName}
+                      onChange={(e) => setFilterName(e.target.value)}
+                      style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                      <Button onClick={handleFilter}>Save</Button>
+                      <Button onClick={() => setFilterPopup(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" }}>
+                {allFilters.map((filter) => {
+                  const filterName = filtertype.find((f) => f._id === filter._id)?.Filter_name || "Unnamed";
+                  return (
+                    <div
+                      key={filter._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        backgroundColor: "#e0e0e0",
+                        padding: "6px 10px",
+                        borderRadius: "20px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <span>{filterName}</span>
+                      <button
+                        onClick={() => removeFilter(filter._id)}
+                        style={{
+                          marginLeft: "8px",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "red",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="input-container">
+              <label>
+                Select Filter Value{" "}
+                <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+              </label>
+              <div style={{ position: "relative" }}>
+                <button
+                  className="input-field"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    backgroundColor: "white",
+                    padding: "8px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setFilterDropdown(!filterdropdown)}
+                >
+                  {selectedfilterarray.length > 0
+                    ? `${selectedfilterarray.length} value(s) selected`
+                    : "--Select Filter Value--"}
+                </button>
+                {filterdropdown && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      backgroundColor: "white",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                      maxHeight: "150px",
+                      overflowY: "auto",
+                      zIndex: 1000,
+                    }}
+                  >
+                    {filterValues.map((value) => (
+                      <div
+                        key={value._id}
+                        style={{
+                          padding: "8px",
+                          borderBottom: "1px solid #eee",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            allFilters
+                              .find((f) => f._id === selectedFilter)
+                              ?.selected.includes(value._id) || false
+                          }
+                          onChange={() => handleFilterValueToggle(value._id)}
+                          style={{ marginRight: "8px" }}
+                        />
+                        <span>{value.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <h3
+                style={{
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  color: "green",
+                  marginTop: "10px",
+                  marginLeft: "5px",
+                }}
+                onClick={() => setShowFilterDropdown(true)}
+              >
+                + ADD FILTER VALUE
+              </h3>
+
+              {showfilterdropdown && (
+                <div
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 1000,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "white",
+                      padding: 20,
+                      borderRadius: 5,
+                      minWidth: 300,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Enter filter value"
+                      value={addFilterValue}
+                      onChange={(e) => setAddFilterValue(e.target.value)}
+                      style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                      <Button onClick={handleFilterType}>Save</Button>
+                      <Button onClick={() => setShowFilterDropdown(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginTop: "10px",
+              minHeight: "30px",
+              marginLeft: "20px",
+              marginBottom: "20px",
+            }}
+          >
+            {selectedfilterarray.map((valueId, index) => {
+              const value = filterValues.find((v) => v._id === valueId);
+              return value ? (
+                <div
+                  key={index}
+                  style={{
+                    backgroundColor: "#f0f0f0",
+                    padding: "6px 10px",
+                    borderRadius: "20px",
+                    fontSize: "14px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>{value.name}</span>
+                  <span
+                    style={{ marginLeft: "5px", cursor: "pointer" }}
+                    onClick={() => handleRemoveFilterValue(valueId)}
+                  >
+                    ×
+                  </span>
+                </div>
+              ) : null;
+            })}
+          </div>
+        </div>
 
         {type === "Main Category" && selectedFilters.length > 0 && (
           <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "30px", marginLeft: '15px' }}>
