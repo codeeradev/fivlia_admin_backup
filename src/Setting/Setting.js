@@ -3,23 +3,23 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { Button, Switch } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function Setting() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState({
     Owner_Name: "",
     Owner_Email: "",
     Owner_Number: "",
-    Store_Number: "",
-    Password: "",
-    Platform_Fee: "",
     GST_Number: "",
+    Platform_Fee: "",
     Description: "",
     Delivery_Charges: "",
-    DeliveryStatus: "",
     codLimit: "",
     PaymentGatewayStatus: false,
     RazorPayKey_test: "",
@@ -31,6 +31,7 @@ function Setting() {
   };
 
   const handleSubmit = async () => {
+    dispatch(startLoading());
     try {
       const filteredData = Object.entries(formData).reduce((acc, [key, value]) => {
         if (value !== "") acc[key] = value;
@@ -58,12 +59,15 @@ function Setting() {
       const result = await response.json();
       if (response.ok) {
         alert("Settings updated successfully");
+        navigate(-1);
       } else {
         alert(result.message || "Update failed");
       }
     } catch (error) {
       console.error("Update error =>", error);
       alert("Something went wrong");
+    } finally {
+      dispatch(stopLoading());
     }
   };
 
@@ -96,7 +100,6 @@ function Setting() {
               />
             </div>
           </div>
-
           <div className="store-row">
             <div className="store-input">
               <label>Mobile Number</label>
@@ -104,40 +107,6 @@ function Setting() {
                 type="number"
                 value={formData.Owner_Number}
                 onChange={(e) => handleInputChange("Owner_Number", e.target.value)}
-              />
-            </div>
-            <div className="store-input">
-              <label>Store Number</label>
-              <input
-                type="text"
-                value={formData.Store_Number}
-                onChange={(e) => handleInputChange("Store_Number", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="store-row">
-            <div className="store-input">
-              <label>Password</label>
-              <input
-                type="password"
-                value={formData.Password}
-                onChange={(e) => handleInputChange("Password", e.target.value)}
-              />
-            </div>
-            <div className="store-input">
-              <label>Confirm Password</label>
-              <input type="password" />
-            </div>
-          </div>
-
-          <div className="store-row">
-            <div className="store-input">
-              <label>Platform Fee</label>
-              <input
-                type="text"
-                value={formData.Platform_Fee}
-                onChange={(e) => handleInputChange("Platform_Fee", e.target.value)}
               />
             </div>
             <div className="store-input">
@@ -149,7 +118,16 @@ function Setting() {
               />
             </div>
           </div>
-
+          <div className="store-row">
+            <div className="store-input">
+              <label>Platform Fee</label>
+              <input
+                type="text"
+                value={formData.Platform_Fee}
+                onChange={(e) => handleInputChange("Platform_Fee", e.target.value)}
+              />
+            </div>
+          </div>
           <div className="store-row">
             <div className="store-input" style={{ flex: "1 1 100%" }}>
               <label>Description</label>
@@ -163,7 +141,6 @@ function Setting() {
         </div>
       </div>
 
-      {/* Delivery Section */}
       <div className="store-container">
         <div className="store-header">Delivery Details</div>
         <div className="store-form">
@@ -177,17 +154,6 @@ function Setting() {
               />
             </div>
             <div className="store-input">
-              <label>Delivery Status</label>
-              <input
-                type="text"
-                value={formData.DeliveryStatus}
-                onChange={(e) => handleInputChange("DeliveryStatus", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="store-row">
-            <div className="store-input">
               <label>COD Limit</label>
               <input
                 type="number"
@@ -199,7 +165,6 @@ function Setting() {
         </div>
       </div>
 
-      {/* Payment Gateway Section */}
       <div className="store-container">
         <div className="store-header">Payment Gateway</div>
         <div className="store-form">
@@ -239,7 +204,6 @@ function Setting() {
         >
           SAVE
         </Button>
-
         <Button
           variant="contained"
           style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}

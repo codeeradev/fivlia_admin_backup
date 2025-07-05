@@ -151,13 +151,13 @@ function Table() {
   };
 
   // Toggle zone status
-  const handleToggleStatus = (id, newStatus, currentCOD) => {
-    updateZone(id, { status: newStatus, cashOnDelivery: currentCOD });
+  const handleToggleStatus = (id, newStatus, currentCOD,city) => {
+    updateZone(id, { status: newStatus, cashOnDelivery: currentCOD,   city });
   };
 
   // Toggle cash on delivery
-  const handleToggleCashOnDelivery = (id, currentStatus, newCOD) => {
-    updateZone(id, { status: currentStatus, cashOnDelivery: newCOD });
+  const handleToggleCashOnDelivery = (id, currentStatus, newCOD,city) => {
+    updateZone(id, { status: currentStatus, cashOnDelivery: newCOD,   city });
   };
 
 
@@ -304,7 +304,7 @@ function Table() {
                         checked={item.cashOnDelivery}
                         color="success"
                         inputProps={{ "aria-label": "controlled" }}
-                        onChange={() => handleToggleCashOnDelivery(item._id, item.status, !item.cashOnDelivery)}
+                        onChange={() => handleToggleCashOnDelivery(item._id, item.status, !item.cashOnDelivery, item.city)}
                         sx={{
                           "& .MuiSwitch-switchBase.Mui-checked": {
                             color: "green",
@@ -322,7 +322,7 @@ function Table() {
                     <td style={{ ...bodyCell, textAlign: 'center' }}>
                       <Switch
                         checked={item.status}
-                        onChange={() => handleToggleStatus(item._id, !item.status, item.cashOnDelivery)}
+                        onChange={() => handleToggleStatus(item._id, !item.status, item.cashOnDelivery, item.city)}
                         inputProps={{ "aria-label": "controlled" }}
                         sx={{
                           "& .MuiSwitch-switchBase.Mui-checked": {

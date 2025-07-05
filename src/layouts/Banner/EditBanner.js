@@ -3,6 +3,8 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@mui/material";
+import { startLoading, stopLoading } from "components/loader/appSlice";
+import { useDispatch } from "react-redux";
 
 function EditBanner() {
   const [controller] = useMaterialUIController();
@@ -24,7 +26,7 @@ function EditBanner() {
   const [subId, setSubId] = useState("");
   const [subsubId, setSubsubId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
-
+  const dispatch = useDispatch();
   // Load initial data from location.state and fetch locations & categories
   useEffect(() => {
     const data = location.state;
@@ -40,6 +42,7 @@ function EditBanner() {
             address: z.address,
             latitude: z.latitude,
             longitude: z.longitude,
+            range: z.range
           }))
         );
       }
@@ -117,6 +120,7 @@ function EditBanner() {
         address: zone.address,
         latitude: zone.latitude,
         longitude: zone.longitude,
+        range: zone.range
       }));
       setZones(allZones);
     } else {
@@ -202,6 +206,7 @@ function EditBanner() {
   }
 
   const formData = new FormData();
+  dispatch(startLoading());
   formData.append("title", name);
   formData.append('city',selectedCityId)
   formData.append("type", type);
@@ -227,13 +232,16 @@ function EditBanner() {
     const result = await response.json();
 
     if (response.ok) {
+      dispatch(stopLoading());
       alert("✅ Banner Updated Successfully!");
       navigate(-1);
     } else {
+      dispatch(stopLoading());
       console.error("Response error:", result);
       alert("Something went wrong: " + (result.message || "Server Error"));
     }
   } catch (error) {
+    dispatch(stopLoading());
     console.error("Network or Server Error:", error);
     alert("Server Error. Please try again.");
   }

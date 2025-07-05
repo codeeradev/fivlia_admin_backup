@@ -5,6 +5,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./Product.css";
 import ColorNamer from "color-namer";
 import { Button, Switch } from "@mui/material";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function EditProduct() {
   const [controller] = useMaterialUIController();
@@ -20,7 +22,7 @@ function EditProduct() {
   const [selectedFilterValue, setSelectedFilterValue] = useState("");
   const [variantImages, setVariantImages] = useState({}); // Added for variant image handling
   const thumbnailInputRef = useRef(null); // Added for thumbnail handling
-
+  const dispatch = useDispatch();
   const sectionIds = ["basicinfo", "imagesection", "category-section", "citysection", "taxsection"];
 
   // State declarations
@@ -929,6 +931,7 @@ function EditProduct() {
   }, []);
 
   const handelProduct = async () => {
+    dispatch(startLoading());
     const selectedFilterIds = Object.keys(selectedValuesByFilter)
       .filter((filterId) => {
         const selectedArray = selectedValuesByFilter[filterId];
@@ -1105,13 +1108,16 @@ function EditProduct() {
       console.log("Server Response:", responseBody);
       if (result.status === 200) {
         alert("Product Updated Successfully");
+        dispatch(stopLoading());
         navigate(-1);
       } else {
         alert(`Error: ${responseBody.message || "Unknown server error"}`);
+        dispatch(stopLoading());
       }
     } catch (err) {
       console.error("Request Error:", err);
       alert("Error updating product: " + err.message);
+      dispatch(stopLoading());
     }
   };
 

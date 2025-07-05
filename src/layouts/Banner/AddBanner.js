@@ -3,6 +3,8 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { startLoading, stopLoading } from "components/loader/appSlice";
+import { useDispatch } from "react-redux";
 
 function AddBanner() {
   const [controller] = useMaterialUIController();
@@ -24,7 +26,7 @@ function AddBanner() {
   const [subsubId, setSubsubId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
   const [imageError, setImageError] = useState("");
-
+  const dispatch = useDispatch();
  
   useEffect(() => {
     const fetchLocations = async () => {
@@ -60,6 +62,7 @@ function AddBanner() {
         address: zone.address,
         latitude: zone.latitude,
         longitude: zone.longitude,
+        range:zone.range
       }));
       setZones(allZones);
     } else {
@@ -118,6 +121,7 @@ function AddBanner() {
     }
 
     const formData = new FormData();
+    dispatch(startLoading());
     formData.append("title", name);
     const selectedCity = locations.find((loc) => loc._id === selectedCityId);
     formData.append("city", selectedCity._id);
@@ -138,13 +142,16 @@ function AddBanner() {
       const result = await response.json();
 
       if (response.ok) {
+        dispatch(stopLoading());
         alert("✅ Banner Added Successfully!");
         navigate(-1);
       } else {
+        dispatch(stopLoading());
         console.error("Response error:", result);
         alert("Something went wrong: " + (result.message || "Server Error"));
       }
     } catch (error) {
+      dispatch(stopLoading());
       console.error("Network or Server Error:", error);
       alert("Server Error. Please try again.");
     }

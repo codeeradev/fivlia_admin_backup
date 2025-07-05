@@ -4,6 +4,8 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 const AddCategories = () => {
   const [name, setCategoryName] = useState("");
@@ -20,7 +22,7 @@ const AddCategories = () => {
   const [filterType, setFilterType] = useState('');
   const [filterData, setFilterData] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState([]);
-
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [controller] = useMaterialUIController();
@@ -121,6 +123,7 @@ useEffect(() => {
     }
 
     const formData = new FormData();
+    dispatch(startLoading());
     formData.append("name", name);
     formData.append("description", description);
     formData.append("image", image);
@@ -149,10 +152,12 @@ useEffect(() => {
 
         const result = await response.json();
         if (response.status === 201) {
+          dispatch(stopLoading());
           alert("Category Added Successfully");
           console.log("Submitted Data:", result);
           navigate('/categories');
         } else {
+          dispatch(stopLoading());
           alert("Something went wrong");
           console.error("Server response:", result);
         }
@@ -168,10 +173,12 @@ useEffect(() => {
           body: formData,
         });
         if (result.status === 201) {
+          dispatch(stopLoading());
           alert('Success');
           console.log(result);
           navigate('/categories');
         } else {
+          dispatch(stopLoading());
           alert('Something Wrong');
         }
       } catch (err) {
@@ -186,10 +193,12 @@ useEffect(() => {
           body: formData,
         });
         if (result.status === 201) {
+          dispatch(stopLoading());
           alert('Success');
           navigate('/categories');
         }
       } catch (err) {
+        dispatch(stopLoading());
         console.log(err);
       }
     }

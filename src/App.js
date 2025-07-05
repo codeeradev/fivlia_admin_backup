@@ -4,7 +4,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Icon from "@mui/material/Icon";
 import MDBox from "components/MDBox";
-
+import GlobalLoader from "components/loader/GlobalLoader";
 import Sidenav from "examples/Sidenav";
 import Configurator from "examples/Configurator";
 import theme from "assets/theme";
@@ -188,6 +188,7 @@ export default function App() {
     <CacheProvider value={rtlCache}>
       <ThemeProvider theme={darkMode ? themeDarkRTL : themeRTL}>
         <CssBaseline />
+         <GlobalLoader />
         {layout === "dashboard" && pathname !== "/login" && (
           <>
             <Sidenav
@@ -268,6 +269,7 @@ export default function App() {
   ) : (
     <ThemeProvider theme={darkMode ? themeDark : theme}>
       <CssBaseline />
+      <GlobalLoader />
       {layout === "dashboard" && pathname !== "/login" && (
         <>
           <Sidenav

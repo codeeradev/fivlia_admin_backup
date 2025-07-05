@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import MDBox from "components/MDBox";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import "./Product.css";
 import ColorNamer from "color-namer";
 import { Button, Switch } from "@mui/material";
+import { useDispatch } from "react-redux";
 
 function Product() {
   const [controller] = useMaterialUIController();
@@ -17,6 +19,7 @@ function Product() {
   const [activeVariant, setActiveVariant] = useState("");
   const [filterdropdown, setFilterDropdown] = useState(false);
   const [allFilters, setAllFilters] = useState([]);
+  const dispatch = useDispatch();
 
   const sectionIds = [
     "basicinfo",
@@ -647,6 +650,7 @@ function Product() {
       if (!addUnit) {
         return alert("Please Input Unit Name");
       }
+       dispatch(startLoading());
       const result = await fetch("https://api.fivlia.in/unit", {
         method: "POST",
         body: JSON.stringify({
@@ -658,6 +662,7 @@ function Product() {
       });
       if (result.status === 200) {
         alert("Unit Added Successfully");
+        dispatch(stopLoading());
         setShowUnitPopup(false);
         setAddUnit("");
 
@@ -666,6 +671,7 @@ function Product() {
         setUnitsData(data.Result);
       } else {
         alert("Something Wrong");
+        dispatch(stopLoading());
       }
     } catch (err) {
       console.log(err);
@@ -699,7 +705,7 @@ function Product() {
       alert("Please enter a brand name.");
       return;
     }
-
+dispatch(startLoading());
     const formData = new FormData();
     formData.append("brandName", addBrand);
     formData.append("description", des);
@@ -715,6 +721,7 @@ function Product() {
 
       if (result.status === 200) {
         alert("Brand Created Successfully");
+        dispatch(stopLoading());
         setShowbrandPopup(false);
         setBrand("");
         setDes("");
@@ -727,6 +734,7 @@ function Product() {
         setBrands(data.allBrands || []);
       } else {
         alert("Something went wrong");
+        dispatch(stopLoading());
       }
     } catch (err) {
       console.log(err);
@@ -887,6 +895,7 @@ function Product() {
   };
 
   const handelProduct = async () => {
+    dispatch(startLoading());
     const formData = new FormData();
     formData.append("productName", name);
     formData.append("description", description);
@@ -1007,9 +1016,11 @@ function Product() {
         alert("Product added Successfully");
         navigate(-1);
       } else {
+        dispatch(stopLoading());
         alert("Error");
       }
     } catch (err) {
+      dispatch(stopLoading());
       console.log(err);
       alert("Error: " + err.message);
     }
