@@ -28,7 +28,7 @@ function EditBrand() {
    useEffect(()=>{
     setName(branddetails.brandName)
     setDescription(branddetails.description)
-    setImage(branddetails.brandLogo)
+    setImage(`${process.env.REACT_APP_IMAGE_LINK}${branddetails.brandLogo}`)
     setId(branddetails._id)
     setFeatured(branddetails.featured === "true")
    },[])

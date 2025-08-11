@@ -4,16 +4,13 @@ import {
   Slider,
   Button,
 } from "@mui/material";
-import {
-  GoogleMap,
-  Marker,
-  Circle,
-  useJsApiLoader,
-  Autocomplete as GMapsAutocomplete,
-} from "@react-google-maps/api";
+import { Marker, Circle } from "@react-google-maps/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
+import AdaptiveMap from "../../components/Maps/AdaptiveMap";
+import { useMapsApi } from "../../hooks/useMapsApi";
+import { Autocomplete as GMapsAutocomplete } from "@react-google-maps/api";
 
 const mapContainerStyle = {
   width: "100%",
@@ -28,6 +25,21 @@ function EditZone() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
+  const { apiType, googleFatalError } = useMapsApi();
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
+
+  useEffect(() => {
+    if (apiType === 'google' && !googleFatalError) {
+      const check = () => {
+        const ready = !!(window.google && window.google.maps && window.google.maps.places);
+        setIsGoogleReady(ready);
+      };
+      check();
+      const interval = setInterval(check, 300);
+      return () => clearInterval(interval);
+    }
+    setIsGoogleReady(false);
+  }, [apiType, googleFatalError]);
 
   const [range, setRange] = useState(3.2);
   const [areaTitle, setAreaTitle] = useState("");
@@ -39,10 +51,7 @@ function EditZone() {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyDnXzpb-5ImxSpoTdmOWlAqBcjtnfw4QLU",
-    libraries,
-  });
+  // Loader is managed centrally by AdaptiveMap; avoid re-initializing with different options
 
   useEffect(() => {
     if (initialZone) {
@@ -128,6 +137,34 @@ function EditZone() {
     }
   };
 
+  const handleMapClick = async (e) => {
+    // Google Maps click
+    if (e?.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setLatitude(lat);
+      setLongitude(lng);
+      setMarkerPosition({ lat, lng });
+      if (window.google && window.google.maps) {
+        await reverseGeocode(lat, lng);
+      } else {
+        setAreaTitle(`Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      }
+      return;
+    }
+
+    // Leaflet/Ola fallback click
+    if (typeof e?.lat === 'number' && typeof e?.lng === 'number') {
+      const lat = e.lat;
+      const lng = e.lng;
+      setLatitude(lat);
+      setLongitude(lng);
+      setMarkerPosition({ lat, lng });
+      const addr = await reverseGeocode(lat, lng);
+      setAreaTitle(addr || `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
+  };
+
   const updateZone = async () => {
     const dataToSave = {
       city: zone?.city,
@@ -160,8 +197,7 @@ function EditZone() {
     }
   };
 
-  if (loadError) return <div>Error loading Google Maps</div>;
-  if (!isLoaded) return <div>Loading Google Maps...</div>;
+  // Rendering of map is handled by AdaptiveMap. For Autocomplete input, gate usage to google-only
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2}>
@@ -194,7 +230,8 @@ function EditZone() {
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px" }}>
           <label>Zone Address</label>
           <div style={{ width: "70%" }}>
-            <GMapsAutocomplete
+            {apiType === 'google' && isGoogleReady ? (
+              <GMapsAutocomplete
               onLoad={(autocomplete) => {
                 window.autocompleteInstance = autocomplete;
               }}
@@ -212,14 +249,22 @@ function EditZone() {
                   }
                 }
               }}
-            >
+              >
+                <TextField
+                  fullWidth
+                  placeholder="Search Zone Address"
+                  value={areaTitle}
+                  onChange={(e) => setAreaTitle(e.target.value)}
+                />
+              </GMapsAutocomplete>
+            ) : (
               <TextField
                 fullWidth
                 placeholder="Search Zone Address"
                 value={areaTitle}
                 onChange={(e) => setAreaTitle(e.target.value)}
               />
-            </GMapsAutocomplete>
+            )}
           </div>
         </div>
 
@@ -232,34 +277,36 @@ function EditZone() {
             marginBottom: "20px",
           }}
         >
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={markerPosition}
-            zoom={13}
-            onClick={async (e) => {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
-              const coords = { lat, lng };
-              setMarkerPosition(coords);
-              setLatitude(lat);
-              setLongitude(lng);
-              const address = await reverseGeocode(lat, lng);
-              setAreaTitle(address);
+          {/* Map */}
+          <div
+            style={{
+              flex: "2",
+              height: "375px",
+              border: "1px solid #ccc",
+              borderRadius: "10px",
             }}
           >
-            <Marker position={markerPosition} />
-            <Circle
+            <AdaptiveMap
+              style={mapContainerStyle}
               center={markerPosition}
-              radius={range * 1000}
-              options={{
-                strokeColor: "red",
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: "red",
-                fillOpacity: 0.2,
-              }}
-            />
-          </GoogleMap>
+              zoom={13}
+              onClick={handleMapClick}
+              radiusMeters={range * 1000}
+            >
+              <Marker position={markerPosition} />
+              <Circle
+                center={markerPosition}
+                radius={range * 1000}
+                options={{
+                  strokeColor: "red",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: "red",
+                  fillOpacity: 0.2,
+                }}
+              />
+            </AdaptiveMap>
+          </div>
         </div>
 
         <label>Select Range</label>

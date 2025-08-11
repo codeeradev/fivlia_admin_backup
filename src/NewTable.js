@@ -152,7 +152,7 @@ const Categories = () => {
                   <TableCell sx={{ width: '45%', border: '1px solid #ddd' }}>
                     <Box display="flex" alignItems="center">
                       <Avatar
-                        src={`https://node-m8jb.onrender.com${item.file}`}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${item.file}`}
                         sx={{ width: 36, height: 36, mr: 1.5 }}
                       />
                       <Typography fontWeight={500} fontSize="14px">
@@ -165,7 +165,7 @@ const Categories = () => {
                   <TableCell sx={{ width: '15%', border: '1px solid #ddd' }}>
                     <Typography fontWeight={500} fontSize="14px">
                       <Avatar
-                        src={`https://node-m8jb.onrender.com${item.file}`}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${item.file}`}
                         sx={{ width: 36, height: 36, mr: 1.5 }}
                       />
                     </Typography>

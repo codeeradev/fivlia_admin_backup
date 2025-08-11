@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +34,9 @@ function AddBanner() {
       try {
         const res = await fetch("https://api.fivlia.in/getAllZone");
         const data = await res.json();
-        setLocations(data.result || []);
+        // Handle both old and new API response structures
+        const cities = Array.isArray(data) ? data : (data.result || data.data || []);
+        setLocations(cities);
       } catch (err) {
         console.error("Error fetching locations:", err);
       }
@@ -44,7 +46,9 @@ function AddBanner() {
       try {
         const res = await fetch("https://api.fivlia.in/getMainCategory");
         const data = await res.json();
-        setMain(data.result || []);
+        // Handle both old and new API response structures
+        const categories = Array.isArray(data) ? data : (data.result || data.data || []);
+        setMain(categories);
       } catch (err) {
         console.error("Error fetching categories:", err);
       }
@@ -54,22 +58,24 @@ function AddBanner() {
     fetchCategories();
   }, []);
 
-  const selectedCity = locations.find((loc) => loc._id === selectedCityId);
-  const cityZones = selectedCity ? selectedCity.zones : [];
+  const selectedCity = useMemo(() => 
+    locations.find((loc) => loc._id === selectedCityId), 
+    [locations, selectedCityId]
+  );
 
   useEffect(() => {
-    if (selectedCityId && cityZones.length > 0) {
-      const allZones = cityZones.map((zone) => ({
+    if (selectedCityId && selectedCity?.zones?.length > 0) {
+      const allZones = selectedCity.zones.map((zone) => ({
         address: zone.address,
         latitude: zone.latitude,
         longitude: zone.longitude,
-        range:zone.range
+        range: zone.range
       }));
       setZones(allZones);
     } else {
       setZones([]);
     }
-  }, [selectedCityId, cityZones]);
+  }, [selectedCityId, selectedCity]);
 
   // Image validation and preview
   const ImagePreview = (e) => {
@@ -243,7 +249,7 @@ function AddBanner() {
             <option value="">-- Select City --</option>
             {locations.map((loc) => (
               <option key={loc._id} value={loc._id}>
-                {loc.city}
+                {loc.city || loc.name || 'Unknown City'}
               </option>
             ))}
           </select>

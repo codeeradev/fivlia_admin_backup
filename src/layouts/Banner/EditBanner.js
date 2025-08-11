@@ -73,8 +73,7 @@ function EditBanner() {
 
       if (data.image) {
         setImage(data.image);
-        
-        setImagePreview(data.image);
+        setImagePreview(`${process.env.REACT_APP_IMAGE_LINK}${data.image}`);
 
       } else {
         setImage(null);
@@ -295,9 +294,9 @@ console.log('data.result',data.result)
               style={{ ...inputStyle, marginRight: "20px" }}
               accept="image/*"
             />
-            {image && (
+            {imagePreview && (
               <img
-                src={image}
+                src={imagePreview}
                 alt="preview"
                 style={{
                   width: "238px",

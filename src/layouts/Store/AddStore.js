@@ -5,13 +5,16 @@ import "./AddStore.css";
 import { Button, Switch } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { Marker, Circle } from "@react-google-maps/api"; // works for Ola via AdaptiveMap
+import AdaptiveMap from "../../components/Maps/AdaptiveMap";
+import { useMapsApi } from "../../hooks/useMapsApi";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function AddStore() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-
+ const { apiType } = useMapsApi();
   // Form states
   const [storeName, setStoreName] = useState('');
   const [ownerName, setOwnerName] = useState('');
@@ -19,6 +22,8 @@ function AddStore() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [markerPosition, setMarkerPosition] = useState({ lat: 29.1492, lng: 75.7217 });
+  const [range, setRange] = useState(3);
   const [selectedZone, setSelectedZone] = useState([]);
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -59,6 +64,12 @@ function AddStore() {
       setIsAuthorized(storedetails.store.Authorized_Store);
       setSelectedImage(storedetails.store.image);
       setSelectedCategory(storedetails.store.Category);
+    }
+    if (storedetails.store.Latitude && storedetails.store.Longitude) {
+      setMarkerPosition({
+        lat: parseFloat(storedetails.store.Latitude),
+        lng: parseFloat(storedetails.store.Longitude),
+      });
     }
   }, []);
 
@@ -106,74 +117,27 @@ function AddStore() {
       setAvailableZones([]);
       setSelectedZone([]);
     }
-  }, [selectedCity, availableZones, cities]);
+  }, [selectedCity, cities]);
 
-  useEffect(() => {
-   const loadScript = (url) => {
-  const existingScript = document.getElementById("olaMaps");
-  if (!existingScript) {
-    const script = document.createElement("script");
-    script.src = url;
-    script.id = "olaMaps";
-    script.async = true;
-    script.defer = true;
-    script.onload = initMap; // Call when loaded
-    document.body.appendChild(script);
-  } else {
-    initMap();
+ const handleMapClick = (e) => {
+  let lat, lng;
+
+  if (typeof e.lat === "number" && typeof e.lng === "number") {
+    // Ola click
+    lat = e.lat;
+    lng = e.lng;
+  } else if (e?.latLng) {
+    // Google click fallback
+    lat = e.latLng.lat();
+    lng = e.latLng.lng();
+  }
+
+  if (lat && lng) {
+    setMarkerPosition({ lat, lng });
+    setLatitude(lat.toString());
+    setLongitude(lng.toString());
   }
 };
-
-
-    window.initMap = initMap;
-
- loadScript(
-  `https://apis.mapmyindia.com/advancedmaps/v1/${process.env.REACT_APP_OLA_MAPS_API_KEY}/map_load?v=1.5`
-);
-
-
-   function initMap() {
-  if (!window.MapmyIndia) return;
-
-  const map = new window.MapmyIndia.Map(mapRef.current, {
-    center: [28.6139, 77.2090], // Delhi
-    zoom: 13,
-  });
-
-  mapInstance.current = map;
-
-  // Autocomplete binding
-  new window.MapmyIndia.search(document.getElementById("locationSearch"), (data) => {
-    if (data && data.latitude && data.longitude) {
-      const lat = data.latitude;
-      const lng = data.longitude;
-
-      if (markerRef.current) {
-        map.removeLayer(markerRef.current);
-      }
-      markerRef.current = window.L.marker([lat, lng]).addTo(map);
-
-      setLatitude(lat);
-      setLongitude(lng);
-      map.setView([lat, lng], 15);
-    }
-  });
-
-  // Manual click on map
-  map.on("click", (e) => {
-    const { lat, lng } = e.latlng;
-
-    if (markerRef.current) {
-      map.removeLayer(markerRef.current);
-    }
-    markerRef.current = window.L.marker([lat, lng]).addTo(map);
-
-    setLatitude(lat);
-    setLongitude(lng);
-  });
-}
-
-  }, []);
 
   const handleSwitchChange = (event) => {
     setIsAuthorized(event.target.checked);
@@ -431,20 +395,17 @@ function AddStore() {
             </div>
           </div>
 
-          <div className="store-row">
-            <div className="store-input" style={{ flex: "1 1 100%" }}>
-              <label>Search Location</label>
-              <input
-                type="text"
-                id="locationSearch"
-                placeholder="Search a location"
-              />
-              <div
-                ref={mapRef}
-                style={{ height: "300px", width: "100%", marginTop: "10px" }}
-              />
-            </div>
-          </div>
+           <div style={{ height: "400px", width: "100%" }}>
+      <AdaptiveMap
+        center={markerPosition}
+        zoom={13}
+        onClick={handleMapClick}
+        radiusMeters={range * 1000}
+      >
+        <Marker position={markerPosition} />
+        <Circle center={markerPosition} radius={range * 1000} />
+      </AdaptiveMap>
+    </div>
 
           <div className="store-row">
             <div className="store-input" style={{ flex: "1 1 100%" }}>

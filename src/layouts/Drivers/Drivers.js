@@ -173,6 +173,46 @@ export default function Drivers() {
     }
   };
 
+  const handleDeleteDriver = async (id) => {
+    const driverToDelete = drivers.find((d) => d.id === id);
+    if (!driverToDelete) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete driver "${driverToDelete.name || id}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      dispatch(startLoading());
+      const response = await fetch(`https://api.fivlia.in/deleteDriver/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        let errorMessage = "Failed to delete driver";
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.message) errorMessage = errJson.message;
+        } catch (_) {
+          // ignore json parse errors
+        }
+        throw new Error(errorMessage);
+      }
+
+      setDrivers((prev) => prev.filter((d) => d.id !== id));
+
+      if (selectedDriver?.id === id) {
+        setSelectedDriver(null);
+        setModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      setError(`Failed to delete driver: ${error.message}`);
+    } finally {
+      dispatch(stopLoading());
+    }
+  };
+
   const handleEditDriver = async () => {
     if (!selectedDriver) {
       setError("No driver selected for editing.");
@@ -446,19 +486,34 @@ export default function Drivers() {
                     />
                   </td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <button
-                      onClick={() => handleOpenEditModal(driver)}
-                      style={{
-                        backgroundColor: "#007BFF",
-                        color: "white",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Edit
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                      <button
+                        onClick={() => handleOpenEditModal(driver)}
+                        style={{
+                          backgroundColor: "#007BFF",
+                          color: "white",
+                          padding: "8px 16px",
+                          borderRadius: "6px",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDriver(driver.id)}
+                        style={{
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          padding: "8px 16px",
+                          borderRadius: "6px",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

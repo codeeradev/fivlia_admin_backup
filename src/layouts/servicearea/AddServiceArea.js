@@ -4,16 +4,13 @@ import {
   Slider,
   Button,
 } from "@mui/material";
-import {
-  GoogleMap,
-  Marker,
-  Circle,
-  Autocomplete as GooglePlacesAutocomplete,
-  useJsApiLoader,
-} from "@react-google-maps/api";
+import { Marker, Circle } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
+import AdaptiveMap from "../../components/Maps/AdaptiveMap";
+import { useMapsApi } from "../../hooks/useMapsApi";
+import { Autocomplete as GooglePlacesAutocomplete } from "@react-google-maps/api";
 
 const mapContainerStyle = {
   width: "100%",
@@ -26,6 +23,21 @@ function AddServiceArea() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
+  const { apiType, googleFatalError } = useMapsApi();
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
+
+  useEffect(() => {
+    if (apiType === 'google' && !googleFatalError) {
+      const check = () => {
+        const ready = !!(window.google && window.google.maps && window.google.maps.places);
+        setIsGoogleReady(ready);
+      };
+      check();
+      const interval = setInterval(check, 300);
+      return () => clearInterval(interval);
+    }
+    setIsGoogleReady(false);
+  }, [apiType, googleFatalError]);
 
   const [range, setRange] = useState(3.2);
   const [areaTitle, setAreaTitle] = useState("");
@@ -37,11 +49,6 @@ function AddServiceArea() {
   const [title,setTitle]=useState('')
 
   const autocompleteRef = useRef(null);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-    libraries,
-  });
 
   useEffect(() => {
     async function fetchCities() {
@@ -122,8 +129,39 @@ function AddServiceArea() {
     }
   };
 
-  if (loadError) return <div>Error loading Google Maps</div>;
-  if (!isLoaded) return <div>Loading Google Maps...</div>;
+  const handleMapClick = (e) => {
+    // Google click
+    if (e?.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setLatitude(lat);
+      setLongitude(lng);
+      setMarkerPosition({ lat, lng });
+      if (window.google && window.google.maps) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            setAreaTitle(results[0].formatted_address);
+          } else {
+            setAreaTitle("");
+          }
+        });
+      } else {
+        setAreaTitle(`Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      }
+      return;
+    }
+
+    // Leaflet/Ola click
+    if (typeof e?.lat === 'number' && typeof e?.lng === 'number') {
+      const lat = e.lat;
+      const lng = e.lng;
+      setLatitude(lat);
+      setLongitude(lng);
+      setMarkerPosition({ lat, lng });
+      setAreaTitle(`Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
+  };
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2}>
@@ -153,7 +191,8 @@ function AddServiceArea() {
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px" }}>
           <label>Zone</label>
           <div style={{ width: "70%" }}>
-            <GooglePlacesAutocomplete
+            {apiType === 'google' && isGoogleReady ? (
+              <GooglePlacesAutocomplete
               onLoad={(autocomplete) => {
                 autocompleteRef.current = autocomplete;
               }}
@@ -168,14 +207,22 @@ function AddServiceArea() {
                   setMarkerPosition({ lat, lng });
                 }
               }}
-            >
+              >
+                <TextField
+                  fullWidth
+                  placeholder="Search for a location"
+                  value={areaTitle}
+                  onChange={(e) => setAreaTitle(e.target.value)}
+                />
+              </GooglePlacesAutocomplete>
+            ) : (
               <TextField
                 fullWidth
                 placeholder="Search for a location"
                 value={areaTitle}
                 onChange={(e) => setAreaTitle(e.target.value)}
               />
-            </GooglePlacesAutocomplete>
+            )}
           </div>
         </div>
 
@@ -209,29 +256,12 @@ function AddServiceArea() {
               borderRadius: "10px",
             }}
           >
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
+            <AdaptiveMap
+              style={mapContainerStyle}
               center={markerPosition}
               zoom={13}
-              onClick={(e) => {
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-
-                setLatitude(lat);
-                setLongitude(lng);
-                setMarkerPosition({ lat, lng });
-
-                
-                const geocoder = new window.google.maps.Geocoder();
-                geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                  if (status === "OK" && results[0]) {
-                    setAreaTitle(results[0].formatted_address);
-                  } else {
-                    setAreaTitle("");
-                    alert("Address not found");
-                  }
-                });
-              }}
+              onClick={handleMapClick}
+              radiusMeters={range * 1000}
             >
               <Marker position={markerPosition} />
               <Circle
@@ -245,8 +275,7 @@ function AddServiceArea() {
                   fillOpacity: 0.2,
                 }}
               />
-            </GoogleMap>
-
+            </AdaptiveMap>
           </div>
         </div>
 

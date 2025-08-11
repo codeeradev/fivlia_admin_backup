@@ -1,9 +1,14 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
-import { Button } from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  TextField,
+  Button,
+} from "@mui/material";
+import { Marker } from "@react-google-maps/api";
+import { useNavigate, useLocation } from "react-router-dom";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
-import { useNavigate, useLocation } from "react-router-dom"; // <-- import useLocation
+import AdaptiveMap from "../../components/Maps/AdaptiveMap";
+import { useMapsApi } from "../../hooks/useMapsApi";
 import "./City.css";
 
 const containerStyle = {
@@ -17,14 +22,13 @@ const defaultCenter = {
 };
 
 function EditCity() {
+  const location = useLocation();
+  const { city: initialCity } = location.state || {};
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-  const location = useLocation();  // <-- to get passed state
-
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-  });
+  const { apiType } = useMapsApi();
+  const searchRef = useRef(null);
 
   const [cityCoordinates, setCityCoordinates] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,7 +37,9 @@ function EditCity() {
   const [selectedState, setSelectedState] = useState("");
   const [fullAddress, setFullAddress] = useState("");
   const [id,setId]=useState('')
-  const searchRef = useRef(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(defaultCenter);
 
   useEffect(() => {
    
@@ -47,9 +53,13 @@ function EditCity() {
       setFullAddress(cityData.fullAddress || cityData.name || "");
       setSearchTerm(cityData.fullAddress || cityData.name || "");
       if (cityData.latitude && cityData.longitude) {
-        setCityCoordinates({ lat: cityData.latitude, lng: cityData.longitude });
+        setLatitude(cityData.latitude);
+        setLongitude(cityData.longitude);
+        setMarkerPosition({ lat: cityData.latitude, lng: cityData.longitude });
       } else if (cityData.lat && cityData.lng) {
-        setCityCoordinates({ lat: cityData.lat, lng: cityData.lng });
+        setLatitude(cityData.lat);
+        setLongitude(cityData.lng);
+        setMarkerPosition({ lat: cityData.lat, lng: cityData.lng });
       }
     }
   }, [location.state]);
@@ -97,46 +107,77 @@ function EditCity() {
     setSelectedState(state);
     setFullAddress(display_name);
     setSearchTerm(display_name);
-    setCityCoordinates({ lat: parseFloat(lat), lng: parseFloat(lon) });
+    setLatitude(parseFloat(lat));
+    setLongitude(parseFloat(lon));
+    setMarkerPosition({ lat: parseFloat(lat), lng: parseFloat(lon) });
     setSuggestions([]);
   };
 
-  const handleMapClick = useCallback(
-    async (e) => {
-      if (!isLoaded) return;
-
+  const handleMapClick = async (e) => {
+    if (apiType === 'google' && e.latLng) {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
-
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-      );
-      const data = await res.json();
-      const address = data.address || {};
-      const city =
-        address.city ||
-        address.town ||
-        address.village ||
-        address.hamlet ||
-        address.locality ||
-        address.municipality ||
-        address.state_district ||
-        "Unknown City";
-      const state = address.state || "Unknown State";
-      const fullAddress = data.display_name || "";
-
-      setSelectedCity(city);
-      setSelectedState(state);
-      setFullAddress(fullAddress);
-      setSearchTerm(fullAddress);
-      setCityCoordinates({ lat, lng });
-      setSuggestions([]);
-    },
-    [isLoaded]
-  );
+      setLatitude(lat);
+      setLongitude(lng);
+      setMarkerPosition({ lat, lng });
+      
+      // Use Google Geocoder if available
+      if (window.google && window.google.maps) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            const address = results[0].address_components;
+            const city = address.find(comp => 
+              comp.types.includes('locality') || 
+              comp.types.includes('administrative_area_level_2')
+            )?.long_name || "Unknown City";
+            const state = address.find(comp => 
+              comp.types.includes('administrative_area_level_1')
+            )?.long_name || "Unknown State";
+            
+            setSelectedCity(city);
+            setSelectedState(state);
+            setFullAddress(results[0].formatted_address);
+            setSearchTerm(results[0].formatted_address);
+          }
+        });
+      }
+    } else if (apiType === 'ola') {
+      // For Ola Maps, use OpenStreetMap reverse geocoding
+      const lat = e.lat || e.latLng?.lat();
+      const lng = e.lng || e.latLng?.lng();
+      
+      if (lat && lng) {
+        setLatitude(lat);
+        setLongitude(lng);
+        setMarkerPosition({ lat, lng });
+        
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+          );
+          const data = await res.json();
+          const address = data.address || {};
+          const city = address.city || address.town || address.village || address.hamlet || address.locality || address.municipality || address.state_district || "Unknown City";
+          const state = address.state || "Unknown State";
+          
+          setSelectedCity(city);
+          setSelectedState(state);
+          setFullAddress(data.display_name || "");
+          setSearchTerm(data.display_name || "");
+        } catch (error) {
+          console.error("Error reverse geocoding:", error);
+          setSelectedCity("Unknown City");
+          setSelectedState("Unknown State");
+          setFullAddress(`Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          setSearchTerm(`Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        }
+      }
+    }
+  };
 
   const handleSave = async () => {
-    if (!cityCoordinates) {
+    if (!latitude || !longitude) {
       alert("Please select a city/location first!");
       return;
     }
@@ -145,8 +186,8 @@ function EditCity() {
       city: selectedCity,
       state: selectedState,
       fullAddress,
-      latitude: cityCoordinates.lat,
-      longitude: cityCoordinates.lng,
+      latitude: latitude,
+      longitude: longitude,
     };
 
     try {
@@ -164,9 +205,6 @@ function EditCity() {
       console.error("Error saving city:", err);
     }
   };
-
-  if (loadError) return <div>Error loading Google Maps</div>;
-  if (!isLoaded) return <div>Loading Google Maps...</div>;
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "40px" }}>
@@ -199,23 +237,23 @@ function EditCity() {
             </div>
           </div>
 
+          {/* Map */}
           <div
             style={{
-              width: "70%",
-              height: "400px",
-              marginTop: "50px",
-              display: "flex",
-              marginLeft: "180px",
+              flex: "2",
+              height: "375px",
+              border: "1px solid #ccc",
+              borderRadius: "10px",
             }}
           >
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={cityCoordinates || defaultCenter}
-              zoom={cityCoordinates ? 12 : 4}
+            <AdaptiveMap
+              style={containerStyle}
+              center={markerPosition}
+              zoom={13}
               onClick={handleMapClick}
             >
-              {cityCoordinates && <Marker position={cityCoordinates} />}
-            </GoogleMap>
+              <Marker position={markerPosition} />
+            </AdaptiveMap>
           </div>
 
           <div style={{ display:'flex',gap:'20px',marginTop: "30px",justifyContent:"center",alignItems:'center' }}>

@@ -454,7 +454,7 @@ export default function Notifications() {
         <DialogContent sx={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "24px" }}>
           {selectedNotification?.image && (
             <img
-              src={selectedNotification.image}
+              src={`${process.env.REACT_APP_IMAGE_LINK}${selectedNotification.image}`}
               alt="Notification Image"
               style={{
                 maxWidth: "100%",

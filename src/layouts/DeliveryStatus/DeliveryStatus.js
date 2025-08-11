@@ -470,7 +470,7 @@ export default function StatusManagement() {
             {selectedStatus?.image && (
               <div style={{ marginTop: 10 }}>
                 <img
-                  src={selectedStatus.image}
+                  src={`${process.env.REACT_APP_IMAGE_LINK}${selectedStatus.image}`}
                   alt="Preview"
                   style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }}
                 />
