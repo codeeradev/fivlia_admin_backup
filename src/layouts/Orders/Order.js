@@ -5,7 +5,7 @@ import Modal from "@mui/material/Modal";
 import { FaSortUp, FaSortDown, FaMapMarkerAlt, FaUser, FaPhoneAlt } from "react-icons/fa";
 import { CSVLink } from "react-csv";
 
-const Orders = () => {
+const Orders = ({ showHeader = true, isDashboard = false }) => {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
 
@@ -32,23 +32,22 @@ const Orders = () => {
   const [pendingStatus, setPendingStatus] = useState(null);
   const [pendingOrderId, setPendingOrderId] = useState(null);
 
-  const restrictedStatuses = ["Going to Pickup", "Picked", "On the Way", "Delivered"];
+  const restrictedStatuses = ["Going to Pickup", "Picked Up", "On The Way", "Delivered"];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const [ordersRes, storesRes, zonesRes, driversRes, statusesRes] = await Promise.all([
-        fetch("https://api.fivlia.in/orders"),
-        fetch("https://api.fivlia.in/getStore"),
-        fetch("https://api.fivlia.in/getAllZone"),
-        fetch("https://api.fivlia.in/getDriver"),
-        fetch("https://api.fivlia.in/getdeliveryStatus"),
+        fetch(`${process.env.REACT_APP_API_URL}/orders`),
+        fetch(`${process.env.REACT_APP_API_URL}/getStore`),
+        fetch(`${process.env.REACT_APP_API_URL}/getAllZone`),
+        fetch(`${process.env.REACT_APP_API_URL}/getDriver`),
+        fetch(`${process.env.REACT_APP_API_URL}/getdeliveryStatus`),
       ]);
-console.log(statusesRes)
       // Handle Orders
       const ordersData = await ordersRes.json();
-      console.log("Orders API response:", ordersData);
+      // console.log("Orders API response:", ordersData);
       if (ordersData.orders && Array.isArray(ordersData.orders)) {
         setOrders(ordersData.orders);
       } else {
@@ -57,7 +56,7 @@ console.log(statusesRes)
 
       // Handle Stores
       const storesData = await storesRes.json();
-      console.log("Stores API response:", storesData);
+      // console.log("Stores API response:", storesData);
       if (storesData.stores && Array.isArray(storesData.stores)) {
         const mappedStores = storesData.stores.map((s) => ({
           id: s._id.$oid || s._id,
@@ -66,14 +65,14 @@ console.log(statusesRes)
           zones: Array.isArray(s.zone) ? s.zone.map((z) => ({ id: z._id.$oid || z._id, title: z.title || "Unknown" })) : [],
         }));
         setStores(mappedStores);
-        console.log("Mapped stores:", mappedStores);
+        // console.log("Mapped stores:", mappedStores);
       } else {
         setError((prev) => prev + (prev ? ", " : "") + "Failed to load stores: Invalid data format");
       }
 
       // Handle Zones
       const zonesData = await zonesRes.json();
-      console.log("Zones API response:", zonesData);
+      // console.log("Zones API response:", zonesData);
       if (Array.isArray(zonesData)) {
         const zoneList = zonesData.reduce((acc, city) => {
           if (city?.zones && Array.isArray(city.zones)) {
@@ -95,7 +94,7 @@ console.log(statusesRes)
 
       // Handle Drivers
       const driversData = await driversRes.json();
-      console.log("Drivers API response:", driversData);
+      // console.log("Drivers API response:", driversData);
       if (driversData.Driver && Array.isArray(driversData.Driver)) {
         const mappedDrivers = driversData.Driver.map((d) => ({
           id: d._id,
@@ -103,7 +102,7 @@ console.log(statusesRes)
           name: d.driverName || "Unknown",
         }));
         setDrivers(mappedDrivers);
-        console.log("Mapped drivers:", mappedDrivers);
+        // console.log("Mapped drivers:", mappedDrivers);
       } else {
         console.error("Invalid drivers data format:", driversData);
         setError((prev) => prev + (prev ? ", " : "") + "Failed to load drivers: Invalid data format");
@@ -111,16 +110,16 @@ console.log(statusesRes)
 
       // Handle Delivery Statuses
       const statusesData = await statusesRes.json();
-      console.log("Delivery Statuses API response:", statusesData);
+      // console.log("Delivery Statuses API response:", statusesData);
       if (statusesData.Status && Array.isArray(statusesData.Status)) {
         const mappedStatuses = statusesData.Status
-          .map(status => (status.statusTitle || status.status || status.name || "").trim().toLowerCase())
+          .map(status => (status.statusTitle || status.status || status.name || "").trim())
           .filter(status => status);
         const uniqueStatuses = [...new Set(mappedStatuses)]
           .map(status => status.charAt(0).toUpperCase() + status.slice(1))
           .sort();
         setDeliveryStatuses(uniqueStatuses);
-        console.log("Mapped delivery statuses:", uniqueStatuses);
+        // console.log("Mapped delivery statuses:", uniqueStatuses);
       } else {
         console.error("Invalid delivery statuses data format:", statusesData);
         setError((prev) => prev + (prev ? ", " : "") + "Failed to load delivery statuses: Invalid data format");
@@ -178,12 +177,13 @@ console.log(statusesRes)
     handleOrderUpdate(orderId, newStatus, undefined);
   };
 
-  const handleDriverSelection = async (driverId) => {
-    if (!driverId) {
+  const handleDriverSelection = async (mongoId) => {
+    console.log('mongoId',mongoId)
+    if (!mongoId) {
       setShowDriverModal(false);
       return;
     }
-    await handleOrderUpdate(pendingOrderId, pendingStatus, driverId);
+    await handleOrderUpdate(pendingOrderId, pendingStatus, mongoId);
     setShowDriverModal(false);
     setPendingOrderId(null);
     setPendingStatus(null);
@@ -196,7 +196,7 @@ console.log(statusesRes)
       const body = {};
       if (status) body.status = status;
       if (driverId) body.driverId = driverId;
-      const res = await fetch(`https://api.fivlia.in/orderStatus/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/orderStatus/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -731,17 +731,21 @@ console.log(statusesRes)
       <MDBox
         p={3}
         style={{
-          marginLeft: miniSidenav ? "90px" : "280px",
+          marginLeft: isDashboard ? 0 : (miniSidenav ? "90px" : "280px"),
           transition: "margin-left 0.3s ease",
           position: "relative",
         }}
       >
         <div className="order-container">
-          <div className="order-box">
+          <div className="order-box" >
             {error && <div className="error-message">{error}</div>}
             <div className="header">
               <div>
-                <h2 style={{ fontWeight: 700, fontSize: "28px", color: "#344767" }}>Orders Management</h2>
+               {showHeader && (
+                  <h2 style={{ marginBottom: "20px" }}>
+                    {isDashboard ? "Recent Orders" : "Order Management"}
+                  </h2>
+                )}
                 <p style={{ fontSize: "16px", color: "#7b809a", marginTop: "8px" }}>View and manage all orders</p>
               </div>
               <div style={{ display: "flex", gap: "16px" }}>
@@ -755,14 +759,23 @@ console.log(statusesRes)
             </div>
 
             <div className="controls-container">
+            {!isDashboard && (
               <div className="control-item">
-                <label>Show Entries</label>
-                <select value={entriesToShow} onChange={(e) => { setEntriesToShow(Number(e.target.value)); setCurrentPage(1); }}>
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                </select>
-              </div>
+                 <label>Show Entries</label>
+                  <select
+                   value={entriesToShow}
+                   onChange={(e) => {
+                   setEntriesToShow(Number(e.target.value));
+                   setCurrentPage(1);
+                  }}
+                   >
+                     <option value="5">5</option>
+                     <option value="10">10</option>
+                     <option value="20">20</option>
+                   </select>
+                 </div>
+               )}
+
               <div className="control-item">
                 <label>Store</label>
                 <select value={selectedStore} onChange={(e) => { setSelectedStore(e.target.value); setCurrentPage(1); }}>
@@ -897,7 +910,7 @@ console.log(statusesRes)
                             >
                               <option value="">Unassigned</option>
                               {drivers.map((driver) => (
-                                <option key={driver.id} value={driver.driverId}>{driver.name}</option>
+                                <option key={driver.id} value={driver.id}>{driver.name}</option>
                               ))}
                             </select>
                           </td>
@@ -948,22 +961,25 @@ console.log(statusesRes)
               </table>
             </div>
 
-            <div className="pagination">
-              <span style={{ fontSize: "14px", color: "#7b809a" }}>
-                Showing {startIndex + 1} to {Math.min(startIndex + entriesToShow, filteredOrders.length)} of {filteredOrders.length} orders
-              </span>
-              <div style={{ display: "flex", gap: "12px" }}>
-                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+           {!isDashboard && (
+  <div className="pagination">
+    <span style={{ fontSize: "14px", color: "#7b809a" }}>
+      Showing {startIndex + 1} to {Math.min(startIndex + entriesToShow, filteredOrders.length)} of {filteredOrders.length} orders
+    </span>
+    <div style={{ display: "flex", gap: "12px" }}>
+      <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+        Previous
+      </button>
+      <button
+        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages}
+      >
+        Next
+      </button>
+    </div>
+  </div>
+)}
+
           </div>
         </div>
 
@@ -996,7 +1012,7 @@ console.log(statusesRes)
                         const variant = variants[item.productId?.$oid || item.productId]?.find(
                           (v) => (v._id?.$oid || v._id) === (item.varientId?.$oid || item.varientId)
                         );
-                        const price = item.variantPrice || item.price || 0;
+                        const price = item.price || 0;
                         const subtotal = item.quantity * price;
                         return (
                           <tr key={item._id?.$oid || item._id}>
@@ -1005,7 +1021,7 @@ console.log(statusesRes)
                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.quantity || 0}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>
                               <img
-                                src={item.image || "https://via.placeholder.com/48"}
+                                src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
                                 alt={item.name}
                                 style={{ width: 48, height: 48, objectFit: "cover", marginRight: 12 }}
                               />
@@ -1027,7 +1043,7 @@ console.log(statusesRes)
                         </td>
                         <td style={{ fontSize: "14px", padding: "16px" }}>
                           ₹{selectedOrder.items.reduce((sum, item) =>
-                            sum + (item.quantity * (item.variantPrice || item.price || 0)), 0)}
+                            sum + (item.quantity * (item.price || 0)), 0)}
                         </td>
                       </tr>
                       <tr>
@@ -1051,9 +1067,9 @@ console.log(statusesRes)
                       </tr>
                       <tr>
                         <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
-                          Platform Fee:
+                          Platform Fee(%):
                         </td>
-                        <td style={{ fontSize: "14px", padding: "16px" }}>₹{selectedOrder.platformFee || 0}</td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>{selectedOrder.platformFee || 0}</td>
                       </tr>
                       <tr style={{ borderTop: "2px solid #d2d6da" }}>
                         <td colSpan="6" style={{ textAlign: "right", fontWeight: 700, padding: "16px", fontSize: "15px" }}>
@@ -1131,7 +1147,7 @@ console.log(statusesRes)
               >
                 <option value="" disabled>Select a driver</option>
                 {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.driverId}>{driver.name}</option>
+                  <option key={driver.id} value={driver.id}>{driver.name}</option>
                 ))}
               </select>
             </div>

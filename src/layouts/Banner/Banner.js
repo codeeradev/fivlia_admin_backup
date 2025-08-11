@@ -63,7 +63,7 @@ function BannerManagement() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, zoneId: banner?.zones?.[0]?._id}),
       });
 
       if (res.ok) {
@@ -213,7 +213,7 @@ function BannerManagement() {
                     <td style={bodyCell}>
                       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                         <img
-                          src={item.image}
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
                           alt={item.title}
                           style={{ width: 50, height: 50, borderRadius: 5, objectFit: "cover" }}
                         />

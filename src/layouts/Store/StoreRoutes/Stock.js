@@ -78,7 +78,7 @@ const styles = `
   }
   .popover-container {
     padding: 15px;
-    max-width: 400px;
+    max-width: 500px;
     max-height: 400px;
     overflow-y: auto;
     background-color: #fff;
@@ -105,7 +105,7 @@ const styles = `
     flex: 1;
   }
   .popover-variant-input {
-    width: 72px;
+    min-width: 80px;
     padding: 5px;
     font-size: 0.8rem;
     border-radius: 4px;
@@ -195,7 +195,7 @@ const styles = `
       text-align: center;
     }
     .popover-container {
-      max-width: 300px;
+      max-width: 350px;
     }
   }
 `;
@@ -217,11 +217,12 @@ function StockManagement() {
   const [popoverType, setPopoverType] = useState("");
   const [popoverProductId, setPopoverProductId] = useState(null);
   const [stockUpdates, setStockUpdates] = useState({});
+  const [priceUpdates, setPriceUpdates] = useState({});
+  const [mrpUpdates, setMrpUpdates] = useState({});
   const [error, setError] = useState("");
 
   useEffect(() => {
     const id = localStorage.getItem("storeId");
-    console.log("Store ID:", id);
     setStoreId(id);
   }, []);
 
@@ -231,7 +232,7 @@ function StockManagement() {
       setLoading(true);
       try {
         // Fetch products
-        const productResponse = await fetch(`https://api.fivlia.in/getStore?id=${storeId}`);
+        const productResponse = await fetch(`${process.env.REACT_APP_API_URL}/getStore?id=${storeId}`);
         if (productResponse.status !== 200) {
           console.error("Product API Error: Status", productResponse.status);
           setError(`Failed to load products: Status ${productResponse.status}`);
@@ -240,21 +241,17 @@ function StockManagement() {
         }
         const productResult = await productResponse.json();
         const products = Array.isArray(productResult) ? productResult.flatMap((store) => store.products || []) : productResult.products || [];
-        console.log("Product API Response:", productResult);
 
         // Fetch stock data
-        const stockResponse = await fetch(`https://api.fivlia.in/getStock?storeId=${storeId}`);
+        const stockResponse = await fetch(`${process.env.REACT_APP_API_URL}/getStock?storeId=${storeId}`);
         let stockData = [];
         if (stockResponse.status === 200) {
           const stockResult = await stockResponse.json();
           stockData = stockResult.stock || [];
-          console.log("Stock API Response:", stockResult);
         } else {
           console.warn("Stock API Error: Status", stockResponse.status);
-          setError(`Failed to load stock data: Status ${stockResponse.status}`);
         }
 
-        // Merge stock quantities into products
         const transformedProducts = products.map((product) => {
           const productId = product._id.$oid || product._id;
           const productStock = stockData.filter((s) => (s.productId.$oid || s.productId) === productId);
@@ -268,7 +265,6 @@ function StockManagement() {
               quantity: stockEntry ? stockEntry.quantity : inv.quantity || 0,
             };
           });
-
           const totalStock = inventory.reduce((sum, inv) => sum + (inv.quantity || 0), 0);
           return {
             ...product,
@@ -282,13 +278,11 @@ function StockManagement() {
 
         setProducts(transformedProducts);
         setData(transformedProducts);
-
         const outCount = transformedProducts.filter((p) => p.totalStock === 0).length;
         const lowCount = transformedProducts.filter((p) => p.totalStock > 0 && p.totalStock <= 10).length;
         setOutOfStockCount(outCount);
         setLowStockCount(lowCount);
 
-        console.log("Transformed Products:", transformedProducts);
       } catch (err) {
         console.error("Fetch Error:", err);
         setError("Failed to load products or stock. Please try again.");
@@ -343,11 +337,32 @@ function StockManagement() {
     setPopoverType("");
     setPopoverProductId(null);
     setStockUpdates({});
+    setPriceUpdates({});
+    setMrpUpdates({});
   };
 
   const handleStockChange = (productId, inventoryId, newValue) => {
-    console.log(`Stock Change → Product: ${productId}, Inventory: ${inventoryId}, New Value: ${newValue}`);
     setStockUpdates((prev) => ({
+      ...prev,
+      [productId]: {
+        ...(prev[productId] || {}),
+        [inventoryId]: Number(newValue),
+      },
+    }));
+  };
+
+  const handlePriceChange = (productId, inventoryId, newValue) => {
+    setPriceUpdates((prev) => ({
+      ...prev,
+      [productId]: {
+        ...(prev[productId] || {}),
+        [inventoryId]: Number(newValue),
+      },
+    }));
+  };
+
+  const handleMrpChange = (productId, inventoryId, newValue) => {
+    setMrpUpdates((prev) => ({
       ...prev,
       [productId]: {
         ...(prev[productId] || {}),
@@ -358,7 +373,6 @@ function StockManagement() {
 
   const handleSaveStock = async () => {
     let updatedProducts = [...products];
-    console.log("Saving stock...");
 
     for (const productId of Object.keys(stockUpdates)) {
       const product = products.find((p) => p._id === productId);
@@ -370,6 +384,8 @@ function StockManagement() {
       const stockPayload = product.inventory.map((inv, idx) => {
         const invKey = inv._id || `${product._id}_${idx}`;
         const updatedQty = stockUpdates[productId]?.[invKey];
+        const updatedPrice = priceUpdates[productId]?.[invKey];
+        const updatedMrp = mrpUpdates[productId]?.[invKey];
 
         if (updatedQty === undefined || !inv.variantId) {
           return null;
@@ -378,37 +394,38 @@ function StockManagement() {
         return {
           variantId: inv.variantId.$oid || inv.variantId,
           quantity: updatedQty,
+          price: updatedPrice !== undefined ? updatedPrice : (inv.price || 0),
+          mrp: updatedMrp !== undefined ? updatedMrp : (inv.mrp || 0),
         };
       }).filter(Boolean);
 
-      console.log(`Product ${productId} - Payload to send:`, stockPayload);
-      console.log("Final Payload:", JSON.stringify({ storeId, stock: stockPayload }, null, 2));
-
       if (stockPayload.length === 0) {
-        console.log(`No valid stock updates for product ${productId}`);
+        console.log(`No valid stock updates for product`);
         continue;
       }
 
       try {
-        const response = await fetch(`https://api.fivlia.in/updateStock/${productId}`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/updateStock/${productId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ storeId, stock: stockPayload }),
         });
 
         const result = await response.json();
-        console.log(`Response for ${productId}:`, result);
 
         if (response.ok) {
-          console.log(`✅ Stock updated for ${productId}`);
           updatedProducts = updatedProducts.map((p) => {
             if (p._id === productId) {
               const updatedInventory = p.inventory.map((inv, idx) => {
                 const invKey = inv._id || `${p._id}_${idx}`;
                 const updatedQty = stockUpdates[productId][invKey];
+                const updatedPrice = priceUpdates[productId]?.[invKey];
+                const updatedMrp = mrpUpdates[productId]?.[invKey];
                 return {
                   ...inv,
                   quantity: updatedQty !== undefined ? updatedQty : inv.quantity,
+                  price: updatedPrice !== undefined ? updatedPrice : inv.price,
+                  mrp: updatedMrp !== undefined ? updatedMrp : inv.mrp,
                 };
               });
 
@@ -431,7 +448,6 @@ function StockManagement() {
 
     const outCount = updatedProducts.filter((p) => p.totalStock === 0).length;
     const lowCount = updatedProducts.filter((p) => p.totalStock > 0 && p.totalStock <= 10).length;
-    console.log("Stock Summary → Out of Stock:", outCount, "Low Stock:", lowCount);
 
     setOutOfStockCount(outCount);
     setLowStockCount(lowCount);
@@ -468,9 +484,9 @@ function StockManagement() {
             }}
           >
             <div>
-              <span style={{ fontWeight: "bold", fontSize: "1.5rem" }}>Stock Management</span>
+              <span style={{ fontWeight: "bold", fontSize: "1.5rem" }}>Stock & Pricing Management</span>
               <br />
-              <span style={{ fontSize: "1rem" }}>Monitor and manage product stock levels</span>
+              <span style={{ fontSize: "1rem" }}>Monitor and manage product stock levels, prices, and MRP</span>
             </div>
           </div>
 
@@ -560,33 +576,102 @@ function StockManagement() {
                         return variant ? (
                           <div key={invId} className="popover-variant">
                             <span className="popover-variant-label">
-                              {variant.attributeName}: {variant.variantValue} (Current Stock: {inv?.quantity ?? 0})
+                              {variant.attributeName}: {variant.variantValue}
                             </span>
-                            <TextField
-                              className="popover-variant-input"
-                              placeholder="Add stock..."
-                              type="number"
-                              value={stockUpdates[product._id]?.[invId] ?? (inv?.quantity ?? 0)}
-                              onChange={(e) => handleStockChange(product._id, invId, e.target.value)}
-                              inputProps={{
-                                min: 0,
-                                style: {
-                                  fontSize: "0.9rem",
-                                  fontWeight: "bold",
-                                  color: "#000",
-                                  backgroundColor: "#f0f4f8",
-                                  padding: "6px",
-                                  borderRadius: "4px",
-                                },
-                              }}
-                              sx={{
-                                "& .MuiOutlinedInput-root": {
-                                  "& fieldset": { borderColor: "#007bff" },
-                                  "&:hover fieldset": { borderColor: "#005cbf" },
-                                  "&.Mui-focused fieldset": { borderColor: "#003087" },
-                                },
-                              }}
-                            />
+                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "5px" }}>
+                              <TextField
+                                className="popover-variant-input"
+                                placeholder="Stock"
+                                label="Stock"
+                                type="number"
+                                size="small"
+                                value={stockUpdates[product._id]?.[invId] ?? (inv?.quantity ?? 0)}
+                                onChange={(e) => handleStockChange(product._id, invId, e.target.value)}
+                                inputProps={{
+                                  min: 0,
+                                  style: {
+                                    fontSize: "0.8rem",
+                                    fontWeight: "bold",
+                                    color: "#000",
+                                    backgroundColor: "#f0f4f8",
+                                    padding: "4px",
+                                    borderRadius: "4px",
+                                  },
+                                }}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "#007bff" },
+                                    "&:hover fieldset": { borderColor: "#005cbf" },
+                                    "&.Mui-focused fieldset": { borderColor: "#003087" },
+                                  },
+                                  "& .MuiInputLabel-root": {
+                                    fontSize: "0.7rem",
+                                  },
+                                }}
+                              />
+                              <TextField
+                                className="popover-variant-input"
+                                placeholder={`Price: ₹${variant?.sell_price ?? 0}`}
+                                label="Price"
+                                type="number"
+                                size="small"
+                                value={priceUpdates[product._id]?.[invId] ?? (variant?.sell_price ?? 0)}
+                                onChange={(e) => handlePriceChange(product._id, invId, e.target.value)}
+                                inputProps={{
+                                  min: 0,
+                                  step: 0.01,
+                                  style: {
+                                    fontSize: "0.8rem",
+                                    fontWeight: "bold",
+                                    color: "#000",
+                                    backgroundColor: "#f0f4f8",
+                                    padding: "4px",
+                                    borderRadius: "4px",
+                                  },
+                                }}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "#28a745" },
+                                    "&:hover fieldset": { borderColor: "#1e7e34" },
+                                    "&.Mui-focused fieldset": { borderColor: "#155724" },
+                                  },
+                                  "& .MuiInputLabel-root": {
+                                    fontSize: "0.7rem",
+                                  },
+                                }}
+                              />
+                              <TextField
+                                className="popover-variant-input"
+                                placeholder={`MRP: ₹${variant?.mrp ?? 0}`}
+                                label="MRP"
+                                type="number"
+                                size="small"
+                                value={mrpUpdates[product._id]?.[invId] ?? (variant?.mrp ?? 0)}
+                                onChange={(e) => handleMrpChange(product._id, invId, e.target.value)}
+                                inputProps={{
+                                  min: 0,
+                                  step: 0.01,
+                                  style: {
+                                    fontSize: "0.8rem",
+                                    fontWeight: "bold",
+                                    color: "#000",
+                                    backgroundColor: "#f0f4f8",
+                                    padding: "4px",
+                                    borderRadius: "4px",
+                                  },
+                                }}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "#ffc107" },
+                                    "&:hover fieldset": { borderColor: "#e0a800" },
+                                    "&.Mui-focused fieldset": { borderColor: "#d39e00" },
+                                  },
+                                  "& .MuiInputLabel-root": {
+                                    fontSize: "0.7rem",
+                                  },
+                                }}
+                              />
+                            </div>
                           </div>
                         ) : null;
                       })}
@@ -596,7 +681,7 @@ function StockManagement() {
                     className="popover-save-button"
                     onClick={handleSaveStock}
                   >
-                    Save Stock
+                    Save Stock & Pricing
                   </Button>
                 </>
               ) : (
@@ -619,7 +704,7 @@ function StockManagement() {
                     <th style={{ ...headerCell, minWidth: "80px" }}>Sr. No</th>
                     <th style={{ ...headerCell, minWidth: "200px" }}>Product Name</th>
                     <th style={{ ...headerCell, minWidth: "100px" }}>SKU</th>
-                    <th style={{ ...headerCell, minWidth: "200px" }}>Variants</th>
+                    <th style={{ ...headerCell, minWidth: "250px" }}>Variants (Stock/Price/MRP)</th>
                     <th style={{ ...headerCell, minWidth: "100px" }}>Total Stock</th>
                     <th style={{ ...headerCell, minWidth: "100px" }}>Actions</th>
                   </tr>
@@ -632,8 +717,10 @@ function StockManagement() {
                           (inv) => (inv.variantId.$oid || inv.variantId)?.toString() === (variant._id.$oid || variant._id)?.toString()
                         );
                         return {
-                          label: `${variant.attributeName}: ${variant.variantValue} (${inv?.quantity || 0})`,
+                          label: `${variant.attributeName}: ${variant.variantValue} (Stock: ${inv?.quantity || 0}, Price: ₹${variant?.sell_price || 0}, MRP: ₹${variant?.mrp || 0})`,
                           quantity: inv?.quantity || 0,
+                          price: variant?.sell_price || 0,
+                          mrp: variant?.mrp || 0,
                         };
                       });
 
@@ -642,7 +729,7 @@ function StockManagement() {
                           <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
                           <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: 10 }}>
                             <img
-                              src={item.productThumbnailUrl || "https://via.placeholder.com/60"}
+                              src={`${process.env.REACT_APP_IMAGE_LINK}${item.productThumbnailUrl || "https://via.placeholder.com/60"}`}
                               alt={item.productName}
                               style={{
                                 width: 60,
@@ -679,7 +766,7 @@ function StockManagement() {
                               className="edit-stock-button"
                               onClick={(e) => handlePopoverOpen(e, "editStock", item._id)}
                             >
-                              Edit Stock
+                              Edit Stock & Pricing
                             </Button>
                           </td>
                         </tr>
@@ -709,8 +796,10 @@ function StockManagement() {
                     (inv) => (inv.variantId.$oid || inv.variantId)?.toString() === (variant._id.$oid || variant._id)?.toString()
                   );
                   return {
-                    label: `${variant.attributeName}: ${variant.variantValue} (${inv?.quantity || 0})`,
+                    label: `${variant.attributeName}: ${variant.variantValue} (Stock: ${inv?.quantity || 0}, Price: ₹${variant?.sell_price || 0}, MRP: ₹${variant?.mrp || 0})`,
                     quantity: inv?.quantity || 0,
+                    price: variant?.sell_price || 0,
+                    mrp: variant?.mrp || 0,
                   };
                 });
 
@@ -772,7 +861,7 @@ function StockManagement() {
                           className="edit-stock-button"
                           onClick={(e) => handlePopoverOpen(e, "editStock", item._id)}
                         >
-                          Edit Stock
+                          Edit Stock & Pricing
                         </Button>
                       </div>
                     </div>

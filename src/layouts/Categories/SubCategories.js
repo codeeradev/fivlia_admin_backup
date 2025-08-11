@@ -40,7 +40,7 @@ function GetSubCategories() {
     const getSubCate = async () => {
       try {
         const res = await fetch(
-          `https://node-m8jb.onrender.com/getsubcat/${category._id}`
+          `https://api.fivlia.in/GetSubCategories/${category._id}`
         );
         if (res.status === 200) {
           const result = await res.json();

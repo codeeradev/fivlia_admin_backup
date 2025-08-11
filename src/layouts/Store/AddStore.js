@@ -4,6 +4,8 @@ import { useMaterialUIController } from "context";
 import "./AddStore.css";
 import { Button, Switch } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function AddStore() {
   const [controller] = useMaterialUIController();
@@ -14,6 +16,7 @@ function AddStore() {
   const [storeName, setStoreName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedZone, setSelectedZone] = useState([]);
@@ -26,7 +29,8 @@ function AddStore() {
   const [cities, setCities] = useState([]);
   const [availableZones, setAvailableZones] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
-
+  const dispatch = useDispatch();
+  
   const mapRef = useRef(null);
   const inputRef = useRef(null);
   const markerRef = useRef(null);
@@ -45,6 +49,7 @@ function AddStore() {
       setStoreName(storedetails.store.storeName);
       setOwnerName(storedetails.store.ownerName);
       setPhone(storedetails.store.PhoneNumber);
+      setEmail(storedetails.store.email || '');
       setPassword(storedetails.store.password);
       setSelectedCity(storedetails.store.city?._id);
       setSelectedZone(zoneIds);
@@ -55,13 +60,12 @@ function AddStore() {
       setSelectedImage(storedetails.store.image);
       setSelectedCategory(storedetails.store.Category);
     }
-  }, [selectedZone]);
-
+  }, []);
 
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const data = await fetch("https://api.fivlia.in/getMainCategory");
         if (data.status === 200) {
           const result = await data.json();
           setMainCategories(result.result);
@@ -105,76 +109,70 @@ function AddStore() {
   }, [selectedCity, availableZones, cities]);
 
   useEffect(() => {
-    const loadScript = (url) => {
-      const existingScript = document.getElementById("googleMaps");
-      if (!existingScript) {
-        const script = document.createElement("script");
-        script.src = url;
-        script.id = "googleMaps";
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-      } else {
-        initMap();
-      }
-    };
+   const loadScript = (url) => {
+  const existingScript = document.getElementById("olaMaps");
+  if (!existingScript) {
+    const script = document.createElement("script");
+    script.src = url;
+    script.id = "olaMaps";
+    script.async = true;
+    script.defer = true;
+    script.onload = initMap; // Call when loaded
+    document.body.appendChild(script);
+  } else {
+    initMap();
+  }
+};
+
 
     window.initMap = initMap;
 
-    loadScript(
-      `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`
-    );
+ loadScript(
+  `https://apis.mapmyindia.com/advancedmaps/v1/${process.env.REACT_APP_OLA_MAPS_API_KEY}/map_load?v=1.5`
+);
 
-    function initMap() {
-      if (!window.google || !window.google.maps || !window.google.maps.places) return;
 
-      const defaultLocation = { lat: 28.6139, lng: 77.2090 }; // Delhi
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: defaultLocation,
-        zoom: 13,
-      });
+   function initMap() {
+  if (!window.MapmyIndia) return;
 
-      mapInstance.current = map;
+  const map = new window.MapmyIndia.Map(mapRef.current, {
+    center: [28.6139, 77.2090], // Delhi
+    zoom: 13,
+  });
 
-      const input = inputRef.current;
-      const searchBox = new window.google.maps.places.SearchBox(input);
+  mapInstance.current = map;
 
-      map.addListener("bounds_changed", () => {
-        searchBox.setBounds(map.getBounds());
-      });
+  // Autocomplete binding
+  new window.MapmyIndia.search(document.getElementById("locationSearch"), (data) => {
+    if (data && data.latitude && data.longitude) {
+      const lat = data.latitude;
+      const lng = data.longitude;
 
-      searchBox.addListener("places_changed", () => {
-        const places = searchBox.getPlaces();
-        if (places.length === 0) return;
-
-        const place = places[0];
-        const location = place.geometry.location;
-
-        placeMarker(location);
-      });
-
-      map.addListener("click", (e) => {
-        const location = e.latLng;
-        placeMarker(location);
-      });
-
-      function placeMarker(location) {
-        if (markerRef.current) {
-          markerRef.current.setMap(null);
-        }
-
-        markerRef.current = new window.google.maps.Marker({
-          position: location,
-          map: mapInstance.current,
-        });
-
-        map.panTo(location);
-        map.setZoom(15);
-
-        setLatitude(location.lat());
-        setLongitude(location.lng());
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current);
       }
+      markerRef.current = window.L.marker([lat, lng]).addTo(map);
+
+      setLatitude(lat);
+      setLongitude(lng);
+      map.setView([lat, lng], 15);
     }
+  });
+
+  // Manual click on map
+  map.on("click", (e) => {
+    const { lat, lng } = e.latlng;
+
+    if (markerRef.current) {
+      map.removeLayer(markerRef.current);
+    }
+    markerRef.current = window.L.marker([lat, lng]).addTo(map);
+
+    setLatitude(lat);
+    setLongitude(lng);
+  });
+}
+
   }, []);
 
   const handleSwitchChange = (event) => {
@@ -218,7 +216,7 @@ function AddStore() {
   };
 
   const handleStore = async () => {
-    if (!storeName || !ownerName || !phone || !latitude || !longitude || !selectedCity) {
+    if (!storeName || !ownerName || !phone || !email || !latitude || !longitude || !selectedCity) {
       alert("Please fill all required fields.");
       return;
     }
@@ -235,9 +233,11 @@ function AddStore() {
 
     try {
       const formData = new FormData();
+      dispatch(startLoading());
       formData.append("storeName", storeName);
       formData.append("ownerName", ownerName);
       formData.append("PhoneNumber", phone);
+      formData.append("email", email);
       formData.append("city", selectedCity);
       formData.append("zone", JSON.stringify(selectedZone));
       formData.append("Latitude", latitude);
@@ -258,20 +258,28 @@ function AddStore() {
           body: formData,
         });
       } else {
+        formData.append("password", password);
         response = await fetch("https://api.fivlia.in/createStore", {
           method: "POST",
           body: formData,
         });
       }
-      console.log(response, 34567);
+
       if (response.status === 201) {
+        dispatch(stopLoading());
         alert("Store added successfully!");
+        navigate(-1);
+      } else if (response.status === 200) {
+        dispatch(stopLoading());
+        alert("Store Updated successfully!");
         navigate(-1);
       } else {
         const errorData = await response.json();
+        dispatch(stopLoading());
         alert(`Error: ${errorData.message || "Failed to add store"}`);
       }
     } catch (error) {
+      dispatch(stopLoading());
       alert("Error adding store: " + error.message);
     }
   };
@@ -319,6 +327,15 @@ function AddStore() {
                 onChange={(e) => setPhone(e.target.value)}
               />
             </div>
+            <div className="store-input">
+              <label>Email</label>
+              <input
+                type="email"
+                placeholder="Enter Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="store-row">
@@ -332,7 +349,6 @@ function AddStore() {
               />
             </div>
           </div>
-
 
           <div className="store-row">
             <div className="store-input">
@@ -420,7 +436,7 @@ function AddStore() {
               <label>Search Location</label>
               <input
                 type="text"
-                ref={inputRef}
+                id="locationSearch"
                 placeholder="Search a location"
               />
               <div

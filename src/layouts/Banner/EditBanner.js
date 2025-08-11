@@ -31,7 +31,6 @@ function EditBanner() {
   useEffect(() => {
     const data = location.state;
     if (data) {
-      console.log(data);
       
       setId(data._id);
       setName(data.title);
@@ -74,7 +73,6 @@ function EditBanner() {
 
       if (data.image) {
         setImage(data.image);
-        console.log(data.image);
         
         setImagePreview(data.image);
 
@@ -96,7 +94,7 @@ function EditBanner() {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const res = await fetch("https://api.fivlia.in/getMainCategory");
         const data = await res.json();
         setMain(data.result || []);
       } catch (err) {
@@ -146,7 +144,7 @@ function EditBanner() {
         });
         const data = await res.json();
         const fetchedStores = data.result || [];
-
+console.log('data.result',data.result)
         // Remove duplicates based on store ID
         const uniqueStores = Array.from(
           new Map(fetchedStores.map((store) => [store._id, store])).values()

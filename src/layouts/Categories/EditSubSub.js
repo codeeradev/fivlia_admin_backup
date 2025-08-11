@@ -25,7 +25,6 @@ const EditSubSubCat = () => {
 
   useEffect(() => {
     if (category) {
-       console.log("subcat",id);
        
       setCategoryName(category.name || "");
       setDescription(category.description || "");

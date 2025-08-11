@@ -26,12 +26,13 @@ function AddBanner() {
   const [subsubId, setSubsubId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
   const [imageError, setImageError] = useState("");
+  const [bannerType, setBannerType] = useState("normal");
   const dispatch = useDispatch();
  
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch("https://node-m8jb.onrender.com/getlocations");
+        const res = await fetch("https://api.fivlia.in/getAllZone");
         const data = await res.json();
         setLocations(data.result || []);
       } catch (err) {
@@ -41,7 +42,7 @@ function AddBanner() {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const res = await fetch("https://api.fivlia.in/getMainCategory");
         const data = await res.json();
         setMain(data.result || []);
       } catch (err) {
@@ -123,6 +124,7 @@ function AddBanner() {
     const formData = new FormData();
     dispatch(startLoading());
     formData.append("title", name);
+    formData.append("type", bannerType);
     const selectedCity = locations.find((loc) => loc._id === selectedCityId);
     formData.append("city", selectedCity._id);
     formData.append("image", imageFile);
@@ -327,6 +329,19 @@ function AddBanner() {
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
             <option value="Sub Sub-Category">Sub Sub-Category</option>
+          </select>
+        </div>
+
+        {/* Banner Type */}
+        <div style={formRowStyle}>
+          <label style={labelStyle}>Banner Type</label>
+          <select
+            style={inputStyle}
+            value={bannerType}
+            onChange={e => setBannerType(e.target.value)}
+          >
+            <option value="normal">Normal</option>
+            <option value="offer">Offer</option>
           </select>
         </div>
 

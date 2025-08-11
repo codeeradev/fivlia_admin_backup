@@ -34,11 +34,13 @@ import Tax from "layouts/Attribute/Tax";
 import Product from "layouts/Products/Product";
 import Stock from "layouts/Store/StoreRoutes/Stock";
 import ProductTable from "layouts/Products/ProductTable";
+import User from "layouts/User/User"
 import CreateStore from "layouts/Store/Store";
 import StoreList from "layouts/Store/Store";
 import UnitsTable from "layouts/Attribute/Units";
 import VarientTabel from "layouts/Attribute/Varient";
 import Setting from "Setting/Setting";
+import PagesTable from "Setting/pageTable";
 import LoginPage from "Login/Login";
 import button from "assets/theme/components/button";
 import StoreTabel from "layouts/Store/StoreTable";
@@ -50,6 +52,7 @@ import DashBoard from "layouts/Store/StoreRoutes/DashBoard";
 import Drivers from "layouts/Drivers/Drivers"
 import DeliveryStatus from "layouts/DeliveryStatus/DeliveryStatus"
 import Orders from "layouts/Orders/Order"
+import Notification from "layouts/Notification/Notification";
 import StoreOrder from "layouts/Store/StoreRoutes/StoreOrder"
 import StoreCategories from "layouts/Store/StoreRoutes/Categories";
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
@@ -178,6 +181,14 @@ const routes =
       route: "/store-table",
       component: <StoreTabel />
     },
+      {
+      type: "collapse",
+      name: "User",
+      key: "user",
+      icon: <Icon fontSize="small">person</Icon>,
+      route: "/user",
+      component: <User />
+    },
     {
     type: "collapse",
     name: "Drivers",
@@ -204,11 +215,34 @@ const routes =
   },
   {
       type: "collapse",
+      name: "Notification",
+      key: "notification",
+      icon: <Icon fontSize="small">notifications</Icon>,
+      route: "/notification",
+      component: <Notification />
+    },
+  {
+      type: "collapse",
       name: "Setting",
-      key: "setting",
+      key: "Setting",
       icon: <Icon fontSize="small">store</Icon>,
-      route: "/setting",
-      component: <Setting />
+       collapse: [
+        {
+          name: "Settings",
+          key: "Settings",
+          route: "/setting",
+          component: <Setting />,
+          icon: <Icon fontSize="small">view_array</Icon>,
+        },
+        {
+          name: "Pages",
+          key: "Pages",
+          route: "/pages",
+          component: <PagesTable />,
+          icon: <Icon fontSize="small">view_array</Icon>,
+        },
+      
+      ],
     },
     {
       type: "collapse",

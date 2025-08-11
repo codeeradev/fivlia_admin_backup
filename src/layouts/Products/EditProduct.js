@@ -21,6 +21,8 @@ function EditProduct() {
   const [filterValues, setFilterValues] = useState([]);
   const [selectedFilterValue, setSelectedFilterValue] = useState("");
   const [variantImages, setVariantImages] = useState({}); // Added for variant image handling
+  const [returnProduct, setReturnProduct] = useState({ title: "", image: null });
+  const returnImageInputRef = useRef(null);
   const thumbnailInputRef = useRef(null); // Added for thumbnail handling
   const dispatch = useDispatch();
   const sectionIds = ["basicinfo", "imagesection", "category-section", "citysection", "taxsection"];
@@ -32,7 +34,6 @@ function EditProduct() {
   const [citydata, setCityData] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [sku, setSku] = useState("");
   const [ribbon, setRibbon] = useState("");
   const [mrp, setMrp] = useState("");
   const [sellingprice, setSellingPrice] = useState("");
@@ -167,6 +168,7 @@ function EditProduct() {
     const maxImages = 4;
     const currentCount = selectedImages.length;
     const remainingSlots = maxImages - currentCount;
+
     const newImages = [];
     let rejected = false;
     let tooMany = false;
@@ -175,7 +177,15 @@ function EditProduct() {
       if (index < remainingSlots) {
         if (file.size <= maxSize) {
           const newfiles = URL.createObjectURL(file);
-          newImages.push({ file, newfiles });
+          newImages.push({
+            file,
+            newfiles,
+          });
+         if (index === 0 && currentCount === 0 && !thumbnailImage) {
+            setThumbnailImage(file);
+            setPreview(URL.createObjectURL(file));
+            setThumbnailError("");
+          }
         } else {
           rejected = true;
         }
@@ -195,8 +205,25 @@ function EditProduct() {
     setSelectedImages((prev) => [...prev, ...newImages]);
   };
 
-  const handleImageRemove = (indexToRemove) => {
-    setSelectedImages((prevImages) => prevImages.filter((_, index) => index !== indexToRemove));
+ const handleImageRemove = (indexToRemove) => {
+    setSelectedImages((prevImages) =>
+      prevImages.filter((_, index) => index !== indexToRemove)
+    );
+    // If removing the first image (thumbnail), clear thumbnail
+    if (indexToRemove === 0 && selectedImages.length > 0) {
+      setThumbnailImage(null);
+      setPreview(null);
+      setThumbnailError("");
+      if (thumbnailInputRef.current) {
+        thumbnailInputRef.current.value = "";
+      }
+      // Set next image as thumbnail if available
+      if (selectedImages.length > 1) {
+        const nextImage = selectedImages[1];
+        setThumbnailImage(nextImage.file);
+        setPreview(nextImage.newfiles);
+      }
+    }
   };
 
   const handleAttributeValueChange = (e) => {
@@ -330,7 +357,7 @@ function EditProduct() {
       return;
     }
     try {
-      const result = await fetch(`https://api.fivlia.in/updateAt/${category[0]}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateAt/${category[0]}`, {
         method: "PATCH",
         body: JSON.stringify({ attribute: addAttribute }),
         headers: { "Content-Type": "application/json" },
@@ -340,7 +367,7 @@ function EditProduct() {
         alert("Attribute Added Successfully");
         setShowPopup(false);
         setAddattribute("");
-        const res = await fetch(`https://api.fivlia.in/getAttributes`);
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } else {
@@ -501,6 +528,35 @@ function EditProduct() {
     }
   };
 
+const handleReturnImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (!validImageTypes.includes(file.type)) {
+      setError("Please upload a valid image (JPEG, PNG, JPG) for return policy");
+      setReturnProduct((prev) => ({ ...prev, image: null }));
+      return;
+    }
+    if (file.size > maxSize) {
+      setError("Return policy image must be less than 500KB");
+      setReturnProduct((prev) => ({ ...prev, image: null }));
+      return;
+    }
+    setError("");
+    setReturnProduct((prev) => ({ ...prev, image: file }));
+  }
+};
+
+const handleRemoveReturnImage = () => {
+  setReturnProduct((prev) => ({ ...prev, image: null }));
+  if (returnImageInputRef.current) {
+    returnImageInputRef.current.value = "";
+  }
+};
+ const handleReturnPolicyChange = (policy) => {
+  setReturnProduct((prev) => ({ ...prev, title: policy }));
+};
+
   const handleRemoveZoneFromCity = (cityId, zoneAddress) => {
     setCityZones(prev => ({
       ...prev,
@@ -649,7 +705,7 @@ function EditProduct() {
   useEffect(() => {
     const getCategory = async () => {
       try {
-        const result = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         if (result.status === 200) {
           const res = await result.json();
           setCategories(res.result);
@@ -661,7 +717,7 @@ function EditProduct() {
 
     const getActiveCity = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getAllZone");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         if (result.status === 200) {
           const res = await result.json();
           setCityData(res);
@@ -730,7 +786,6 @@ function EditProduct() {
       setId(data._id || "");
       setName(data.productName || "");
       setDescription(data.description || "");
-      setSku(data.sku || "");
       setRibbon(data.ribbon || "");
       setMrp(data.mrp || "");
       setSellingPrice(data.sell_price || "");
@@ -941,7 +996,7 @@ function EditProduct() {
     const newformdata1 = new FormData();
     newformdata1.append('filterIds', JSON.stringify(selectedFilterIds));
 
-    const res = await fetch(`https://api.fivlia.in/addFilterInCategory/${selecetdcategory}`, {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/addFilterInCategory/${selecetdcategory}`, {
       method: "PUT",
       body: newformdata1,
     });
@@ -955,7 +1010,6 @@ function EditProduct() {
 
     formData.append("productName", name);
     formData.append("description", description);
-    formData.append("sku", sku);
     formData.append("ribbon", ribbon || "");
     formData.append("feature_product", isFeatured);
     formData.append("unit", unitname);
@@ -963,8 +1017,16 @@ function EditProduct() {
     formData.append("online_visible", true);
     formData.append("status", status);
 
-    if (thumbnailImage && thumbnailImage instanceof File) {
-      formData.append("productThumbnail", thumbnailImage);
+    if (returnProduct.title) {
+     formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
+    }
+
+    if (returnProduct.image) {
+     formData.append("file", returnProduct.image);
+    }
+
+   if (thumbnailImage) {
+      formData.append("image", thumbnailImage);
     }
 
     selectedImages
@@ -1038,36 +1100,41 @@ function EditProduct() {
     }
 
     if (attributeValue.length > 0) {
-      const variants = attributeValue
-        .map((item, index) => {
-          const prices = variantPrices[item.variantName];
-          if (!prices || !prices.mrp || !prices.sell_price) {
-            return null;
-          }
-          return {
-            attributeName: item.attributeName,
-            variantValue: `${item.variantName}${item.unit ? ` ${item.unit}` : ''}`,
-            mrp: parseFloat(prices.mrp) || 0,
-            sell_price: parseFloat(prices.sell_price) || 0,
-            imageKey: `var${index + 1}`,
-            ...(item.attributeName.toLowerCase() === "color" && colorHexCodes[item.variantName]
-              ? { hexCode: colorHexCodes[item.variantName] }
-              : {}),
-          };
-        })
-        .filter(Boolean);
-      if (variants.length > 0) {
-        formData.append("variants", JSON.stringify(variants));
+  const variants = attributeValue
+    .map((item, index) => {
+      const prices = variantPrices[item.variantName];
+      if (!prices || !prices.mrp || !prices.sell_price) {
+        return null;
       }
+      // Find the original variant data from the initial product data
+      const originalVariant = location.state?.variants?.find(
+        (v) => v.variantValue.split(" ")[0] === item.variantName
+      );
+      return {
+        ...(originalVariant?._id && { _id: originalVariant._id }), // Include _id if it exists
+        attributeName: item.attributeName,
+        variantValue: `${item.variantName}${item.unit ? ` ${item.unit}` : ''}`,
+        mrp: parseFloat(prices.mrp) || 0,
+        sell_price: parseFloat(prices.sell_price) || 0,
+        imageKey: `var${index + 1}`,
+        ...(item.attributeName.toLowerCase() === "color" && colorHexCodes[item.variantName]
+          ? { hexCode: colorHexCodes[item.variantName] }
+          : {}),
+      };
+    })
+    .filter(Boolean);
+  if (variants.length > 0) {
+    formData.append("variants", JSON.stringify(variants));
+  }
 
-      attributeValue
-        .filter((item) => variantPrices[item.variantName])
-        .forEach((item, index) => {
-          if (variantImages[item.variantName]?.file) {
-            formData.append(`var${index + 1}`, variantImages[item.variantName].file);
-          }
-        });
-    }
+  attributeValue
+    .filter((item) => variantPrices[item.variantName])
+    .forEach((item, index) => {
+      if (variantImages[item.variantName]?.file) {
+        formData.append(`var${index + 1}`, variantImages[item.variantName].file);
+      }
+    });
+}
 
     const combinedFilterData = {};
     originalFilterData.forEach((filter) => {
@@ -1100,24 +1167,23 @@ function EditProduct() {
     }
 
     try {
-      const result = await fetch(`https://api.fivlia.in/updateProduct/${id}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateProduct/${id}`, {
         method: "PATCH",
         body: formData,
       });
       const responseBody = await result.json();
-      console.log("Server Response:", responseBody);
       if (result.status === 200) {
-        alert("Product Updated Successfully");
         dispatch(stopLoading());
+        alert("Product Updated Successfully");
         navigate(-1);
       } else {
-        alert(`Error: ${responseBody.message || "Unknown server error"}`);
         dispatch(stopLoading());
+        alert(`Error: ${responseBody.message || "Unknown server error"}`);
       }
     } catch (err) {
+      dispatch(stopLoading());
       console.error("Request Error:", err);
       alert("Error updating product: " + err.message);
-      dispatch(stopLoading());
     }
   };
 
@@ -1126,7 +1192,7 @@ function EditProduct() {
 
   const handlefiltervalue = async () => {
     try {
-      const newvalue = await fetch(`https://api.fivlia.in/editFilter/${filterTypeName}`, {
+      const newvalue = await fetch(`${process.env.REACT_APP_API_URL}/editFilter/${filterTypeName}`, {
         method: "PATCH",
         body: JSON.stringify({
           Filter: [{ name: newFilterValue }],
@@ -1192,19 +1258,6 @@ function EditProduct() {
             </div>
             <div className="row-section">
               <div className="input-container">
-                <label>
-                  Product SKU <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter Product SKU"
-                  className="input-field"
-                  value={sku}
-                  style={{ backgroundColor: "white" }}
-                  onChange={(e) => setSku(e.target.value)}
-                />
-              </div>
-              <div className="input-container">
                 <label>Ribbon</label>
                 <input
                   type="text"
@@ -1216,15 +1269,88 @@ function EditProduct() {
                 />
               </div>
             </div>
-            <div className="row-section">
-              <div className="input-container">
-                <label>Feature Product</label>
-                <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
-                <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
-                  {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
-                </div>
-              </div>
-            </div>
+     <div className="row-section">
+       <div className="input-container">
+         <label>Feature Product</label>
+         <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
+         <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
+           {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
+         </div>
+       </div>
+       <div className="input-container">
+         <label>
+           Return Policy <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+         </label>
+         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+             <input
+               type="checkbox"
+               checked={returnProduct.title === "No Return"}
+               onChange={() => handleReturnPolicyChange("No Return")}
+               style={{ marginRight: "8px" }}
+             />
+             No Return
+           </label>
+           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+             <input
+               type="checkbox"
+               checked={returnProduct.title === "No Exchange"}
+               onChange={() => handleReturnPolicyChange("No Exchange")}
+               style={{ marginRight: "8px" }}
+             />
+             No Exchange
+           </label>
+           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+             <input
+               type="checkbox"
+               checked={returnProduct.title === "3 Day Return"}
+               onChange={() => handleReturnPolicyChange("3 Day Return")}
+               style={{ marginRight: "8px" }}
+             />
+             3 Day Return
+           </label>
+           <div style={{ marginTop: "10px" }}>
+             <label>Return Policy Image (Optional)</label>
+             <input
+               type="file"
+               accept="image/jpeg,image/png,image/jpg"
+               ref={returnImageInputRef}
+               onChange={handleReturnImageChange}
+               style={{ marginTop: "8px" }}
+             />
+             {returnProduct.image && (
+               <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
+                 <img
+                   src={URL.createObjectURL(returnProduct.image)}
+                   alt="Return Policy Preview"
+                   style={{
+                     width: "50px",
+                     height: "50px",
+                     objectFit: "cover",
+                     borderRadius: "8px",
+                     marginRight: "10px",
+                   }}
+                 />
+                 <button
+                   onClick={handleRemoveReturnImage}
+                   style={{
+                     background: "red",
+                     color: "white",
+                     border: "none",
+                     borderRadius: "4px",
+                     padding: "4px 8px",
+                     cursor: "pointer",
+                     fontSize: "12px",
+                   }}
+                 >
+                   Remove
+                 </button>
+               </div>
+             )}
+           </div>
+         </div>
+       </div>
+     </div>
           </div>
 
           {/* Image Upload */}
@@ -1234,43 +1360,6 @@ function EditProduct() {
             </span>
             <div className="row-section">
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                <div>
-                  <label>
-                    Thumbnail Image <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={thumbnailInputRef}
-                    onChange={handleThumbnailChange}
-                    className="input-field"
-                    style={{ backgroundColor: "white" }}
-                  />
-                  {thumbnailError && <p style={{ color: "red", fontSize: "12px" }}>{thumbnailError}</p>}
-                  {preview && (
-                    <div style={{ marginTop: "10px" }}>
-                      <img
-                        src={preview}
-                        alt="thumbnail-preview"
-                        style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
-                      />
-                      <button
-                        onClick={handleRemoveThumbnail}
-                        style={{
-                          background: "red",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          cursor: "pointer",
-                          marginLeft: "10px",
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
                 <div>
                   <label>
                     Product Images <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>

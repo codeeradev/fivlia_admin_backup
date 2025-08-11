@@ -19,20 +19,18 @@ const AddStoreCat = () => {
 
     useEffect(() => {
         const id = localStorage.getItem('storeId')
-        console.log(id);
         setStoreId(id)
       }, [])
 
     useEffect(() => {
         const getMainCategory = async () => {
             try {
-                const data = await fetch('https://node-m8jb.onrender.com/getMainCategory');
+                const data = await fetch('https://api.fivlia.in/getMainCategory');
                 if (data.status === 200) {
                     const result = await data.json();
                     setMainCategories(result.result);
                     //   const allSubCategories = result.result.flatMap(cat => cat.subcat || []);
                     //   setSubCategories(allSubCategories);
-                    console.log("Main ", result.result);
                     // console.log("Sub", allSubCategories);
                 } else {
                     console.log('Something Wrong');

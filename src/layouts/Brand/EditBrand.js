@@ -26,7 +26,6 @@ function EditBrand() {
     };
 
    useEffect(()=>{
-    console.log(branddetails);
     setName(branddetails.brandName)
     setDescription(branddetails.description)
     setImage(branddetails.brandLogo)

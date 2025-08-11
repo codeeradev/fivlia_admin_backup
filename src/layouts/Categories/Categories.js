@@ -34,7 +34,7 @@ function Categories() {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const data = await fetch("https://api.fivlia.in/getMainCategory");
         if (data.status === 200) {
           const result = await data.json();
           setMainCategories(result.result); // Assume each category has `status` field
@@ -240,7 +240,7 @@ function Categories() {
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>
                         <img
-                          src={item.image}
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
                           alt={item.name}
                           style={{
                             width: "50px",

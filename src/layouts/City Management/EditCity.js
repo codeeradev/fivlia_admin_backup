@@ -39,7 +39,6 @@ function EditCity() {
    
     if (location.state) {
       const cityData = location.state;
-      console.log(cityData);
       setId(cityData.id)
      
       

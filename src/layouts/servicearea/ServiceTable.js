@@ -26,7 +26,7 @@ function Table() {
   const navigate = useNavigate();
 
   const [locations, setLocations] = useState([]);
-  const [entriesToShow, setEntriesToShow] = useState(10);
+  const [entriesToShow, setEntriesToShow] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("All Cities");
@@ -36,8 +36,6 @@ function Table() {
       try {
         const res = await fetch("https://api.fivlia.in/getAllZone");
         const data = await res.json();
-
-        console.log(data);
 
         const allZones = (data || []).flatMap(cityObj => {
           if (!Array.isArray(cityObj.zones) || cityObj.zones.length === 0) return [];
@@ -227,9 +225,9 @@ function Table() {
             <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 16 }}>Show Entries</span>&nbsp;
               <select value={entriesToShow} onChange={handleEntriesChange}>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
+                <option value={5}>100</option>
+                <option value={10}>150</option>
+                <option value={20}>200</option>
               </select>
             </div>
 

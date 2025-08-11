@@ -115,7 +115,6 @@ export default function StatusManagement() {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to add status");
-
       setStatuses((prev) => [
         ...prev,
         {
@@ -315,7 +314,7 @@ export default function StatusManagement() {
                   <td style={bodyCell}>
                     {status.image ? (
                       <img
-                        src={status.image}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${status.image}`}
                         alt={status.statusTitle}
                         style={{ width: 40, height: 40, borderRadius: "6px", objectFit: "cover" }}
                       />

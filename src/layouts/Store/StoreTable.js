@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Switch,
 } from "@mui/material";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -51,21 +52,22 @@ function StoreTabel() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const getAllStores = async () => {
-      try {
-        const result = await fetch("https://api.fivlia.in/getStore");
-        if (result.status === 200) {
-          const res = await result.json();
-          setStores(res.stores);
-        } else {
-          console.log("Something went wrong");
-        }
-      } catch (err) {
-        console.log(err);
-      }
-    };
     getAllStores();
   }, []);
+
+  const getAllStores = async () => {
+    try {
+      const result = await fetch("https://api.fivlia.in/getStore");
+      if (result.status === 200) {
+        const res = await result.json();
+        setStores(res.stores);
+      } else {
+        console.log("Something went wrong");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const handleZonesClick = (event, zones) => {
     if (anchorEl && anchorEl === event.currentTarget) {
@@ -92,6 +94,29 @@ function StoreTabel() {
     setActionStore(null);
   };
 
+  const handleStatusToggle = async (storeId, newStatus) => {
+    try {
+      const response = await fetch(`https://api.fivlia.in/storeEdit/${storeId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        setStores((prevStores) =>
+          prevStores.map((s) => (s._id === storeId ? { ...s, status: newStatus } : s))
+        );
+      } else {
+        alert("Failed to update status.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong while updating status.");
+    }
+  };
+
   return (
     <MDBox
       p={2}
@@ -110,7 +135,6 @@ function StoreTabel() {
             overflowX: "auto",
           }}
         >
-          {/* Header */}
           <div
             style={{
               display: "flex",
@@ -143,7 +167,6 @@ function StoreTabel() {
             </div>
           </div>
 
-          {/* Table */}
           <div style={{ width: "100%", overflowX: "auto", maxWidth: "100%" }}>
             <table
               style={{
@@ -162,6 +185,7 @@ function StoreTabel() {
                   <th style={headerCell}>City</th>
                   <th style={headerCell}>Zone(s)</th>
                   <th style={{ ...headerCell, width: "100px", textAlign: "center" }}>Products</th>
+                  <th style={{ ...headerCell, textAlign: "center" }}>Status</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
@@ -174,7 +198,7 @@ function StoreTabel() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {store.image ? (
                           <img
-                            src={store.image}
+                            src={`${process.env.REACT_APP_IMAGE_LINK}${store.image}`}
                             alt="store"
                             style={{ width: 60, height: 60, borderRadius: 8, objectFit: "cover" }}
                           />
@@ -267,6 +291,14 @@ function StoreTabel() {
 
                     <td style={bodyCell}>{store.Category?.length || 0}</td>
 
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <Switch
+                        checked={store.status}
+                        onChange={(e) => handleStatusToggle(store._id, e.target.checked)}
+                        color="primary"
+                      />
+                    </td>
+
                     <td style={{ ...bodyCell, width: 150, textAlign: "center" }}>
                       <IconButton onClick={(e) => handleActionClick(e, store)} size="small">
                         <MoreVertIcon />
@@ -296,7 +328,9 @@ function StoreTabel() {
                         <MenuItem
                           onClick={() => {
                             handleActionClose();
-                            navigate("/store-login", { state: store._id });
+                            localStorage.setItem("userType", "store");
+                            localStorage.setItem("storeId", store._id); // ✅ Set the ID first
+                            window.location.href = "/dashboard1";        
                           }}
                         >
                           Login

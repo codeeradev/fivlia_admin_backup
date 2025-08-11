@@ -33,7 +33,7 @@ function BrandTable() {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getBrand");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
         const data = await res.json();
         // Use allBrands from the API response
         setBrands(data.allBrands || []);
@@ -83,7 +83,6 @@ function BrandTable() {
       console.log("Delete failed:", err);
     }
   };
-
   return (
     <MDBox
       p={2}
@@ -198,7 +197,7 @@ function BrandTable() {
                     <td style={bodyCell}>{item.brandName}</td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <img
-                        src={item.brandLogo}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${item.brandLogo}`}
                         alt="logo"
                         width="70"
                         height="70"

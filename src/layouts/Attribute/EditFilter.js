@@ -34,9 +34,6 @@ function EditFilter() {
                 return;
             }
             const formattedFilter = filterData.map(item => ({ name: item }));
-            console.log("Filter Name:", name);
-            console.log("Filter Values:", formattedFilter);
-
               const payload = {
             Filter_name: name,
             Filter: formattedFilter

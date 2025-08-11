@@ -18,6 +18,8 @@ function Product() {
   const [colorError, setColorError] = useState("");
   const [activeVariant, setActiveVariant] = useState("");
   const [filterdropdown, setFilterDropdown] = useState(false);
+  const [returnProduct, setReturnProduct] = useState({ title: "", image: null });
+  const returnImageInputRef = useRef(null);
   const [allFilters, setAllFilters] = useState([]);
   const dispatch = useDispatch();
 
@@ -43,7 +45,6 @@ function Product() {
   // Basic Product Info
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [sku, setSku] = useState("");
   const [ribbon, setRibbon] = useState("");
   const [mrp, setMrp] = useState("");
   const [sellingprice, setSellingPrice] = useState("");
@@ -107,7 +108,7 @@ function Product() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getFilter");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         const data = await res.json();
         setFilterTypes(data);
       } catch (err) {
@@ -118,7 +119,7 @@ function Product() {
 
     const getCategory = async () => {
       try {
-        const result = await fetch("https://node-m8jb.onrender.com/getMainCategory");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         if (result.status === 200) {
           const res = await result.json();
           setCategories(res.result);
@@ -133,7 +134,7 @@ function Product() {
 
     const getActiveCity = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getAllZone");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         if (result.status === 200) {
           const res = await result.json();
           setCityData(res);
@@ -148,7 +149,7 @@ function Product() {
 
     const fetchBrands = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getBrand");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
         if (res.status === 200) {
           const data = await res.json();
           setBrands(data.allBrands);
@@ -172,7 +173,7 @@ function Product() {
 
     const fetchAttribute = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } catch (err) {
@@ -183,7 +184,7 @@ function Product() {
 
     const getUnits = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getUnit");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
         if (result.status === 200) {
           const res = await result.json();
           setUnitsData(res.Result);
@@ -240,7 +241,7 @@ function Product() {
       return;
     }
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({
           _id: selectedFilter,
@@ -454,6 +455,34 @@ function Product() {
 
     setShowCategoryDropdown(false);
   };
+const handleReturnImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (!validImageTypes.includes(file.type)) {
+      setError("Please upload a valid image (JPEG, PNG, JPG) for return policy");
+      setReturnProduct((prev) => ({ ...prev, image: null }));
+      return;
+    }
+    if (file.size > maxSize) {
+      setError("Return policy image must be less than 500KB");
+      setReturnProduct((prev) => ({ ...prev, image: null }));
+      return;
+    }
+    setError("");
+    setReturnProduct((prev) => ({ ...prev, image: file }));
+  }
+};
+
+const handleRemoveReturnImage = () => {
+  setReturnProduct((prev) => ({ ...prev, image: null }));
+  if (returnImageInputRef.current) {
+    returnImageInputRef.current.value = "";
+  }
+};
+ const handleReturnPolicyChange = (policy) => {
+  setReturnProduct((prev) => ({ ...prev, title: policy }));
+};
 
   const handleRemoveCategory = (categoryId) => {
     const updatedCategories = category.filter((id) => id !== categoryId);
@@ -573,7 +602,7 @@ function Product() {
 
     const selectedCategoryId = category[0];
     try {
-      const result = await fetch(`https://api.fivlia.in/updateAt/${selectedCategoryId}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateAt/${selectedCategoryId}`, {
         method: "PATCH",
         body: JSON.stringify({
           attribute: addAttribute,
@@ -589,7 +618,7 @@ function Product() {
         alert("Attribute Added Successfully");
         setShowPopup(false);
         setAddattribute("");
-        const res = await fetch(`https://api.fivlia.in/getAttributes`);
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } else {
@@ -896,14 +925,29 @@ dispatch(startLoading());
 
   const handelProduct = async () => {
     dispatch(startLoading());
+    const hasVariantImage = attributeValue.some(
+  (item) => variantImages[item.variantName]?.file
+);
+if (attributeValue.length > 0 && !hasVariantImage) {
+  dispatch(stopLoading());
+  alert("At least one variant must have an image.");
+  return;
+}
     const formData = new FormData();
     formData.append("productName", name);
     formData.append("description", description);
-    formData.append("sku", sku);
     formData.append("ribbon", ribbon);
     formData.append("mrp", mrp);
     formData.append("sell_price", sellingprice);
     formData.append("feature_product", isFeatured);
+    
+  if (returnProduct.title) {
+    formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
+  }
+
+    if (returnProduct.image) {
+    formData.append("file", returnProduct.image);
+  }
 
     if (thumbnailImage) {
       formData.append("image", thumbnailImage); // Changed from "image" to "thumbnail"
@@ -1007,12 +1051,13 @@ dispatch(startLoading());
     }
 
     try {
-      const result = await fetch(`https://api.fivlia.in/products`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/products`, {
         method: "POST",
         body: formData,
       });
 
       if (result.status === 200) {
+        dispatch(stopLoading());
         alert("Product added Successfully");
         navigate(-1);
       } else {
@@ -1070,43 +1115,101 @@ dispatch(startLoading());
                             />
                         </div>
                     </div>
-
-                    <div className="row-section">
-                        <div className="input-container">
-                            <label>
-                                Product SKU <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Enter Product SKU"
-                                className="input-field"
-                                value={sku}
-                                style={{ backgroundColor: "white" }}
-                                onChange={(e) => setSku(e.target.value)}
-                            />
-                        </div>
-                        <div className="input-container">
-                            <label>Ribbon</label>
-                            <input
-                                type="text"
-                                placeholder="Enter Ribbon Text"
-                                className="input-field"
-                                value={ribbon}
-                                style={{ backgroundColor: "white" }}
-                                onChange={(e) => setRibbon(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="row-section">
-                        <div className="input-container">
-                            <label>Feature Product</label>
-                            <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
-                            <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
-                                {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
-                            </div>
-                        </div>
-                    </div>
+ <div className="row-section">
+              <div className="input-container">
+                <label>Ribbon</label>
+                <input
+                  type="text"
+                  placeholder="Enter Ribbon Text"
+                  className="input-field"
+                  value={ribbon}
+                  style={{ backgroundColor: "white" }}
+                  onChange={(e) => setRibbon(e.target.value)}
+                />
+              </div>
+            </div>
+<div className="row-section">
+  <div className="input-container">
+    <label>Feature Product</label>
+    <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
+    <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
+      {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
+    </div>
+  </div>
+  <div className="input-container">
+    <label>
+      Return Policy <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+    </label>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={returnProduct.title === "No Return"}
+          onChange={() => handleReturnPolicyChange("No Return")}
+          style={{ marginRight: "8px" }}
+        />
+        No Return
+      </label>
+      <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={returnProduct.title === "No Exchange"}
+          onChange={() => handleReturnPolicyChange("No Exchange")}
+          style={{ marginRight: "8px" }}
+        />
+        No Exchange
+      </label>
+      <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={returnProduct.title === "3 Day Return"}
+          onChange={() => handleReturnPolicyChange("3 Day Return")}
+          style={{ marginRight: "8px" }}
+        />
+        3 Day Return
+      </label>
+      <div style={{ marginTop: "10px" }}>
+        <label>Return Policy Image (Optional)</label>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/jpg"
+          ref={returnImageInputRef}
+          onChange={handleReturnImageChange}
+          style={{ marginTop: "8px" }}
+        />
+        {returnProduct.image && (
+          <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
+            <img
+              src={URL.createObjectURL(returnProduct.image)}
+              alt="Return Policy Preview"
+              style={{
+                width: "50px",
+                height: "50px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                marginRight: "10px",
+              }}
+            />
+            <button
+              onClick={handleRemoveReturnImage}
+              style={{
+                background: "red",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: "12px",
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
                 </div>
 
                 {/* Image Upload */}

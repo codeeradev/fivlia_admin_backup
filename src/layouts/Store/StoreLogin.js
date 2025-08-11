@@ -5,7 +5,7 @@ import "../../Login/LoginPage.css";
 import logo from '../../Login/fivlialogo.png'
 
 function StoreLogin() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [id, setId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,13 +21,13 @@ function StoreLogin() {
   e.preventDefault();
 
   try {
-    const res = await fetch("https://api.fivlia.in/storeLogin", {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/storeLogin`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        PhoneNumber: username,
+        email: email,
         password: password,
       }),
     });
@@ -68,11 +68,11 @@ function StoreLogin() {
             alt="Fivlia"
           />
           <h2>Login</h2>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+        <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           <div className="password-wrapper">

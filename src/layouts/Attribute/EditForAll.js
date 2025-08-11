@@ -8,8 +8,6 @@ import { Button } from "@mui/material";
 function EditAll() {
     const location=useLocation()
     const data=location.state;
-
-    console.log(data);
     
     const [controller] = useMaterialUIController();
     const { miniSidenav } = controller;
@@ -18,8 +16,6 @@ function EditAll() {
 
     useEffect(()=>{
         setName(data.Attribute_name)
-        console.log(data._id);
-        
     },[])
 
     const SaveValue=async()=>{

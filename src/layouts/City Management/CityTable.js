@@ -10,7 +10,7 @@ export default function CityTable() {
   const navigate = useNavigate();
 
   const [cities, setCities] = useState([]);
-  const [entriesToShow, setEntriesToShow] = useState(5);
+  const [entriesToShow, setEntriesToShow] = useState(100);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -35,8 +35,6 @@ export default function CityTable() {
       try {
         const result = await fetch("https://api.fivlia.in/getCity");
         const data = await result.json();
-        console.log(data);
-
 
         if (Array.isArray(data)) {
           const citiesWithDetails = data.map((city) => ({
@@ -182,7 +180,7 @@ export default function CityTable() {
                 border: "1px solid #ccc",
               }}
             >
-              {[5, 10, 20, 30].map((num) => (
+              {[100, 150, 200, 300].map((num) => (
                 <option key={num} value={num}>
                   {num}
                 </option>

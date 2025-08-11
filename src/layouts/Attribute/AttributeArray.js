@@ -33,7 +33,6 @@ function AttributeTable() {
         const res = await fetch("https://api.fivlia.in/getAttributes");
         const data = await res.json();
         setAttribute(data);
-        console.log(data);
       } catch (err) {
         console.error("Error fetching attributes:", err);
       }

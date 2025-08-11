@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { Button, TextField, Switch, FormControlLabel } from "@mui/material";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function AddDriver() {
   const [controller] = useMaterialUIController();
@@ -15,23 +17,59 @@ function AddDriver() {
   const [mobileNo, setMobileNo] = useState("");
   const [locality, setLocality] = useState("");
   const [city, setCity] = useState("");
+  const [cities, setCities] = useState([]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [policeVerification, setPoliceVerification] = useState(null);
+  const [aadharFront, setAadharFront] = useState(null);
+  const [aadharBack, setAadharBack] = useState(null);
+  const [dlFront, setDlFront] = useState(null);
+  const [dlBack, setDlBack] = useState(null);
+  const dispatch = useDispatch();
 
-  const handleImageChange = (e) => {
-    setImage(e.target.files[0]);
+
+  const handleFileChange = (e, setter) => {
+    setter(e.target.files[0]);
   };
+
+  useEffect(() => {
+  const fetchCities = async () => {
+    try {
+      const response = await fetch("https://api.fivlia.in/getCity");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setCities(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cities:", error);
+    }
+  };
+
+  fetchCities();
+}, []);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!image) {
-      alert("Please select an image");
+    if (!image || !policeVerification || !aadharFront || !aadharBack || !dlFront || !dlBack) {
+      alert("Please upload all required files");
       return;
     }
-
+dispatch(startLoading());
     const formData = new FormData();
+    
     formData.append("driverName", driverName);
-    formData.append("status", status);
+    formData.append("status", status ? "true" : "false");
     formData.append("image", image);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("Police_Verification_Copy", policeVerification);
+formData.append("aadharCard", aadharFront); // index 0
+formData.append("aadharCard", aadharBack);  // index 1
+
+formData.append("drivingLicence", dlFront); // index 0
+formData.append("drivingLicence", dlBack);  
     formData.append(
       "address",
       JSON.stringify({
@@ -50,12 +88,15 @@ function AddDriver() {
       const result = await response.json();
 
       if (response.ok) {
+        dispatch(stopLoading());
         alert("Driver added successfully");
         navigate("/drivers");
       } else {
+        dispatch(stopLoading());
         alert(result.message || "Failed to add driver");
       }
     } catch (err) {
+      dispatch(stopLoading());
       console.error("Upload error:", err);
       alert("Something went wrong!");
     }
@@ -81,6 +122,26 @@ function AddDriver() {
           fullWidth
           value={driverName}
           onChange={(e) => setDriverName(e.target.value)}
+          margin="normal"
+          required
+        />
+
+        <TextField
+          label="Email"
+          fullWidth
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          margin="normal"
+          required
+        />
+
+        <TextField
+          label="Password"
+          fullWidth
+          type="text"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           margin="normal"
           required
         />
@@ -114,23 +175,88 @@ function AddDriver() {
           required
         />
 
-        <TextField
-          label="City"
-          fullWidth
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          margin="normal"
-          required
-        />
+<TextField
+  select
+  label=""
+  fullWidth
+  value={city}
+  onChange={(e) => setCity(e.target.value)}
+  margin="normal"
+  required
+  SelectProps={{ native: true }}
+>
+  <option value="">-- Select City --</option>
+  {cities.map((c, index) => (
+    <option key={index} value={c.city}>
+      {c.city}
+    </option>
+  ))}
+</TextField>
+
 
         <div style={{ margin: "20px 0" }}>
-          <label>Upload Image:</label>
+          <label>Upload Profile Image:</label>
           <input
             type="file"
             accept="image/*"
-            onChange={handleImageChange}
+            onChange={(e) => handleFileChange(e, setImage)}
             required
-            style={{ marginTop: 10 }}
+            style={{ marginTop: 10, display: "block" }}
+          />
+        </div>
+
+        <div style={{ margin: "20px 0" }}>
+          <label>Upload Police Verification Copy:</label>
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={(e) => handleFileChange(e, setPoliceVerification)}
+            required
+            style={{ marginTop: 10, display: "block" }}
+          />
+        </div>
+
+        <div style={{ margin: "20px 0" }}>
+          <label>Upload Aadhar Card (Front):</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, setAadharFront)}
+            required
+            style={{ marginTop: 10, display: "block" }}
+          />
+        </div>
+
+        <div style={{ margin: "20px 0" }}>
+          <label>Upload Aadhar Card (Back):</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, setAadharBack)}
+            required
+            style={{ marginTop: 10, display: "block" }}
+          />
+        </div>
+
+        <div style={{ margin: "20px 0" }}>
+          <label>Upload Driving License (Front):</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, setDlFront)}
+            required
+            style={{ marginTop: 10, display: "block" }}
+          />
+        </div>
+
+        <div style={{ margin: "20px 0" }}>
+          <label>Upload Driving License (Back):</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, setDlBack)}
+            required
+            style={{ marginTop: 10, display: "block" }}
           />
         </div>
 
