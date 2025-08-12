@@ -328,6 +328,7 @@ export default function App() {
               <Route path="/edit-filter" element={<EditFilter />} />
               <Route path="/store-login" element={<StoreLogin />} />
               <Route path="/edit-store" element={<AddStore />} />
+              <Route path="/add-page" element={<AddPageForm />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
 
               {/* Store Routes */}

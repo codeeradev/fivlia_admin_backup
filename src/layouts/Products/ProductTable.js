@@ -9,8 +9,7 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { MoreHoriz } from "@mui/icons-material";
-import { startLoading, stopLoading } from "components/loader/appSlice";
-import { useDispatch } from "react-redux";
+
 // Styles for table headers and cells
 const headerCell = {
   padding: "14px 12px",
@@ -47,33 +46,29 @@ function ProductTable() {
   const [popoverData, setPopoverData] = useState([]);
   const [popoverIndex, setPopoverIndex] = useState(null);
   const [popoverType, setPopoverType] = useState(""); // "city" or "price"
-const dispatch = useDispatch();
+
   // Fetch products from API
   useEffect(() => {
     const getProduct = async () => {
       try {
-        dispatch(startLoading());
         const result = await fetch("https://api.fivlia.in/adminProducts");
         if (result.status === 200) {
           const res = await result.json();
           const products = res.Product || [];
           setData(products);
-dispatch(stopLoading());
+
           const initialPublicStatus = products.reduce((acc, cur) => {
             acc[cur._id] = cur.status === true;
             return acc;
           }, {});
           setPublicStatus(initialPublicStatus);
         } else {
-          dispatch(stopLoading());
           console.error("API returned non-200 status:", result.status);
         }
       } catch (err) {
-        dispatch(stopLoading());
         console.error("Error fetching products:", err);
       }
     };
-    dispatch(stopLoading());
     getProduct();
   }, []);
 
