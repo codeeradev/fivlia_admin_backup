@@ -4,7 +4,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Icon from "@mui/material/Icon";
 import MDBox from "components/MDBox";
-import GlobalLoader from "components/loader/GlobalLoader";
+
 import Sidenav from "examples/Sidenav";
 import Configurator from "examples/Configurator";
 import theme from "assets/theme";
@@ -74,6 +74,7 @@ import Stock from "layouts/Store/StoreRoutes/Stock"
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
 import AddStoreCat from "layouts/Store/StoreRoutes/AddCatStore";
 import AddPageForm from "Setting/addEditPage";
+
 
 
 export default function App() {
@@ -188,7 +189,6 @@ export default function App() {
     <CacheProvider value={rtlCache}>
       <ThemeProvider theme={darkMode ? themeDarkRTL : themeRTL}>
         <CssBaseline />
-         <GlobalLoader />
         {layout === "dashboard" && pathname !== "/login" && (
           <>
             <Sidenav
@@ -244,6 +244,7 @@ export default function App() {
                   <Route path="/store-login" element={<StoreLogin />} />
                   <Route path="/edit-store" element={<AddStore />} />
                   <Route path="/add-page" element={<AddPageForm />} />
+                  <Route path="/edit-page" element={<AddPageForm />} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
 
 
@@ -270,7 +271,6 @@ export default function App() {
   ) : (
     <ThemeProvider theme={darkMode ? themeDark : theme}>
       <CssBaseline />
-      <GlobalLoader />
       {layout === "dashboard" && pathname !== "/login" && (
         <>
           <Sidenav
@@ -329,6 +329,7 @@ export default function App() {
               <Route path="/store-login" element={<StoreLogin />} />
               <Route path="/edit-store" element={<AddStore />} />
               <Route path="/add-page" element={<AddPageForm />} />
+              <Route path="/edit-page" element={<AddPageForm />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
 
               {/* Store Routes */}

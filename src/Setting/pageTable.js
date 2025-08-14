@@ -9,7 +9,7 @@ export default function PagesTable() {
   const { miniSidenav } = controller;
   const navigate = useNavigate();
 
-  const [cities, setCities] = useState([]);
+  const [pages, setPages] = useState([]);
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,28 +31,19 @@ export default function PagesTable() {
   };
 
   useEffect(() => {
-    const getCity = async () => {
+    const getPage = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getCity");
+        const result = await fetch("https://api.fivlia.in/getPage ");
         const data = await result.json();
-        console.log(data);
-
-
-        if (Array.isArray(data)) {
-          const citiesWithDetails = data.map((city) => ({
-            id: city._id,
-            name: city.city,
-            state: city.state,
-            status: Boolean(city.status),
-            latitude: city.latitude,
-            longitude: city.longitude,
-            fullAddress: city.fullAddress,
-            createdAt: city.createdAt,
-            updatedAt: city.updatedAt,
+        if (Array.isArray(data.getPage)) {
+          const pagesWithDetails = data.getPage.map((page) => ({
+            id: page._id,
+            title: page.pageTitle,
+            slug: page.pageSlug,
+            content: page.pageContent,
+            status: Boolean(page.status),
           }));
-          setCities(citiesWithDetails);
-
-
+          setPages(pagesWithDetails);
         } else {
           console.error("Expected array but got:", data);
         }
@@ -61,17 +52,17 @@ export default function PagesTable() {
       }
     };
 
-    getCity();
+    getPage();
   }, []);
 
-  const filteredCities = cities.filter((city) =>
-    city.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPages = pages.filter((page) =>
+    page.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredCities.length / entriesToShow);
+  const totalPages = Math.ceil(filteredPages.length / entriesToShow);
   const startIndex = (currentPage - 1) * entriesToShow;
   const endIndex = startIndex + entriesToShow;
-  const currentCities = filteredCities.slice(startIndex, endIndex);
+  const currentPages = filteredPages.slice(startIndex, endIndex);
 
   const handleEntriesChange = (e) => {
     setEntriesToShow(parseInt(e.target.value));
@@ -93,14 +84,14 @@ export default function PagesTable() {
 
   // Updated toggleStatus: update backend first, then update UI on success
   const toggleStatus = async (id) => {
-    const cityToUpdate = cities.find((city) => city.id === id);
-    if (!cityToUpdate) return;
+    const pageToUpdate = pages.find((page) => page.id === id);
+    if (!pageToUpdate) return;
 
-    const newStatus = !cityToUpdate.status;
+    const newStatus = !pageToUpdate.status;
 
     try {
       const response = await fetch(
-        `https://api.fivlia.in/updateCityStatus/${id}`,
+        `https://api.fivlia.in/updatePageStatus/${id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -111,14 +102,14 @@ export default function PagesTable() {
       if (!response.ok) throw new Error("Failed to update status");
 
       // Update state only after successful backend update
-      setCities((prevCities) =>
-        prevCities.map((city) =>
-          city.id === id ? { ...city, status: newStatus } : city
+      setPages((prevPages) =>
+        prevPages.map((page) =>
+          page.id === id ? { ...page, status: newStatus } : page
         )
       );
     } catch (error) {
       alert("Failed to update status. Please try again.");
-      console.error(error);
+      // console.error(error);
     }
   };
 
@@ -190,19 +181,19 @@ export default function PagesTable() {
               </tr>
             </thead>
             <tbody>
-              {currentCities.length > 0 ? (
-                currentCities.map((city, index) => (
-                  <tr key={city.id}>
+              {currentPages.length > 0 ? (
+                currentPages.map((page, index) => (
+                  <tr key={page.id}>
                     <td style={{ ...bodyCell, textAlign: "center", padding: "14px" }}>
                       {startIndex + index + 1}
                     </td>
-                    <td style={{ ...bodyCell, padding: "14px" }}>{city.name}</td>
-                    <td style={{ ...bodyCell, padding: "14px" }}>{city.state}</td>
+                    <td style={{ ...bodyCell, padding: "14px" }}>{page.title}</td>
+                    <td style={{ ...bodyCell, padding: "14px" }}>{page.slug}</td>
                     <td style={{ ...bodyCell, textAlign: "center", padding: "14px" }}>
                       <Switch
-                        key={`${city.id}-${city.status}`}
-                        checked={city.status}
-                        onChange={() => toggleStatus(city.id)}
+                        key={`${page.id}-${page.status}`}
+                        checked={page.status}
+                        onChange={() => toggleStatus(page.id)}
                          inputProps={{ "aria-label": "controlled" }}
                         sx={{
                           "& .MuiSwitch-switchBase.Mui-checked": {
@@ -220,7 +211,7 @@ export default function PagesTable() {
                     </td>
                     <td style={{ ...bodyCell, textAlign: "center", padding: "14px" }}>
                       <button
-                        onClick={() => navigate('/edit-city', { state: city })}
+                        onClick={() => navigate('/edit-page', { state: page })}
                         style={{
                           backgroundColor: "#007BFF",
                           color: "white",
@@ -269,8 +260,8 @@ export default function PagesTable() {
           }}
         >
           <div>
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredCities.length)} of{" "}
-            {filteredCities.length} entries
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredPages.length)} of{" "}
+            {filteredPages.length} entries
           </div>
           <div>
             <button

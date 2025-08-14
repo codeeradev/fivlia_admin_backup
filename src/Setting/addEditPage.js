@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@mui/material";
@@ -13,50 +13,46 @@ function AddPageForm() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-  const { id } = useParams(); // for edit mode
+  const location = useLocation();
 
   useEffect(() => {
-    if (id) {
-      fetch(`${process.env.REACT_APP_API_URL}/getPage?${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.page) {
-            setTitle(data.page.title || "");
-            setSlug(data.page.slug || "");
-            setContent(data.page.content || "");
-          }
-        })
-        .catch((err) => console.error("Error fetching page:", err));
+    if (location.state) {
+      const pageData = location.state;
+      setTitle(pageData.title || "");
+      setSlug(pageData.slug || "");
+      setContent(pageData.content || "");
     }
-  }, [id]);
+  }, [location.state]);
 
   const handleSave = async () => {
-  const pageData = { title, slug, content };
+    const data = {
+      pageTitle : title,
+      pageSlug : slug,
+      pageContent : content,
+    };
+    try {
+      const url = location.state ? `https://api.fivlia.in/editPage/${location.state.id}` : `https://api.fivlia.in/addPage`;
+      const method = location.state ? "PUT" : "POST";
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-  try {
-    const url = id
-      ? `${process.env.REACT_APP_API_URL}/editPage/${id}` // edit
-      : `${process.env.REACT_APP_API_URL}/addPage`;       // add
-
-    const res = await fetch(url, {
-      method: id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pageData),
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      alert(id ? "Page Updated!" : "Page Added!");
+      if (!response.ok) {
+        throw new Error("Failed to save the page");
+      }
+      const result = await response.json();
+      console.log("Page saved:", result);
+      alert("Page Saved!");
       navigate(-1);
-    } else {
-      alert(result.message || "Something went wrong");
+    } catch (error) {
+      console.error("Error saving page:", error);
+      alert("Failed to save page.");
     }
-  } catch (error) {
-    console.error("Save Error:", error);
-    alert("Server error while saving the page");
-  }
-};
-
+  };
 
   const handleCancel = () => {
     navigate(-1);
@@ -66,7 +62,7 @@ function AddPageForm() {
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "40px" }}>
       <div className="city-container">
         <h2 style={{ textAlign: "center", color: "#1976d2", fontWeight: 500 }}>
-          {id ? "EDIT PAGE" : "ADD NEW PAGE"}
+          ADD NEW PAGE
         </h2>
 
         <div className="add-city-box">
@@ -108,24 +104,13 @@ function AddPageForm() {
               <ReactQuill
                 value={content}
                 onChange={setContent}
-                style={{
-                  backgroundColor: "white",
-                  height: "300px",
-                  marginBottom: "20px",
-                }}
+                style={{ backgroundColor: "white", height: "300px", marginBottom: "20px" }}
                 placeholder="Write your page content here..."
               />
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "20px",
-              marginTop: "30px",
-              justifyContent: "center",
-            }}
-          >
+          <div style={{ display: "flex", gap: "20px", marginTop: "30px", justifyContent: "center" }}>
             <Button
               style={{
                 backgroundColor: "#1976d2",
