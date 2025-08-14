@@ -53,22 +53,20 @@ const AddCategories = () => {
     fetchFilters();
   }, []);
 
- const handleFilterChange = (e) => {
+const handleFilterChange = (e) => {
   const filterId = e.target.value;
   setSelectedFilter(filterId);
 
-  const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
+const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
 
-  if (selectedFilterObj?.Filter_name === "Brand") {
-    // Brand selected, use brand list
-    setFilterValues(brands.map((brand) => ({
-      _id: brand._id,
-      name: brand.brandName,
-    })));
-  } else {
-    setFilterValues(selectedFilterObj?.Filter || []);
-  }
+if (selectedFilterObj?.Filter_name === "Brand") {
+  setFilterValues(brands.map(b => ({ _id: b._id, name: b.brandName })));
+} else {
+  setFilterValues(selectedFilterObj?.Filter || []);
+}
+
 };
+
 
 const handleFilterValueToggle = (filterId, valueId) => {
   setAllFilters((prev) => {
@@ -200,8 +198,19 @@ useEffect(()=>{
     const res = await fetch("https://api.fivlia.in/getBrand");
     if (res.status === 200) {
       const data = await res.json();
-      setBrands(data.allBrands || []);
-    }
+    setBrands(data.allBrands);
+    setFilterTypes((prev) => [
+          ...prev.filter(f => f.Filter_name !== "Brand"),
+          {
+            _id: "brand-filter",
+            Filter_name: "Brand",
+            Filter: data.allBrands.map((b) => ({
+              _id: b._id,
+              name: b.brandName
+            })),
+          },
+        ]);
+      }
   } catch (err) {
     console.error("Error fetching brands:", err);
   }
@@ -817,34 +826,22 @@ fetchBrands();
                 marginBottom: "20px",
               }}
             >
-           {allFilters.map((filter) =>
-  filter.selected.map((valueId, index) => {
+    {allFilters.map((filter) =>
+  (filter.selected || []).map((valueId, index) => {
     const filterObj = filterTypes.find((f) => f._id === filter._id);
     const isBrandFilter = filterObj?.Filter_name === "Brand";
 
-    // ✅ NEW: Get the name from the correct source
     const value = isBrandFilter
-      ? brands.find((b) => b._id === valueId)
-      : filterObj?.Filter.find((f) => f._id === valueId);
+      ? brands.find(b => b._id === valueId)
+      : (filterObj?.Filter || []).find(f => f._id === valueId);
 
     return value ? (
-      <div
-        key={`${filter._id}-${valueId}-${index}`}
-        style={{
-          backgroundColor: "#f0f0f0",
-          padding: "6px 10px",
-          borderRadius: "20px",
-          fontSize: "14px",
-          display: "inline-flex",
-          alignItems: "center",
-        }}
-      >
+      <div key={`${filter._id}-${valueId}-${index}`} style={{ /* styling */ }}>
         <span>
-          {filterObj?.Filter_name || "Unnamed"}:{" "}
-          {value?.name || value?.brandName}
+          {filterObj?.Filter_name || "Unnamed"}: {value?.name || value?.brandName}
         </span>
         <span
-          style={{ marginLeft: "5px", cursor: "pointer" }}
+          style={{ cursor: "pointer", marginLeft: "5px" }}
           onClick={() => handleFilterValueToggle(filter._id, valueId)}
         >
           ×
@@ -853,6 +850,7 @@ fetchBrands();
     ) : null;
   })
 )}
+
 
             </div>
           </div>

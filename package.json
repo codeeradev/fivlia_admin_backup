@@ -19,6 +19,7 @@
     "color-namer": "^1.4.0",
     "crypto-js": "^4.2.0",
     "file-saver": "^2.0.5",
+    "firebase": "^12.1.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",

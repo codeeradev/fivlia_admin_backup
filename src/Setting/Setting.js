@@ -29,8 +29,10 @@ function Setting() {
     activeMode: "", // Tracks the selected mode (test or live)
     RazorPayKey_test: "",
     RazorPayKey_live: "",
+    RazorPayKey_secret: "",
     PhonePe_test: "",
     PhonePe_live: "",
+    PhonePe_secret: "",
     Map_Api: {
       google: { key: "", status: false },
       apple: { key: "", status: false },
@@ -42,6 +44,7 @@ function Setting() {
         whatsApp: { appKey: "", authKey: "", status: false }
       }
     ],
+    imageLink: "",
   });
 
   // Fetch settings data on component mount
@@ -63,7 +66,6 @@ function Setting() {
           const razorpayLive = result.settings.PaymentGateways?.RazorPayKey?.live || "";
           const phonepeTest = result.settings.PaymentGateways?.PhonePe?.test || "";
           const phonepeLive = result.settings.PaymentGateways?.PhonePe?.live || "";
-          
           let activeGateway = "None";
           let activeMode = "";
           
@@ -103,8 +105,10 @@ function Setting() {
             activeMode,
             RazorPayKey_test: razorpayTest,
             RazorPayKey_live: razorpayLive,
+            RazorPayKey_secret: result.settings.PaymentGateways?.RazorPayKey?.secretKey || "",
             PhonePe_test: phonepeTest,
             PhonePe_live: phonepeLive,
+            PhonePe_secret: result.settings.PaymentGateways?.PhonePe?.secretKey || "",
             Map_Api: {
               google: { api_key: mapApi.google?.api_key || "", status: mapApi.google?.status || false },
               apple: { api_key: mapApi.apple?.api_key || "", status: mapApi.apple?.status || false },
@@ -118,6 +122,7 @@ function Setting() {
                     whatsApp: { appKey: "", authKey: "", status: false }
                   }
                 ],
+            imageLink: result.settings.imageLink || "",
           });
         } else {
           dispatch(stopLoading());
@@ -135,19 +140,18 @@ function Setting() {
     fetchSettings();
   }, [dispatch]);
 
-  const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-  };
+const handleInputChange = (field, value) => {
+  setFormData(prevFormData => ({
+    ...prevFormData,
+    [field]: value,
+  }));
+};
 
   const handleGatewayChange = (gateway) => {
     setFormData((prev) => ({
       ...prev,
       activeGateway: gateway,
-      activeMode: "", // Reset mode when gateway changes
-      RazorPayKey_test: gateway === "Razorpay" ? prev.RazorPayKey_test : "",
-      RazorPayKey_live: gateway === "Razorpay" ? prev.RazorPayKey_live : "",
-      PhonePe_test: gateway === "PhonePe" ? prev.PhonePe_test : "",
-      PhonePe_live: gateway === "PhonePe" ? prev.PhonePe_live : "",
+      activeMode: "",
     }));
   };
 
@@ -156,10 +160,6 @@ function Setting() {
       ...prev,
       activeMode: mode,
       // Reset the non-selected mode's key
-      RazorPayKey_test: prev.activeGateway === "Razorpay" && mode === "live" ? "" : prev.RazorPayKey_test,
-      RazorPayKey_live: prev.activeGateway === "Razorpay" && mode === "test" ? "" : prev.RazorPayKey_live,
-      PhonePe_test: prev.activeGateway === "PhonePe" && mode === "live" ? "" : prev.PhonePe_test,
-      PhonePe_live: prev.activeGateway === "PhonePe" && mode === "test" ? "" : prev.PhonePe_live,
     }));
   };
 
@@ -194,26 +194,50 @@ function Setting() {
 
       // Structure PaymentGateways to send only the active gateway's selected mode key
       filteredData.PaymentGateways = {};
-      if (formData.activeGateway === "Razorpay" && formData.activeMode) {
-        filteredData.PaymentGateways.RazorPayKey = {
-          test: formData.activeMode === "test" ? filteredData.RazorPayKey_test || "" : "",
-          live: formData.activeMode === "live" ? filteredData.RazorPayKey_live || "" : "",
-          status: true,
-        };
-        filteredData.PaymentGateways.PhonePe = { test: "", live: "", status: false,};
-      } else if (formData.activeGateway === "PhonePe" && formData.activeMode) {
-        filteredData.PaymentGateways.PhonePe = {
-          test: formData.activeMode === "test" ? filteredData.PhonePe_test || "" : "",
-          live: formData.activeMode === "live" ? filteredData.PhonePe_live || "" : "",
-          status: true,
-        };
-        filteredData.PaymentGateways.RazorPayKey = { test: "", live: "", status: false,};
-      } else {
-        filteredData.PaymentGateways.RazorPayKey = { test: "", live: "",  status: false,};
-        filteredData.PaymentGateways.PhonePe = { test: "", live: "",  status: false,};
-      }
+       if (formData.activeGateway === "Razorpay") {
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: true,
+            secretKey: formData.RazorPayKey_secret || "",
+            activeMode: formData.activeMode
+          };
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: false,
+            secretKey: ""
+          };
+        } else if (formData.activeGateway === "PhonePe") {
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: true,
+            secretKey: formData.PhonePe_secret || "",
+            activeMode: formData.activeMode
+          };
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: false,
+            secretKey: ""
+          };
+         } else {
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: false,
+            secretKey: ""
+          };
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: false,
+            secretKey: ""
+          };
+         }
 
-      // Prepare Map_Api for backend
+
       const mapApi = formData.Map_Api;
       filteredData.Map_Api = [
         {
@@ -314,6 +338,17 @@ function Setting() {
           </div>
           <div className="store-row">
             <div className="store-input" style={{ flex: "1 1 100%" }}>
+              <label>Image Link</label>
+              <input
+                type="text"
+                value={formData.imageLink}
+                onChange={(e) => handleInputChange("imageLink", e.target.value)}
+              />
+            </div>
+          </div>
+              
+          <div className="store-row">
+            <div className="store-input" style={{ flex: "1 1 100%" }}>
               <label>Description</label>
               <textarea
                 rows={4}
@@ -406,39 +441,65 @@ function Setting() {
             </div>
           )}
           {formData.activeGateway === "Razorpay" && formData.activeMode && (
-            <div className="store-row">
-              <div className="store-input">
-                <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
-                <input
-                  type="text"
-                  value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
-                  onChange={(e) =>
-                    handleInputChange(
-                      formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-          )}
-          {formData.activeGateway === "PhonePe" && formData.activeMode && (
-            <div className="store-row">
-              <div className="store-input">
-                <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
-                <input
-                  type="text"
-                  value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
-                  onChange={(e) =>
-                    handleInputChange(
-                      formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-          )}
+  <>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+        <input
+          type="text"
+          value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
+          onChange={(e) =>
+            handleInputChange(
+              formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
+              e.target.value
+            )
+          }
+        />
+      </div>
+    </div>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+        <input
+          type="text"
+          value={formData.RazorPayKey_secret}
+          onChange={(e) => handleInputChange("RazorPayKey_secret", e.target.value)}
+        />
+      </div>
+    </div>
+  </>
+)}
+
+{formData.activeGateway === "PhonePe" && formData.activeMode && (
+  <>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+        <input
+          type="text"
+          value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
+          onChange={(e) =>
+            handleInputChange(
+              formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
+              e.target.value
+            )
+          }
+        />
+      </div>
+    </div>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+        <input
+          type="text"
+          value={formData.PhonePe_secret}
+          onChange={(e) => handleInputChange("PhonePe_secret", e.target.value)}
+        />
+      </div>
+    </div>
+  </>
+)}
+
         </div>
       </div>
 

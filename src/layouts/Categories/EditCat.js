@@ -68,10 +68,22 @@ const EditCategory = () => {
 useEffect(() => {
 const getBrands = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getBrands"); // Adjust if your route is different
+    const res = await fetch("https://api.fivlia.in/getBrand"); // Adjust if your route is different
     if (res.status === 200) {
       const data = await res.json();
-      setAllBrands(data);
+      setAllBrands(data.allBrands);
+      setAllFilters((prev) => [
+  ...prev,
+  {
+    _id: "brand-filter",
+    Filter_name: "Brand",
+    Filter: data.allBrands.map((b) => ({
+      _id: b._id,
+      name: b.brandName
+    }))
+  }
+]);
+
     }
   } catch (err) {
     console.log(err);
@@ -81,43 +93,33 @@ const getBrands = async () => {
 getBrands();
 }, []);
 
-  useEffect(() => {
-    if (category) {
-      setCategoryName(category.name || "");
-      setDescription(category.description || "");
-      setImagePreview(category.image || null);
-      setId(category._id);
-      
-      // Map attribute names to their _id values
-      const initialAttributes = Array.isArray(category.attribute)
-        ? category.attribute.map((attrName) => {
-            const attr = allAttributes.find((a) => a.Attribute_name === attrName);
-            return attr ? attr._id : null;
-          }).filter((id) => id !== null)
-        : [];
-      setSelectedAttributes(initialAttributes);
+useEffect(() => {
+  if (!category || allFilters.length === 0) return;
 
-      // Initialize selected filter values from category
-    const initialSelectedFilters = Array.isArray(category.filter)
-     ? category.filter.reduce((acc, f) => {
-         const isBrandFilter = f.Filter_name === "Brand";
-         if (isBrandFilter) {
-           acc.push(...(f.selected || []).map((val) => val._id.toString()));
-         } else {
-           const matched = allFilters.find((af) => af._id === f._id);
-           if (matched) {
-             acc.push(...(f.selected || []).map((val) => val._id.toString()));
-           }
-         }
-         return acc;
-       }, [])
-     : [];
-      setSelectedFilterArray(initialSelectedFilters);
-    } else {
-      toast.error("No category data provided.");
-      navigate(-1);
-    }
-  }, [category, allFilters, allAttributes, navigate]);
+  // Map attribute names to their _id values
+  const initialAttributes = Array.isArray(category.attribute)
+    ? category.attribute.map((attrName) => {
+        const attr = allAttributes.find((a) => a.Attribute_name === attrName);
+        return attr ? attr._id : null;
+      }).filter(Boolean)
+    : [];
+  setSelectedAttributes(initialAttributes);
+
+  // Initialize selected filter values from category
+  const initialSelectedFilters = Array.isArray(category.filter)
+    ? category.filter.reduce((acc, f) => {
+        const matchedFilter = allFilters.find(
+          (af) => af._id === f._id || af.Filter_name === f.Filter_name
+        );
+        if (matchedFilter) {
+          acc.push(...(f.selected || []).map((val) => val._id.toString()));
+        }
+        return acc;
+      }, [])
+    : [];
+
+  setSelectedFilterArray(initialSelectedFilters);
+}, [category, allFilters, allAttributes]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -131,16 +133,17 @@ getBrands();
     }
   };
 
-  const handleFilterChange = (e) => {
-    const filterId = e.target.value;
-    setSelectedFilter(filterId);
-   const selectedFilterObj = allFilters.find((f) => f._id === filterId);
-    if (selectedFilterObj?.Filter_name === "Brand") {
-      setFilterValues(allBrands.map((b) => ({ _id: b._id, name: b.brandName })));
-    } else {
-      setFilterValues(selectedFilterObj?.Filter || []);
-    }
-   };
+ const handleFilterChange = (filterId) => {
+  setSelectedFilter(filterId);
+
+  const selectedFilterObj = allFilters.find(
+    (f) => f._id === filterId
+  );
+
+  setFilterValues(selectedFilterObj?.Filter || []);
+};
+
+
 
   const handleFilterValueToggle = (valueId) => {
     setSelectedFilterArray((prev) =>
@@ -337,7 +340,7 @@ getBrands();
               <select
                 className="input-field"
                 value={selectedFilter}
-                onChange={handleFilterChange}
+                onChange={(e) => handleFilterChange(e.target.value)}
                 style={{ width: "100%", padding: "8px", borderRadius: "5px", border: '1px solid black', backgroundColor: 'white' }}
               >
                 <option value="">--Select Filter--</option>
@@ -523,9 +526,11 @@ getBrands();
             }}
           >
             {selectedFilterArray.map((valueId, index) => {
-              const value = allFilters
-                .flatMap((f) => f.Filter)
-                .find((v) => v._id === valueId);
+             const value = allFilters
+  .flatMap((f) => f.Filter)
+  .find((v) => v._id === valueId);
+
+
               return value ? (
                 <div
                   key={index}
@@ -540,7 +545,7 @@ getBrands();
                     margin: "5px",
                   }}
                 >
-                  <span>{value.name}</span>
+                  <span>{value?.name}</span>
                   <span
                     style={{ marginLeft: "5px", cursor: "pointer", color: "red", fontWeight: "bold" }}
                     onClick={() => handleRemoveFilterValue(valueId)}

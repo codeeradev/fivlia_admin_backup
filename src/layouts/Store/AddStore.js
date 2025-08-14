@@ -64,13 +64,13 @@ function AddStore() {
       setIsAuthorized(storedetails.store.Authorized_Store);
       setSelectedImage(storedetails.store.image);
       setSelectedCategory(storedetails.store.Category);
-    }
     if (storedetails.store.Latitude && storedetails.store.Longitude) {
       setMarkerPosition({
         lat: parseFloat(storedetails.store.Latitude),
         lng: parseFloat(storedetails.store.Longitude),
       });
     }
+  }
   }, []);
 
   useEffect(() => {

@@ -36,7 +36,7 @@ import Stock from "layouts/Store/StoreRoutes/Stock";
 import ProductTable from "layouts/Products/ProductTable";
 import User from "layouts/User/User"
 import CreateStore from "layouts/Store/Store";
-import StoreList from "layouts/Store/Store";
+import SellerTable from "layouts/Store/sellerTable";
 import UnitsTable from "layouts/Attribute/Units";
 import VarientTabel from "layouts/Attribute/Varient";
 import Setting from "Setting/Setting";
@@ -173,14 +173,29 @@ const routes =
       route: "/producttable",
       component: <ProductTable />
     },
-    {
+ 
+     {
       type: "collapse",
-      name: "Store",
+      name: "Stores",
+      key: "storeList",
+      icon: <Icon fontSize="small">storefront</Icon>,      
+      collapse:[
+      {
+      name: "Fivlia Stores",
       key: "store-list",
       icon: <Icon fontSize="small">store</Icon>,
       route: "/store-table",
-      component: <StoreTabel />
+      component: <StoreTabel /> 
+      },{
+          name: "Sellers",
+          key: "sellers",
+          route: "/seller-table",
+          component: <SellerTable />,
+          icon: <Icon fontSize="small">person</Icon>,
+        },
+      ]
     },
+    
       {
       type: "collapse",
       name: "User",
@@ -241,7 +256,6 @@ const routes =
           component: <PagesTable />,
           icon: <Icon fontSize="small">view_array</Icon>,
         },
-      
       ],
     },
     {

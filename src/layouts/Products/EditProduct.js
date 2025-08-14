@@ -477,7 +477,7 @@ function EditProduct() {
         if (brandImageInputRef.current) brandImageInputRef.current.value = "";
         const res = await fetch("https://api.fivlia.in/getBrand");
         const data = await res.json();
-        setBrands(data);
+        setBrands(data.allBrands);
       } else {
         alert("Something went wrong");
       }
@@ -731,8 +731,8 @@ const handleRemoveReturnImage = () => {
       try {
         const res = await fetch("https://api.fivlia.in/getBrand");
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setBrands(data);
+        if (Array.isArray(data.allBrands)) {
+          setBrands(data.allBrands);
         } else {
           console.warn("Expected an array, but received:", data);
           setBrands([]);

@@ -20,6 +20,12 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
+import db from "components/firebase"
+import { doc, getDoc } from "firebase/firestore";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import driverImg from "assets/images/driverFivlia.png"
 
 export default function Drivers() {
   const [controller] = useMaterialUIController();
@@ -49,6 +55,9 @@ export default function Drivers() {
     address: { city: "", locality: "", mobileNo: "" },
   });
   const [searchLocation, setSearchLocation] = useState("");
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+
   const [error, setError] = useState("");
 
   const headerCell = {
@@ -80,6 +89,47 @@ export default function Drivers() {
     fontSize: "16px",
     color: "#555",
   };
+
+  const bikeIcon = L.icon({
+  iconUrl: driverImg,
+  iconSize: [40, 40], // size of the icon
+  iconAnchor: [20, 40], // point of the icon which will correspond to marker's location
+  popupAnchor: [0, -40], // point from which the popup should open relative to the iconAnchor
+});
+
+  const fetchDriverLocation = async (driverId) => {
+  try {
+    const docRef = doc(db, "updates", driverId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+
+       const location = {
+        lat: data.latitude || 0,
+        lng: data.longitude || 0
+      };
+      return location;
+    } else {
+      console.log("No such driver location!");
+      return null;
+    }
+  } catch (err) {
+    console.error("Error fetching driver location:", err);
+    return null;
+  }
+};
+
+const handleTrackDriver = async (driver) => {
+  const loc = await fetchDriverLocation(driver.id);
+  if (loc) {
+    setDriverLocation(loc);
+    setSelectedDriver(driver);
+    setMapModalOpen(true);
+  } else {
+    alert("Location not available");
+  }
+};
+
 
   useEffect(() => {
     const fetchDrivers = async () => {
@@ -341,8 +391,7 @@ export default function Drivers() {
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-      <div style={{ width: "100%", padding: "0 20px" }}>
-        {/* Header */}
+      <div style={{ width: "100%", padding: "0 20px" }}>        
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Driver List</h2>
@@ -432,6 +481,7 @@ export default function Drivers() {
               <th style={headerCell}>Details</th>
               <th style={headerCell}>Status</th>
               <th style={headerCell}>Action</th>
+              <th style={headerCell}>Locate</th>
             </tr>
           </thead>
           <tbody>
@@ -515,6 +565,22 @@ export default function Drivers() {
                       </button>
                     </div>
                   </td>
+                  <td style={{ ...bodyCell, textAlign: "center" }}>
+                  <button
+                    onClick={() => handleTrackDriver(driver)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #007bff",
+                      backgroundColor: "white",
+                      color: "#007bff",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Track
+                  </button>
+                  </td>
                 </tr>
               ))
             ) : (
@@ -566,6 +632,31 @@ export default function Drivers() {
           </div>
         </div>
       </div>
+
+<Dialog open={mapModalOpen} onClose={() => setMapModalOpen(false)} maxWidth="md" fullWidth>
+  <DialogTitle>Driver Location - {selectedDriver?.name}</DialogTitle>
+  <DialogContent>
+    {driverLocation ? (
+      <div style={{ height: "400px", width: "100%" }}>
+        <MapContainer center={[driverLocation.lat, driverLocation.lng]} zoom={15} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; OpenStreetMap contributors'
+          />
+          <Marker position={[driverLocation.lat, driverLocation.lng]}icon={bikeIcon}>
+            <Popup>{selectedDriver?.name}</Popup>
+          </Marker>
+        </MapContainer>
+      </div>
+    ) : (
+      <Typography>No location data available</Typography>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setMapModalOpen(false)}>Close</Button>
+  </DialogActions>
+</Dialog>
+
 
       {/* Driver Details Modal */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
@@ -771,6 +862,7 @@ export default function Drivers() {
             <Typography sx={modalValueStyle}>No details available.</Typography>
           )}
         </DialogContent>
+
         <DialogActions sx={{ padding: "16px 24px" }}>
           <Button
             onClick={() => setModalOpen(false)}
