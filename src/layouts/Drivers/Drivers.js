@@ -2,30 +2,16 @@ import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
-import {
-  Button,
-  Switch,
-  Avatar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  IconButton,
-  Typography,
-  Divider,
-} from "@mui/material";
+import { Button, Switch, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControlLabel, Checkbox, IconButton, Typography, Divider } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
-import db from "components/firebase"
+import db from "components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import driverImg from "assets/images/driverFivlia.png"
+import driverImg from "assets/images/driverFivlia.png";
 
 export default function Drivers() {
   const [controller] = useMaterialUIController();
@@ -34,6 +20,7 @@ export default function Drivers() {
   const dispatch = useDispatch();
 
   const [drivers, setDrivers] = useState([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]); // New state for withdrawal requests
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,7 +44,6 @@ export default function Drivers() {
   const [searchLocation, setSearchLocation] = useState("");
   const [driverLocation, setDriverLocation] = useState(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
-
   const [error, setError] = useState("");
 
   const headerCell = {
@@ -91,46 +77,45 @@ export default function Drivers() {
   };
 
   const bikeIcon = L.icon({
-  iconUrl: driverImg,
-  iconSize: [40, 40], // size of the icon
-  iconAnchor: [20, 40], // point of the icon which will correspond to marker's location
-  popupAnchor: [0, -40], // point from which the popup should open relative to the iconAnchor
-});
+    iconUrl: driverImg,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40],
+  });
 
   const fetchDriverLocation = async (driverId) => {
-  try {
-    const docRef = doc(db, "updates", driverId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-
-       const location = {
-        lat: data.latitude || 0,
-        lng: data.longitude || 0
-      };
-      return location;
-    } else {
-      console.log("No such driver location!");
+    try {
+      const docRef = doc(db, "updates", driverId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const location = {
+          lat: data.latitude || 0,
+          lng: data.longitude || 0,
+        };
+        return location;
+      } else {
+        console.log("No such driver location!");
+        return null;
+      }
+    } catch (err) {
+      console.error("Error fetching driver location:", err);
       return null;
     }
-  } catch (err) {
-    console.error("Error fetching driver location:", err);
-    return null;
-  }
-};
+  };
 
-const handleTrackDriver = async (driver) => {
-  const loc = await fetchDriverLocation(driver.id);
-  if (loc) {
-    setDriverLocation(loc);
-    setSelectedDriver(driver);
-    setMapModalOpen(true);
-  } else {
-    alert("Location not available");
-  }
-};
+  const handleTrackDriver = async (driver) => {
+    const loc = await fetchDriverLocation(driver.id);
+    if (loc) {
+      setDriverLocation(loc);
+      setSelectedDriver(driver);
+      setMapModalOpen(true);
+    } else {
+      alert("Location not available");
+    }
+  };
 
-
+  // Fetch drivers
   useEffect(() => {
     const fetchDrivers = async () => {
       try {
@@ -146,9 +131,9 @@ const handleTrackDriver = async (driver) => {
             email: driver.email || "",
             password: driver.password || "",
             image: driver.image || "",
-            Police_Verification_Copy: driver.documents?.Police_Verification_Copy || "",
-            aadharCard: driver.documents?.aadharCard || { front: "", back: "" },
-            drivingLicence: driver.documents?.drivingLicence || { front: "", back: "" },
+            Police_Verification_Copy: driver.Police_Verification_Copy || "",
+            aadharCard: driver.aadharCard || { front: "", back: "" },
+            drivingLicence: driver.drivingLicence || { front: "", back: "" },
             address: driver.address || { city: "", locality: "", mobileNo: "" },
           }));
           setDrivers(formattedDrivers);
@@ -163,7 +148,37 @@ const handleTrackDriver = async (driver) => {
       }
     };
 
+    // Fetch withdrawal requests
+    const fetchWithdrawalRequests = async () => {
+      try {
+        dispatch(startLoading());
+        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest");
+        const data = await response.json();
+        if (Array.isArray(data.requests)) {
+          const formattedRequests = data.requests.map((request) => ({
+            id: request._id,
+            driverId: request.driverId,
+            amount: request.amount,
+            type: request.type,
+            description: request.description,
+            status: request.status,
+            createdAt: request.createdAt,
+            updatedAt: request.updatedAt,
+          }));
+          setWithdrawalRequests(formattedRequests);
+        } else {
+          setError("Invalid withdrawal requests data format");
+        }
+      } catch (error) {
+        console.error("Failed to fetch withdrawal requests:", error);
+        setError("Failed to fetch withdrawal requests. Please try again.");
+      } finally {
+        dispatch(stopLoading());
+      }
+    };
+
     fetchDrivers();
+    fetchWithdrawalRequests();
   }, [dispatch]);
 
   const filteredDrivers = drivers.filter((d) =>
@@ -270,8 +285,6 @@ const handleTrackDriver = async (driver) => {
     }
 
     const formData = new FormData();
-
-    // Append text fields
     formData.append("driverName", editDriverData.driverName);
     formData.append("status", editDriverData.status.toString());
     formData.append("email", editDriverData.email);
@@ -280,7 +293,6 @@ const handleTrackDriver = async (driver) => {
     }
     formData.append("address", JSON.stringify(editDriverData.address));
 
-    // Append files if they exist
     if (editDriverData.image) {
       formData.append("image", editDriverData.image);
     }
@@ -315,41 +327,68 @@ const handleTrackDriver = async (driver) => {
       const updated = await response.json();
       setDrivers((prev) =>
         prev.map((d) =>
-        d.id === updated.edit._id
-          ? {
-              ...d,
-              name: updated.edit.driverName || d.name,
-              status: updated.edit.status === "true" || updated.edit.status === true,
-              email: updated.edit.email || d.email,
-              password: updated.edit.password || d.password,
-              image: updated.edit.image || d.image,
-              Police_Verification_Copy:
-                updated.edit.documents?.Police_Verification_Copy || d.Police_Verification_Copy,
-              aadharCard: updated.edit.documents?.aadharCard || d.aadharCard,
-              drivingLicence: updated.edit.documents?.drivingLicence || d.drivingLicence,
-              address: updated.edit.address || d.address,
-            }
-          : d
-      )
-    );
+          d.id === updated.edit._id
+            ? {
+                ...d,
+                name: updated.edit.driverName || d.name,
+                status: updated.edit.status === "true" || updated.edit.status === true,
+                email: updated.edit.email || d.email,
+                password: updated.edit.password || d.password,
+                image: updated.edit.image || d.image,
+                Police_Verification_Copy:
+                  updated.edit.Police_Verification_Copy || d.Police_Verification_Copy,
+                aadharCard: updated.edit.aadharCard || d.aadharCard,
+                drivingLicence: updated.edit.drivingLicence || d.drivingLicence,
+                address: updated.edit.address || d.address,
+              }
+            : d
+        )
+      );
 
-    setEditModalOpen(false);
-    setSelectedDriver(null);
-    setEditDriverData({
-      driverName: "",
-      status: false,
-      email: "",
-      password: "",
-      image: null,
-      Police_Verification_Copy: null,
-      aadharCard: { front: null, back: null },
-      drivingLicence: { front: null, back: null },
-      address: { city: "", locality: "", mobileNo: "" },
-    });
-    setError("");
+      setEditModalOpen(false);
+      setSelectedDriver(null);
+      setEditDriverData({
+        driverName: "",
+        status: false,
+        email: "",
+        password: "",
+        image: null,
+        Police_Verification_Copy: null,
+        aadharCard: { front: null, back: null },
+        drivingLicence: { front: null, back: null },
+        address: { city: "", locality: "", mobileNo: "" },
+      });
+      setError("");
     } catch (error) {
       console.error("Error updating driver:", error);
       setError(`Failed to update driver: ${error.message}`);
+    } finally {
+      dispatch(stopLoading());
+    }
+  };
+
+  // Handle Accept/Decline Withdrawal Request
+  const handleWithdrawalAction = async (requestId, action) => {
+    try {
+      dispatch(startLoading());
+      const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
+      }
+
+      setWithdrawalRequests((prev) =>
+        prev.map((req) =>
+          req.id === requestId ? { ...req, status: action === "accept" ? "Approved" : "Declined" } : req
+        )
+      );
+    } catch (error) {
+      console.error(`Error ${action}ing withdrawal request:`, error);
+      setError(`Failed to ${action} withdrawal request: ${error.message}`);
     } finally {
       dispatch(stopLoading());
     }
@@ -391,7 +430,7 @@ const handleTrackDriver = async (driver) => {
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-      <div style={{ width: "100%", padding: "0 20px" }}>        
+      <div style={{ width: "100%", padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Driver List</h2>
@@ -460,7 +499,7 @@ const handleTrackDriver = async (driver) => {
           <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
         )}
 
-        {/* Table */}
+        {/* Driver Table */}
         <table
           style={{
             width: "100%",
@@ -566,27 +605,112 @@ const handleTrackDriver = async (driver) => {
                     </div>
                   </td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
-                  <button
-                    onClick={() => handleTrackDriver(driver)}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #007bff",
-                      backgroundColor: "white",
-                      color: "#007bff",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                    }}
-                  >
-                    Track
-                  </button>
+                    <button
+                      onClick={() => handleTrackDriver(driver)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #007bff",
+                        backgroundColor: "white",
+                        color: "#007bff",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
+                    >
+                      Track
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
+                  No drivers found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {/* Withdrawal Requests Table */}
+        <h2 style={{ marginTop: "40px", fontSize: "30px", fontWeight: "bold" }}>
+          Withdrawal Requests
+        </h2>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontFamily: '"Urbanist", sans-serif',
+            fontSize: "17px",
+            border: "1px solid #007BFF",
+            marginTop: "20px",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={headerCell}>Sr No</th>
+              <th style={headerCell}>Driver ID</th>
+              <th style={headerCell}>Amount</th>
+              <th style={headerCell}>Type</th>
+              <th style={headerCell}>Description</th>
+              <th style={headerCell}>Status</th>
+              <th style={headerCell}>Created At</th>
+              <th style={headerCell}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {withdrawalRequests.length > 0 ? (
+              withdrawalRequests.map((request, index) => (
+                <tr key={request.id}>
+                  <td style={{ ...bodyCell, textAlign: "center" }}>{index + 1}</td>
+                  <td style={bodyCell}>{request.driverId}</td>
+                  <td style={bodyCell}>₹{request.amount}</td>
+                  <td style={bodyCell}>{request.type}</td>
+                  <td style={bodyCell}>{request.description}</td>
+                  <td style={bodyCell}>{request.status}</td>
+                  <td style={bodyCell}>{new Date(request.createdAt).toLocaleString()}</td>
+                  <td style={{ ...bodyCell, textAlign: "center" }}>
+                    {request.status === "Pending" ? (
+                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                        <button
+                          onClick={() => handleWithdrawalAction(request.id, "accept")}
+                          style={{
+                            backgroundColor: "#28a745",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleWithdrawalAction(request.id, "decline")}
+                          style={{
+                            backgroundColor: "#dc3545",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: request.status === "Approved" ? "green" : "red" }}>
+                        {request.status}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan="8" style={{ textAlign: "center", padding: "20px" }}>
-                  No drivers found.
+                  No withdrawal requests found.
                 </td>
               </tr>
             )}
@@ -633,30 +757,34 @@ const handleTrackDriver = async (driver) => {
         </div>
       </div>
 
-<Dialog open={mapModalOpen} onClose={() => setMapModalOpen(false)} maxWidth="md" fullWidth>
-  <DialogTitle>Driver Location - {selectedDriver?.name}</DialogTitle>
-  <DialogContent>
-    {driverLocation ? (
-      <div style={{ height: "400px", width: "100%" }}>
-        <MapContainer center={[driverLocation.lat, driverLocation.lng]} zoom={15} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; OpenStreetMap contributors'
-          />
-          <Marker position={[driverLocation.lat, driverLocation.lng]}icon={bikeIcon}>
-            <Popup>{selectedDriver?.name}</Popup>
-          </Marker>
-        </MapContainer>
-      </div>
-    ) : (
-      <Typography>No location data available</Typography>
-    )}
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setMapModalOpen(false)}>Close</Button>
-  </DialogActions>
-</Dialog>
-
+      <Dialog open={mapModalOpen} onClose={() => setMapModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Driver Location - {selectedDriver?.name}</DialogTitle>
+        <DialogContent>
+          {driverLocation ? (
+            <div style={{ height: "400px", width: "100%" }}>
+              <MapContainer
+                center={[driverLocation.lat, driverLocation.lng]}
+                zoom={15}
+                scrollWheelZoom={true}
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; OpenStreetMap contributors'
+                />
+                <Marker position={[driverLocation.lat, driverLocation.lng]} icon={bikeIcon}>
+                  <Popup>{selectedDriver?.name}</Popup>
+                </Marker>
+              </MapContainer>
+            </div>
+          ) : (
+            <Typography>No location data available</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMapModalOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Driver Details Modal */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
@@ -720,7 +848,7 @@ const handleTrackDriver = async (driver) => {
                   {selectedDriver.Police_Verification_Copy ? (
                     selectedDriver.Police_Verification_Copy.endsWith(".pdf") ? (
                       <a
-                        href={selectedDriver.Police_Verification_Copy}
+                        href={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.Police_Verification_Copy}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ color: "#007bff", textDecoration: "underline", fontSize: "16px" }}
@@ -729,7 +857,7 @@ const handleTrackDriver = async (driver) => {
                       </a>
                     ) : (
                       <img
-                        src={selectedDriver.Police_Verification_Copy}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.Police_Verification_Copy}`}
                         alt="Police Verification"
                         style={{
                           maxWidth: "350px",
@@ -741,7 +869,7 @@ const handleTrackDriver = async (driver) => {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(selectedDriver.Police_Verification_Copy)}
+                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.Police_Verification_Copy}`)}
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -758,7 +886,7 @@ const handleTrackDriver = async (driver) => {
                     <span style={modalLabelStyle}>🆔 Front:</span>
                     {selectedDriver.aadharCard?.front ? (
                       <img
-                        src={selectedDriver.aadharCard.front}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.front}`}
                         alt="Aadhar Card Front"
                         style={{
                           maxWidth: "350px",
@@ -770,7 +898,7 @@ const handleTrackDriver = async (driver) => {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(selectedDriver.aadharCard.front)}
+                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.front}`)}
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -782,7 +910,7 @@ const handleTrackDriver = async (driver) => {
                     <span style={modalLabelStyle}>🆔 Back:</span>
                     {selectedDriver.aadharCard?.back ? (
                       <img
-                        src={selectedDriver.aadharCard.back}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.back}`}
                         alt="Aadhar Card Back"
                         style={{
                           maxWidth: "350px",
@@ -794,7 +922,7 @@ const handleTrackDriver = async (driver) => {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(selectedDriver.aadharCard.back)}
+                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.back}`)}
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -811,7 +939,7 @@ const handleTrackDriver = async (driver) => {
                     <span style={modalLabelStyle}>🚗 Front:</span>
                     {selectedDriver.drivingLicence?.front ? (
                       <img
-                        src={selectedDriver.drivingLicence.front}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.front}`}
                         alt="Driving Licence Front"
                         style={{
                           maxWidth: "350px",
@@ -823,7 +951,7 @@ const handleTrackDriver = async (driver) => {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(selectedDriver.drivingLicence.front)}
+                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.front}`)}
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -835,7 +963,7 @@ const handleTrackDriver = async (driver) => {
                     <span style={modalLabelStyle}>🚗 Back:</span>
                     {selectedDriver.drivingLicence?.back ? (
                       <img
-                        src={selectedDriver.drivingLicence.back}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.back}`}
                         alt="Driving Licence Back"
                         style={{
                           maxWidth: "350px",
@@ -847,7 +975,7 @@ const handleTrackDriver = async (driver) => {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(selectedDriver.drivingLicence.back)}
+                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.back}`)}
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />

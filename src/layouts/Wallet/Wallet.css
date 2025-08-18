@@ -1,0 +1,97 @@
+.wallet-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.card-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.card {
+  flex: 1 1 200px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.card .icon {
+  font-size: 30px;
+}
+
+.card .card-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.card .card-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: #000;
+}
+
+.card.green {
+  border-left: 5px solid green;
+}
+
+.card.red {
+  border-left: 5px solid red;
+}
+
+.card.blue {
+  border-left: 5px solid blue;
+}
+
+.transactions-section {
+  margin-top: 20px;
+}
+
+.transaction-list {
+  list-style: none;
+  padding: 0;
+}
+
+.transaction-list .txn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.txn-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.txn-details {
+  flex: 1;
+}
+
+.txn-amount.credit {
+  color: green;
+  font-weight: bold;
+}
+
+.txn-amount.debit {
+  color: red;
+  font-weight: bold;
+}

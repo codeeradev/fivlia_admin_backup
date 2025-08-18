@@ -56,6 +56,7 @@ import Notification from "layouts/Notification/Notification";
 import StoreOrder from "layouts/Store/StoreRoutes/StoreOrder"
 import StoreCategories from "layouts/Store/StoreRoutes/Categories";
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
+import Wallet from "layouts/Wallet/Wallet";
 
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
@@ -73,6 +74,14 @@ const routes =
       icon: <Icon fontSize="small">dashboard</Icon>,
       route: "/dashboard",
       component: <Demo />,
+    },
+    {
+      type: "collapse",
+      name: "Wallet",
+      key: "wallet",
+      icon: <Icon fontSize="small">wallet</Icon>,
+      route: "/wallet",
+      component: <Wallet />,
     },
     {
       type: "collapse",
