@@ -36,26 +36,30 @@ function ProductTable() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuIndex, setMenuIndex] = useState(null);
   const [search, setSearch] = useState("");
-  const [entries, setEntries] = useState(30);
+  const [entries, setEntries] = useState(25); // Default to 10 for API pagination
   const [selectedCity, setSelectedCity] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(""); // New state for category filter
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [publicStatus, setPublicStatus] = useState({});
   const [popoverAnchorEl, setPopoverAnchorEl] = useState(null);
   const [popoverData, setPopoverData] = useState([]);
   const [popoverIndex, setPopoverIndex] = useState(null);
-  const [popoverType, setPopoverType] = useState(""); // "city" or "price"
+  const [popoverType, setPopoverType] = useState("");
 
-  // Fetch products from API
+  // Fetch products from API with pagination
   useEffect(() => {
     const getProduct = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/adminProducts");
+        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}`);
         if (result.status === 200) {
           const res = await result.json();
-          const products = res.Product || [];
+          const products = res.Product || []; // Note the capital 'P'
           setData(products);
+          setTotalItems(res.count || 0);
+          setTotalPages(res.totalPages || 1);
 
           const initialPublicStatus = products.reduce((acc, cur) => {
             acc[cur._id] = cur.status === true;
@@ -70,7 +74,7 @@ function ProductTable() {
       }
     };
     getProduct();
-  }, []);
+  }, [currentPage, entries]);
 
   const handleMenuOpen = (event, index) => {
     setAnchorEl(event.currentTarget);
@@ -94,10 +98,13 @@ function ProductTable() {
 
       if (result.status === 200) {
         alert("Product Deleted Successfully");
-        const result = await fetch("https://api.fivlia.in/getProducts");
+        // Refetch products with current page and limit
+        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}`);
         const res = await result.json();
-        const products = res.products || [];
+        const products = res.Product || [];
         setData(products);
+        setTotalItems(res.count || 0);
+        setTotalPages(res.totalPages || 1);
 
         const updatedStatus = products.reduce((acc, cur) => {
           acc[cur._id] = cur.status === true;
@@ -112,38 +119,33 @@ function ProductTable() {
     }
   };
 
-  // Filter and search products
-   const filteredProducts = Array.isArray(data)
+  // Filter products client-side
+  const filteredProducts = Array.isArray(data)
     ? data
-      .filter((item) =>
-        selectedCity
-          ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity)
-          : true
-      )
-      .filter((item) =>
-        selectedCategory
-          ? item.category?.some((cat) => cat.name === selectedCategory)
-          : true
-      )
-      .filter((item) =>
-        Object.values(item).some((val) =>
-          Array.isArray(val)
-            ? val.some((v) =>
-                typeof v === "object"
-                  ? Object.values(v).some((subVal) =>
-                      String(subVal).toLowerCase().includes(search.toLowerCase())
-                    )
-                  : String(v).toLowerCase().includes(search.toLowerCase())
-              )
-            : String(val).toLowerCase().includes(search.toLowerCase())
+        .filter((item) =>
+          selectedCity
+            ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity)
+            : true
         )
-      )
+        .filter((item) =>
+          selectedCategory
+            ? item.category?.some((cat) => cat.name === selectedCategory)
+            : true
+        )
+        .filter((item) =>
+          Object.values(item).some((val) =>
+            Array.isArray(val)
+              ? val.some((v) =>
+                  typeof v === "object"
+                    ? Object.values(v).some((subVal) =>
+                        String(subVal).toLowerCase().includes(search.toLowerCase())
+                      )
+                    : String(v).toLowerCase().includes(search.toLowerCase())
+                )
+              : String(val).toLowerCase().includes(search.toLowerCase())
+          )
+        )
     : [];
-
-  const totalItems = filteredProducts.length;
-  const totalPages = Math.ceil(totalItems / entries);
-  const startIndex = (currentPage - 1) * entries;
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + entries);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -189,7 +191,7 @@ function ProductTable() {
     const exportData = await Promise.all(
       filteredProducts.map(async (item, index) => {
         return {
-          "Sr. No": index + 1,
+          "Sr. No": (currentPage - 1) * entries + index + 1,
           Product: item.productName,
           ImageURL: item.productThumbnailUrl,
           SKU: item.sku,
@@ -298,22 +300,22 @@ function ProductTable() {
     >
       <div style={{ borderRadius: 15, padding: 20, overflowX: "auto" }}>
         {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-          flexWrap: "wrap",
-        }}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 20,
+            flexWrap: "wrap",
+          }}
         >
-        <div>
-          <span style={{ fontWeight: "bold", fontSize: 26 }}>Product List</span>
-          <br />
-          <span style={{ fontSize: 17 }}>View and manage all products</span>
-        </div>
+          <div>
+            <span style={{ fontWeight: "bold", fontSize: 26 }}>Product List</span>
+            <br />
+            <span style={{ fontSize: 17 }}>View and manage all products</span>
+          </div>
           <Button
-           style={{
+            style={{
               backgroundColor: "#00c853",
               height: 45,
               width: 160,
@@ -345,10 +347,11 @@ function ProductTable() {
                 setCurrentPage(1);
               }}
             >
-              <option value={30}>30</option>
+              <option value={25}>25</option>
               <option value={50}>50</option>
-              <option value={70}>70</option>
               <option value={100}>100</option>
+              <option value={250}>250</option>
+              <option value={500}>500</option>
             </select>
           </div>
 
@@ -380,7 +383,6 @@ function ProductTable() {
                 value={selectedCity}
                 onChange={(e) => {
                   setSelectedCity(e.target.value);
-                  setCurrentPage(1);
                 }}
                 style={{ fontSize: 16, borderRadius: "6px" }}
               >
@@ -404,7 +406,6 @@ function ProductTable() {
                 value={selectedCategory}
                 onChange={(e) => {
                   setSelectedCategory(e.target.value);
-                  setCurrentPage(1);
                 }}
                 style={{ fontSize: 16, borderRadius: "6px" }}
               >
@@ -428,7 +429,6 @@ function ProductTable() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setCurrentPage(1);
                 }}
                 placeholder="Search..."
                 style={{
@@ -456,7 +456,7 @@ function ProductTable() {
           >
             <thead>
               <tr>
-                <th style={{...headerCell,minWidth:'80px'}}>Sr. No</th>
+                <th style={{ ...headerCell, minWidth: "80px" }}>Sr. No</th>
                 <th style={{ ...headerCell, minWidth: 250 }}>Product Name</th>
                 <th style={headerCell}>SKU</th>
                 <th style={{ ...headerCell, width: "130px" }}>City</th>
@@ -468,19 +468,18 @@ function ProductTable() {
               </tr>
             </thead>
             <tbody>
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((item, index) => {
-                  // Extract all city names
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((item, index) => {
                   const cities = item.location?.map((loc) => loc.city?.[0]?.name).filter(Boolean) || [];
-
-                  // Extract all prices
                   const prices = item.variants?.map(
                     (v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`
                   ) || [];
 
                   return (
                     <tr key={item._id}>
-                      <td style={{ ...bodyCell, width: "75px" }}>{startIndex + index + 1}</td>
+                      <td style={{ ...bodyCell, width: "75px" }}>
+                        {(currentPage - 1) * entries + index + 1}
+                      </td>
                       <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: 10 }}>
                         <img
                           src={`${process.env.REACT_APP_IMAGE_LINK}${item.productThumbnailUrl}`}
@@ -496,7 +495,7 @@ function ProductTable() {
                       </td>
                       <td style={bodyCell}>{item.sku}</td>
                       <td style={bodyCell}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: 'row' }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
                           <div>
                             {cities.slice(0, 2).map((city, idx) => (
                               <Chip
@@ -557,7 +556,7 @@ function ProductTable() {
                         {item.location?.[0]?.zone?.[0]?.name?.split(",")[0] || "N/A"}
                       </td>
                       <td style={{ ...bodyCell }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: 'row' }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
                           <div>
                             {item.variants?.slice(0, 2).map((variant, idx) => (
                               <Chip

@@ -74,8 +74,8 @@ import Stock from "layouts/Store/StoreRoutes/Stock"
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
 import AddStoreCat from "layouts/Store/StoreRoutes/AddCatStore";
 import AddPageForm from "Setting/addEditPage";
-
-
+import StoreTransaction from "layouts/Store/StoreRoutes/storeTransaction"
+import DriverTransaction from "layouts/Drivers/driverTransaction"
 
 export default function App() {
   const [controller, dispatch] = useMaterialUIController();
@@ -245,15 +245,15 @@ export default function App() {
                   <Route path="/edit-store" element={<AddStore />} />
                   <Route path="/add-page" element={<AddPageForm />} />
                   <Route path="/edit-page" element={<AddPageForm />} />
+                  <Route path="/driverTransaction" element={<DriverTransaction />} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
-
-
 
                    {/* Store Routes */}
               <Route path="/dashboard1" element={<DashBoard />} />
               <Route path="/storecat" element={<StoreCategories />} />
               <Route path="/storeproduct" element={<StoreProduct />} />
               <Route path="/addstorecat" element={<AddStoreCat />} />
+              <Route path="/storeTransaction" element={<StoreTransaction />} />
                 </Route>
               </Routes>
             </MDBox>
@@ -330,6 +330,7 @@ export default function App() {
               <Route path="/edit-store" element={<AddStore />} />
               <Route path="/add-page" element={<AddPageForm />} />
               <Route path="/edit-page" element={<AddPageForm />} />
+              <Route path="/driverTransaction" element={<DriverTransaction />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
 
               {/* Store Routes */}
@@ -339,6 +340,7 @@ export default function App() {
               <Route path="/stock" element={<Stock />} />
               <Route path="/addstorecat" element={<AddStoreCat />} />
               <Route path="/store-orders" element={<StoreOrder />} />
+              <Route path="/storeTransaction" element={<StoreTransaction />} />
             </Route>
           </Routes>
         </>

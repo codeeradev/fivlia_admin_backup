@@ -24,6 +24,7 @@ function Setting() {
     codLimit: "",
     minPrice: "",
     maxPrice: "",
+    minWithdrawal: "", 
     PaymentGatewayStatus: false,
     activeGateway: "None", // Tracks the selected gateway (Razorpay, PhonePe, or None)
     activeMode: "", // Tracks the selected mode (test or live)
@@ -100,6 +101,7 @@ function Setting() {
             codLimit: result.settings.codLimit || "",
             minPrice: result.settings.minPrice || "",
             maxPrice: result.settings.maxPrice || "",
+            minWithdrawal: result.settings.minWithdrawal || "",
             PaymentGatewayStatus: result.settings.PaymentGatewayStatus || false,
             activeGateway,
             activeMode,
@@ -396,6 +398,14 @@ const handleInputChange = (field, value) => {
                 onChange={(e) => handleInputChange("maxPrice", e.target.value)}
               />
             </div>
+            <div className="store-input">
+            <label>Minimum Withdrawal</label>
+            <input
+              type="number"
+              value={formData.minWithdrawal}
+              onChange={(e) => handleInputChange("minWithdrawal", e.target.value)}
+            />
+          </div>
           </div>
         </div>
       </div>

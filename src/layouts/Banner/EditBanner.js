@@ -83,9 +83,10 @@ function EditBanner() {
 
     const fetchLocations = async () => {
       try {
-        const res = await fetch("https://node-m8jb.onrender.com/getlocations");
+        const res = await fetch("https://api.fivlia.in/getAllZone");
         const data = await res.json();
-        setLocations(data.result || []);
+        const cities = Array.isArray(data) ? data : (data.result || data.data || []);
+        setLocations(cities);
       } catch (err) {
         console.error("Error fetching locations:", err);
       }

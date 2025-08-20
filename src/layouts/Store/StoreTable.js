@@ -41,6 +41,7 @@ function StoreTabel() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const [stores, setStores] = useState([]);
+  const [walletBalances, setWalletBalances] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedZones, setSelectedZones] = useState([]);
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
@@ -48,11 +49,11 @@ function StoreTabel() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-
   const navigate = useNavigate();
 
   useEffect(() => {
     getAllStores();
+    getWalletBalances();
   }, []);
 
   const getAllStores = async () => {
@@ -63,6 +64,20 @@ function StoreTabel() {
         setStores(res.stores);
       } else {
         console.log("Something went wrong");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const getWalletBalances = async () => {
+    try {
+      const result = await fetch("https://api.fivlia.in/walletAdmin");
+      if (result.status === 200) {
+        const res = await result.json();
+        setWalletBalances(res.storeTotals);
+      } else {
+        console.log("Failed to fetch wallet balances");
       }
     } catch (err) {
       console.log(err);
@@ -103,7 +118,6 @@ function StoreTabel() {
         },
         body: JSON.stringify({ status: newStatus }),
       });
-
       if (response.ok) {
         setStores((prevStores) =>
           prevStores.map((s) => (s._id === storeId ? { ...s, status: newStatus } : s))
@@ -149,7 +163,6 @@ function StoreTabel() {
               <br />
               <span style={{ fontSize: 17 }}>View and manage all stores</span>
             </div>
-
             <div>
               <Button
                 style={{
@@ -166,7 +179,6 @@ function StoreTabel() {
               </Button>
             </div>
           </div>
-
           <div style={{ width: "100%", overflowX: "auto", maxWidth: "100%" }}>
             <table
               style={{
@@ -185,6 +197,7 @@ function StoreTabel() {
                   <th style={headerCell}>City</th>
                   <th style={headerCell}>Zone(s)</th>
                   <th style={{ ...headerCell, width: "100px", textAlign: "center" }}>Products</th>
+                  <th style={{ ...headerCell, textAlign: "center" }}>Wallet</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Status</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
                 </tr>
@@ -193,7 +206,6 @@ function StoreTabel() {
                 {stores.map((store, index) => (
                   <tr key={store._id}>
                     <td style={{ ...bodyCell, textAlign: "center" }}>{index + 1}</td>
-
                     <td style={bodyCell}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {store.image ? (
@@ -222,7 +234,6 @@ function StoreTabel() {
                         <span style={{ marginLeft: "30px" }}>{store.storeName}</span>
                       </div>
                     </td>
-
                     <td style={bodyCell}>
                       <div
                         style={{
@@ -239,9 +250,7 @@ function StoreTabel() {
                         <strong>{store.ownerName || "N/A"}</strong>
                       </div>
                     </td>
-
                     <td style={bodyCell}>{store.city?.name || "N/A"}</td>
-
                     <td style={{ ...bodyCell, width: 140 }}>
                       {store.zone && store.zone.length > 0 ? (
                         <>
@@ -253,7 +262,6 @@ function StoreTabel() {
                               style={{ marginRight: 4, marginBottom: 4 }}
                             />
                           ))}
-
                           {store.zone.length > 2 && (
                             <Button
                               size="small"
@@ -263,7 +271,6 @@ function StoreTabel() {
                               +{store.zone.length - 2} more
                             </Button>
                           )}
-
                           <Popper
                             open={Boolean(anchorEl) && selectedZones === store.zone}
                             anchorEl={anchorEl}
@@ -288,9 +295,19 @@ function StoreTabel() {
                         "N/A"
                       )}
                     </td>
-
                     <td style={bodyCell}>{store.Category?.length || 0}</td>
-
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <div
+                        style={{
+                          cursor: "pointer",
+                          color: "#007bff",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() => navigate("/storeTransaction", { state: { id: store._id } })}
+                      >
+                        ₹{walletBalances[store._id]?.toFixed(2) || "0.00"}
+                      </div>
+                    </td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <Switch
                         checked={store.status}
@@ -298,12 +315,10 @@ function StoreTabel() {
                         color="primary"
                       />
                     </td>
-
                     <td style={{ ...bodyCell, width: 150, textAlign: "center" }}>
                       <IconButton onClick={(e) => handleActionClick(e, store)} size="small">
                         <MoreVertIcon />
                       </IconButton>
-
                       <Menu
                         anchorEl={actionAnchorEl}
                         open={Boolean(actionAnchorEl) && actionStore?._id === store._id}
@@ -329,8 +344,8 @@ function StoreTabel() {
                           onClick={() => {
                             handleActionClose();
                             localStorage.setItem("userType", "store");
-                            localStorage.setItem("storeId", store._id); // ✅ Set the ID first
-                            window.location.href = "/dashboard1";        
+                            localStorage.setItem("storeId", store._id);
+                            window.location.href = "/dashboard1";
                           }}
                         >
                           Login
@@ -343,7 +358,6 @@ function StoreTabel() {
             </table>
           </div>
         </div>
-
         {/* Owner Info Modal */}
         <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>Owner Info</DialogTitle>

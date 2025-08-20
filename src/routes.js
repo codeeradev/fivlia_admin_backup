@@ -57,6 +57,8 @@ import StoreOrder from "layouts/Store/StoreRoutes/StoreOrder"
 import StoreCategories from "layouts/Store/StoreRoutes/Categories";
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
 import Wallet from "layouts/Wallet/Wallet";
+import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
+import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
@@ -82,6 +84,27 @@ const routes =
       icon: <Icon fontSize="small">wallet</Icon>,
       route: "/wallet",
       component: <Wallet />,
+    },
+        {
+      type: "collapse",
+      name: "Withdraw Request",
+      key: "withdrawal-request",
+      icon: <Icon fontSize="small">account_balance_wallet</Icon>,      
+      collapse:[
+      {
+      name: "Driver Request",
+      key: "driver-request",
+      icon: <Icon fontSize="small">local_shipping</Icon>,
+      route: "/driver-request",
+      component: <DriversWithdrawal /> 
+      },{
+          name: "Sellers Request",
+          key: "sellers-request",
+          route: "/sellers-request",
+          component: <SellerWithdrawal />,
+          icon: <Icon fontSize="small">seller</Icon>,
+        },
+      ]
     },
     {
       type: "collapse",

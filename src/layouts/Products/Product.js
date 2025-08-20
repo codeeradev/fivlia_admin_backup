@@ -102,6 +102,9 @@ function Product() {
   const [variantImages, setVariantImages] = useState({});
   const [addFilterValue, setAddFilterValue] = useState("");
   const [newfiltertype, setNewfilterType] = useState([]);
+  const [isFood, setIsFood] = useState(false);
+  const [isVeg, setIsVeg] = useState(false);
+  const [isNonVeg, setIsNonVeg] = useState(false);
 
   const maxSize = 500 * 1024; // 500KB
 
@@ -133,19 +136,32 @@ function Product() {
     getCategory();
 
     const getActiveCity = async () => {
-      try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setCityData(res);
-        } else {
-          console.log("Something Wrong");
+    try {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
+      if (result.status === 200) {
+        const res = await result.json();
+        setCityData(res);
+        // Automatically select all cities and their zones
+        const allCities = res;
+        setSelectedCities(allCities);
+        const zonesMap = {};
+        allCities.forEach((city) => {
+          zonesMap[city._id] = city.zones.map((zone) => zone.address);
+        });
+        setCityZones(zonesMap);
+        // Optionally set the first city as the active city
+        if (allCities.length > 0) {
+          setCity(allCities[0]._id);
+          setZones(allCities[0].zones.map((zone) => zone.address));
         }
-      } catch (err) {
-        console.log(err);
+      } else {
+        console.log("Something Wrong");
       }
-    };
-    getActiveCity();
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  getActiveCity();
 
     const fetchBrands = async () => {
       try {
@@ -198,18 +214,28 @@ function Product() {
     getUnits();
 
     const handleScroll = () => {
-      let current = "";
-      for (let id of sectionIds) {
-        const section = document.getElementById(id);
-        if (section) {
-          const { top } = section.getBoundingClientRect();
-          if (top <= 40) {
-            current = id;
-          }
-        }
+  let current = "";
+  let closestTop = Infinity;
+
+  for (let id of sectionIds) {
+    const section = document.getElementById(id);
+    if (section) {
+      const rect = section.getBoundingClientRect();
+      const top = rect.top;
+      const sectionHeight = rect.height;
+
+      // Consider a section active if its top is near the viewport top and it's at least partially visible
+      if (top <= 150 && top > -sectionHeight && Math.abs(top) < Math.abs(closestTop)) {
+        current = id;
+        closestTop = top;
       }
-      setActiveSection(current);
-    };
+    } else {
+      console.warn(`Section with ID ${id} not found in DOM`); // Debugging
+    }
+  }
+
+  setActiveSection(current);
+};
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -566,6 +592,17 @@ const handleRemoveReturnImage = () => {
     }
   };
 
+  const handleSidenavClick = (id) => {
+  const section = document.getElementById(id);
+  if (section) {
+    // Scroll to the section with an offset to account for headers
+    const offset = 80; // Adjust based on your header height
+    const topPos = section.getBoundingClientRect().top + window.pageYOffset - offset;
+    window.scrollTo({ top: topPos, behavior: "smooth" });
+    setActiveSection(id); // Manually set the active section
+  }
+};
+
   const handleFilter = async () => {
     try {
       const result = await fetch(`https://api.fivlia.in/addFilter`, {
@@ -771,28 +808,18 @@ dispatch(startLoading());
   };
 
   const handleCityChange = (e) => {
-    const cityId = e.target.value;
-    setCity(cityId);
+  const cityId = e.target.value;
+  setCity(cityId);
 
-    const selectedCity = citydata.find((item) => item._id === cityId);
-    if (selectedCity) {
-      const cityZones = selectedCity.zones || [];
-      setZones(cityZones);
-      const allZoneAddresses = cityZones.map((zone) => zone.address);
-      setZone(allZoneAddresses);
-
-      if (!selectedCities.some((city) => city._id === cityId)) {
-        setSelectedCities((prev) => [...prev, selectedCity]);
-        setCityZones((prev) => ({
-          ...prev,
-          [cityId]: allZoneAddresses,
-        }));
-      }
-    } else {
-      setZones([]);
-      setZone([]);
-    }
-  };
+  const selectedCity = citydata.find((item) => item._id === cityId);
+  if (selectedCity) {
+    const cityZones = selectedCity.zones || [];
+    setZones(cityZones.map((zone) => zone.address));
+  } else {
+    setZones([]);
+    setZone([]);
+  }
+};
 
   const handleRemoveZone = (zoneAddress) => {
     setZone((prev) => prev.filter((z) => z !== zoneAddress));
@@ -941,6 +968,15 @@ if (attributeValue.length > 0 && !hasVariantImage) {
     formData.append("sell_price", sellingprice);
     formData.append("feature_product", isFeatured);
     
+    if (isFood) {
+      if (isVeg) {
+        formData.append("isVeg", 1); // Send 1 if Veg is selected
+      }
+      if (isNonVeg) {
+        formData.append("isVeg", 2); // Send 2 if Non-Veg is selected
+      }
+    }
+
   if (returnProduct.title) {
     formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
   }
@@ -1211,7 +1247,42 @@ if (attributeValue.length > 0 && !hasVariantImage) {
   </div>
 </div>
                 </div>
+                <div className="background">
+            <div className="row-section">
+              <div className="input-container">
+                <label>
+                  Is this a food product? <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                </label>
+                <Switch checked={isFood} onChange={() => setIsFood(!isFood)} color="primary" />
+              </div>
+            </div>
 
+            {isFood && (
+              <div className="row-section">
+                <div className="input-container">
+                  <label>
+                    Select Type <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isVeg}
+                      onChange={() => setIsVeg(!isVeg)}
+                    />
+                    Veg
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isNonVeg}
+                      onChange={() => setIsNonVeg(!isNonVeg)}
+                    />
+                    Non-Veg
+                  </label>
+                </div>
+              </div>
+            )}
+</div>
                 {/* Image Upload */}
                 <div className="background" id="imagesection">
                     <span style={{ marginLeft: "20px", fontWeight: "bold", marginBottom: "10px" }}>
@@ -2362,38 +2433,41 @@ if (attributeValue.length > 0 && !hasVariantImage) {
             </div>
 
             <div className="sidebar-container">
-                <span style={{ fontWeight: "bold" }}>Product Information</span>
-                {[
-                    { id: "basicinfo", label: "Basic Information" },
-                    { id: "imagesection", label: "Image Section" },
-                    { id: "category-section", label: "Category Section" },
-                    { id: "citysection", label: "City & Zones" },
-                    { id: "unit-section", label: "Units & Brands" },
-                    { id: "attributes", label: "Attributes & Variants" },
-                    { id: "filter-type", label: "Filter & Types" },
-                    { id: "taxsection", label: "Tax Information" },
-                ].map((item, index, array) => (
-                    <div key={item.id} style={{ position: "relative" }}>
-                        {index < array.length - 1 && (
-                            <div
-                                className={`dashed-line ${activeSection === item.id || array[index + 1].id === activeSection
-                                    ? "active"
-                                    : ""
-                                    }`}
-                            ></div>
-                        )}
-                        <a
-                            href={`#${item.id}`}
-                            className="sidebar-link-container"
-                            style={{ textDecoration: "none" }}
-                        >
-                            <span className={`dot ${activeSection === item.id ? "active" : ""}`}></span>
-                            <h5 className={`label-text ${activeSection === item.id ? "active" : ""}`}>
-                                {item.label}
-                            </h5>
-                        </a>
-                    </div>
-                ))}
+              <span style={{ fontWeight: "bold" }}>Product Information</span>
+              {[
+                { id: "basicinfo", label: "Basic Information" },
+                { id: "imagesection", label: "Image Section" },
+                { id: "category-section", label: "Category Section" },
+                { id: "citysection", label: "City & Zones" },
+                { id: "unit-section", label: "Units & Brands" },
+                { id: "attributes", label: "Attributes & Variants" },
+                { id: "filter-type", label: "Filter & Types" },
+                { id: "taxsection", label: "Tax Information" },
+              ].map((item, index, array) => (
+                <div key={item.id} style={{ position: "relative" }}>
+                  {index < array.length - 1 && (
+                    <div
+                      className={`dashed-line ${
+                        activeSection === item.id || array[index + 1].id === activeSection ? "active" : ""
+                      }`}
+                    ></div>
+                  )}
+                  <a
+                    href={`#${item.id}`}
+                    className="sidebar-link-container"
+                    style={{ textDecoration: "none" }}
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default anchor behavior
+                      handleSidenavClick(item.id);
+                    }}
+                  >
+                    <span className={`dot ${activeSection === item.id ? "active" : ""}`}></span>
+                    <h5 className={`label-text ${activeSection === item.id ? "active" : ""}`}>
+                      {item.label}
+                    </h5>
+                  </a>
+                </div>
+              ))}
             </div>
         </div>
     </MDBox>

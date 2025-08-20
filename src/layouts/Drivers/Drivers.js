@@ -20,7 +20,8 @@ export default function Drivers() {
   const dispatch = useDispatch();
 
   const [drivers, setDrivers] = useState([]);
-  const [withdrawalRequests, setWithdrawalRequests] = useState([]); // New state for withdrawal requests
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [walletBalances, setWalletBalances] = useState({}); // New state for wallet balances
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,7 +116,27 @@ export default function Drivers() {
     }
   };
 
-  // Fetch drivers
+  // Fetch wallet balances
+  const fetchWalletBalances = async () => {
+    try {
+      const promises = drivers.map(async (driver) => {
+        const response = await fetch(`https://api.fivlia.in/transactionList/${driver.id}`);
+        const data = await response.json();
+        return { driverId: driver.id, totalAmount: data.totalAmount || 0 };
+      });
+      const balances = await Promise.all(promises);
+      const balanceMap = balances.reduce((acc, { driverId, totalAmount }) => {
+        acc[driverId] = totalAmount;
+        return acc;
+      }, {});
+      setWalletBalances(balanceMap);
+    } catch (err) {
+      console.error("Failed to fetch wallet balances:", err);
+      setError("Failed to fetch wallet balances. Please try again.");
+    }
+  };
+
+  // Fetch drivers and wallet balances
   useEffect(() => {
     const fetchDrivers = async () => {
       try {
@@ -180,6 +201,13 @@ export default function Drivers() {
     fetchDrivers();
     fetchWithdrawalRequests();
   }, [dispatch]);
+
+  // Fetch wallet balances when drivers change
+  useEffect(() => {
+    if (drivers.length > 0) {
+      fetchWalletBalances();
+    }
+  }, [drivers]);
 
   const filteredDrivers = drivers.filter((d) =>
     d.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -453,7 +481,6 @@ export default function Drivers() {
           </Button>
         </div>
 
-        {/* Controls */}
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
           <div>
             <label style={{ fontSize: 17 }}>Show Entries </label>
@@ -494,12 +521,10 @@ export default function Drivers() {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
         )}
 
-        {/* Driver Table */}
         <table
           style={{
             width: "100%",
@@ -517,6 +542,7 @@ export default function Drivers() {
               <th style={headerCell}>Driver Name</th>
               <th style={headerCell}>Email</th>
               <th style={headerCell}>Mobile No</th>
+              <th style={headerCell}>Wallet</th>
               <th style={headerCell}>Details</th>
               <th style={headerCell}>Status</th>
               <th style={headerCell}>Action</th>
@@ -541,6 +567,18 @@ export default function Drivers() {
                   </td>
                   <td style={bodyCell}>{driver.email || "-"}</td>
                   <td style={bodyCell}>{driver.address?.mobileNo || "-"}</td>
+                  <td style={{ ...bodyCell, textAlign: "center" }}>
+                    <div
+                      style={{
+                        cursor: "pointer",
+                        color: "#007bff",
+                        textDecoration: "underline",
+                      }}
+                      onClick={() => navigate("/driverTransaction", { state: { driverId: driver.id } })}
+                    >
+                      ₹{walletBalances[driver.id]?.toFixed(2) || "0.00"}
+                    </div>
+                  </td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
                     <button
                       onClick={() => {
@@ -624,7 +662,7 @@ export default function Drivers() {
               ))
             ) : (
               <tr>
-                <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
+                <td colSpan="10" style={{ textAlign: "center", padding: "20px" }}>
                   No drivers found.
                 </td>
               </tr>
@@ -632,92 +670,6 @@ export default function Drivers() {
           </tbody>
         </table>
 
-        {/* Withdrawal Requests Table */}
-        <h2 style={{ marginTop: "40px", fontSize: "30px", fontWeight: "bold" }}>
-          Withdrawal Requests
-        </h2>
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontFamily: '"Urbanist", sans-serif',
-            fontSize: "17px",
-            border: "1px solid #007BFF",
-            marginTop: "20px",
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Driver ID</th>
-              <th style={headerCell}>Amount</th>
-              <th style={headerCell}>Type</th>
-              <th style={headerCell}>Description</th>
-              <th style={headerCell}>Status</th>
-              <th style={headerCell}>Created At</th>
-              <th style={headerCell}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {withdrawalRequests.length > 0 ? (
-              withdrawalRequests.map((request, index) => (
-                <tr key={request.id}>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>{index + 1}</td>
-                  <td style={bodyCell}>{request.driverId}</td>
-                  <td style={bodyCell}>₹{request.amount}</td>
-                  <td style={bodyCell}>{request.type}</td>
-                  <td style={bodyCell}>{request.description}</td>
-                  <td style={bodyCell}>{request.status}</td>
-                  <td style={bodyCell}>{new Date(request.createdAt).toLocaleString()}</td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {request.status === "Pending" ? (
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.id, "accept")}
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.id, "decline")}
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ color: request.status === "Approved" ? "green" : "red" }}>
-                        {request.status}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" style={{ textAlign: "center", padding: "20px" }}>
-                  No withdrawal requests found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
           <div>
             Showing {startIndex + 1} to {Math.min(endIndex, filteredDrivers.length)} of{" "}
@@ -786,7 +738,6 @@ export default function Drivers() {
         </DialogActions>
       </Dialog>
 
-      {/* Driver Details Modal */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
           Driver Details
@@ -794,7 +745,6 @@ export default function Drivers() {
         <DialogContent dividers sx={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
           {selectedDriver ? (
             <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-              {/* Left Column: Text Details */}
               <div style={{ flex: "1 1 300px" }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
                   Personal Information
@@ -838,7 +788,6 @@ export default function Drivers() {
                 />
               </div>
 
-              {/* Right Column: Documents */}
               <div style={{ flex: "1 1 400px" }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
                   Documents
@@ -1007,7 +956,6 @@ export default function Drivers() {
         </DialogActions>
       </Dialog>
 
-      {/* Image Viewer Modal */}
       <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
           Image Preview
@@ -1043,7 +991,6 @@ export default function Drivers() {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Driver Modal */}
       <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
           Edit Driver

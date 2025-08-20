@@ -4,7 +4,7 @@
 
 .inner-view {
     width: 77%;
-    padding: 30px;
+    padding: 23px;
     border-radius: 8px;
      
 }
@@ -157,10 +157,10 @@
   background-color: white;
   display: flex;
   flex-direction: column;
-  margin-top: 100px;
+  margin-top: 40px;
   padding: 10px 20px;
   position: fixed;
-  right: 50px;
+  right: 30px;
   gap: 25px;
   border-radius: 20px;
 }
