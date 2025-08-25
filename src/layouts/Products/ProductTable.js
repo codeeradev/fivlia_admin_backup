@@ -36,7 +36,9 @@ function ProductTable() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuIndex, setMenuIndex] = useState(null);
   const [search, setSearch] = useState("");
-  const [entries, setEntries] = useState(25); // Default to 10 for API pagination
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [entries, setEntries] = useState(250); // Default to 10 for API pagination
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,32 +51,30 @@ function ProductTable() {
   const [popoverIndex, setPopoverIndex] = useState(null);
   const [popoverType, setPopoverType] = useState("");
 
-  // Fetch products from API with pagination
-  useEffect(() => {
-    const getProduct = async () => {
-      try {
-        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}`);
-        if (result.status === 200) {
-          const res = await result.json();
-          const products = res.Product || []; // Note the capital 'P'
-          setData(products);
-          setTotalItems(res.count || 0);
-          setTotalPages(res.totalPages || 1);
+ 
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const result = await fetch(
+        `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
+      );
+      const res = await result.json();
+      setData(res.Product || []);
+      setTotalItems(res.count || 0);
+      setTotalPages(res.totalPages || 1);
 
-          const initialPublicStatus = products.reduce((acc, cur) => {
-            acc[cur._id] = cur.status === true;
-            return acc;
-          }, {});
-          setPublicStatus(initialPublicStatus);
-        } else {
-          console.error("API returned non-200 status:", result.status);
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      }
-    };
-    getProduct();
-  }, [currentPage, entries]);
+      const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
+        acc[cur._id] = cur.status === true;
+        return acc;
+      }, {});
+      setPublicStatus(initialPublicStatus);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  };
+
+  fetchData();
+}, [searchQuery, entries, selectedCity, selectedCategory, currentPage]);
 
   const handleMenuOpen = (event, index) => {
     setAnchorEl(event.currentTarget);
@@ -99,7 +99,7 @@ function ProductTable() {
       if (result.status === 200) {
         alert("Product Deleted Successfully");
         // Refetch products with current page and limit
-        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}`);
+        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`);
         const res = await result.json();
         const products = res.Product || [];
         setData(products);
@@ -146,6 +146,27 @@ function ProductTable() {
           )
         )
     : [];
+
+    const fetchProducts = async () => {
+  try {
+    const result = await fetch(
+      `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
+    );
+    const res = await result.json();
+    setData(res.Product || []);
+    setTotalItems(res.count || 0);
+    setTotalPages(res.totalPages || 1);
+
+    const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
+      acc[cur._id] = cur.status === true;
+      return acc;
+    }, {});
+    setPublicStatus(initialPublicStatus);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+  }
+};
+
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -338,6 +359,7 @@ function ProductTable() {
             flexWrap: "wrap",
           }}
         >
+
           <div>
             <span style={{ fontSize: 16 }}>Show Entries:</span>
             <select
@@ -347,11 +369,9 @@ function ProductTable() {
                 setCurrentPage(1);
               }}
             >
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
               <option value={250}>250</option>
               <option value={500}>500</option>
+              <option value={1000}>1000</option>
             </select>
           </div>
 
@@ -424,23 +444,28 @@ function ProductTable() {
             <div>
               <label style={{ fontSize: 16 }}>Search:</label>
               <br />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                }}
-                placeholder="Search..."
-                style={{
-                  padding: "10px",
-                  borderRadius: "20px",
-                  height: "40px",
-                  width: "200px",
-                  border: "1px solid #ccc",
-                  fontSize: 16,
-                  marginTop: 5,
-                }}
-              />
+       <input
+  type="text"
+  value={searchInput}
+  onChange={(e) => setSearchInput(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      setSearchQuery(searchInput); // trigger API call only on Enter
+      setCurrentPage(1); // reset to first page
+    }
+  }}
+  placeholder="Search..."
+  style={{
+    padding: "10px",
+    borderRadius: "20px",
+    height: "40px",
+    width: "200px",
+    border: "1px solid #ccc",
+    fontSize: 16,
+    marginTop: 5,
+  }}
+/>
+
             </div>
           </div>
         </div>

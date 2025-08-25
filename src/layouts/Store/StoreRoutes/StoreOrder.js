@@ -130,10 +130,57 @@ const styles = `
     background: white;
     border-radius: 8px;
     padding: 16px;
-    max-width: 400px;
+    max-width: 90%;
+    width: 800px;
     margin: 5% auto;
     box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     border: 1px solid #e0e0e0;
+    position: relative;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    font-weight: bold;
+    z-index: 1;
+  }
+  .modal-close:hover {
+    color: #333;
+  }
+  .modal-table-container {
+    overflow-x: auto;
+    margin-top: 16px;
+  }
+  .modal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .modal-table th,
+  .modal-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px;
+    text-align: left;
+  }
+  .modal-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+  }
+  .modal-table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+  .item-link {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
   }
   .modal-header {
     font-size: 20px;
@@ -210,6 +257,7 @@ function StoreOrder({ isDashboard = false }) {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const [orders, setOrders] = useState([]);
+  const [variants, setVariants] = useState({});
   const [drivers, setDrivers] = useState([]);
   const [deliveryStatuses, setDeliveryStatuses] = useState([]);
   const [entriesToShow, setEntriesToShow] = useState(10);
@@ -232,7 +280,7 @@ function StoreOrder({ isDashboard = false }) {
           return setError("Store ID missing");
         }
 
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/orders?storeId=${storeId}`);
+        const res = await fetch(`https://api.fivlia.in/orders?storeId=${storeId}`);
         const data = await res.json();
         if (data.orders && Array.isArray(data.orders)) {
           setOrders(data.orders);
@@ -251,7 +299,7 @@ function StoreOrder({ isDashboard = false }) {
 
     const fetchDrivers = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getDriver`);
+        const res = await fetch("https://api.fivlia.in/getDriver");
         const data = await res.json();
         if (data.Driver && Array.isArray(data.Driver)) {
           setDrivers(data.Driver);
@@ -267,7 +315,7 @@ function StoreOrder({ isDashboard = false }) {
 
     const fetchDeliveryStatuses = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getdeliveryStatus`);
+        const res = await fetch("https://api.fivlia.in/getdeliveryStatus");
         const data = await res.json();
         if (data.Status && Array.isArray(data.Status)) {
           setDeliveryStatuses(data.Status);
@@ -406,7 +454,7 @@ function StoreOrder({ isDashboard = false }) {
       const statusInfo = deliveryStatuses.find(s => s.statusCode === newStatus);
       const statusTitle = statusInfo ? statusInfo.statusTitle : newStatus;
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/orderStatus/${selectedOrder._id}`, {
+      const res = await fetch(`https://api.fivlia.in/orderStatus/${selectedOrder._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: statusTitle }),
@@ -503,7 +551,7 @@ function StoreOrder({ isDashboard = false }) {
                       return (
                         <tr key={order._id}>
                           <td className="body-cell">{startIndex + index + 1}</td>
-                          <td className="body-cell">{order._id || "-"}</td>
+                          <td className="body-cell">{order.orderId || "-"}</td>
                           <td
                             className="body-cell"
                             onClick={() => openDetailsModal(order)}
@@ -512,7 +560,7 @@ function StoreOrder({ isDashboard = false }) {
                             {item ? (
                               <>
                                 <img
-                                  src={`${process.env.REACT_APP_IMAGE_LINK}${item.image || ""}`}
+                                  src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
                                   alt={item.name || "Item"}
                                   style={{
                                     width: 40,
@@ -618,52 +666,120 @@ function StoreOrder({ isDashboard = false }) {
       </MDBox>
 
       <Modal open={detailsModalOpen} onClose={closeModal}>
-        <Box className="modal-content">
-          <Typography className="modal-header">Order Details</Typography>
-          {selectedOrder?.items?.length > 0 ? (
-            selectedOrder.items.map((item, i) => (
-              <Box
-                key={i}
-                display="flex"
-                alignItems="center"
-                mb={1}
-              >
-                <img
-                  src={`${process.env.REACT_APP_IMAGE_LINK}${item.image || ""}`}
-                  alt={item.name || "Item"}
-                  style={{
-                    width: 50,
-                    height: 50,
-                    marginRight: 12,
-                    objectFit: "cover",
-                    borderRadius: 4,
-                  }}
-                />
-                <Typography sx={{ fontSize: '14px', color: '#344767' }}>
-                  {item.name}
-                </Typography>
-              </Box>
-            ))
-          ) : (
-            <Typography sx={{ color: '#666' }}>No items available</Typography>
-          )}
-          <Box mt={2}>
-            <Button
-              className="modal-button"
-              variant="contained"
-              onClick={closeModal}
-              sx={{
-                background: '#007bff',
-                color: 'white',
-                width: '100%',
-                '&:hover': { background: '#0056b3' }
-              }}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        <div className="modal-content">
+          <span className="modal-close" onClick={closeModal}>×</span>
+            {selectedOrder && (
+              <>
+                <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
+                  Order Details - {selectedOrder.orderId}
+                </h3>
+                <div style={{ marginBottom: "16px", fontSize: "14px", color: "#344767" }}>
+                  <strong>Status:</strong> {selectedOrder.orderStatus || ""}
+                </div>
+                <div className="modal-table-container">
+                  <table className="modal-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "80px" }}>Sr No</th>
+                        <th style={{ width: "100px" }}>Price</th>
+                        <th style={{ width: "100px" }}>Quantity</th>
+                        <th style={{ width: "250px" }}>Product</th>
+                        <th style={{ width: "150px" }}>Variant</th>
+                        <th style={{ width: "120px" }}>Price (Incl. GST)</th>
+                        <th style={{ width: "120px" }}>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedOrder.items.map((item, index) => {
+                        const variant = variants[item.productId?.$oid || item.productId]?.find(
+                          (v) => (v._id?.$oid || v._id) === (item.varientId?.$oid || item.varientId)
+                        );
+                        const price = item.price || 0;
+                        const subtotal = item.quantity * price;
+                        return (
+                          <tr key={item._id?.$oid || item._id}>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>{index + 1}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.quantity || 0}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>
+                              <img
+                                src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
+                                alt={item.name}
+                                style={{ width: 48, height: 48, objectFit: "cover", marginRight: 12 }}
+                              />
+                              <span className="item-link" title={item.name}>
+                                {item.name || "-"}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.variantName || "-"}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>₹{subtotal}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                          Subtotal (Incl. GST):
+                        </td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>
+                          ₹{selectedOrder.items.reduce((sum, item) =>
+                            sum + (item.quantity * (item.price || 0)), 0)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                          GST Breakdown ({selectedOrder.items[0]?.gst || "0%"}):
+                        </td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>
+                          ₹{selectedOrder.items.reduce((sum, item) => {
+                            const price = item.quantity * (item.variantPrice || item.price || 0);
+                            const gstRate = parseFloat(item.gst || "0") / 100;
+                            return sum + price * gstRate;
+                          }, 0).toFixed(2)} <br />
+                          <small style={{ color: "#7b809a", fontSize: "12px" }}>(Already included in prices)</small>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                          Delivery Charges:
+                        </td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>₹{selectedOrder.deliveryCharges || 0}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                          Platform Fee(%):
+                        </td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>{selectedOrder.platformFee || 0}</td>
+                      </tr>
+                      <tr style={{ borderTop: "2px solid #d2d6da" }}>
+                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 700, padding: "16px", fontSize: "15px" }}>
+                          Total Payable Amount:
+                        </td>
+                        <td style={{ fontSize: "15px", padding: "16px" }}>
+                          ₹{selectedOrder.totalPrice?.toFixed(2) || (
+                            (
+                              selectedOrder.items.reduce((sum, item) => {
+                                const price = item.quantity * (item.variantPrice || item.price || 0);
+                                return sum + price;
+                              }, 0) +
+                              (selectedOrder.deliveryCharges || 0) +
+                              (selectedOrder.platformFee || 0)
+                            ).toFixed(2)
+                          )}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div style={{ marginTop: "16px", fontSize: "13px", color: "#7b809a" }}>
+                  <em>Note: GST is already included in the product prices.</em>
+                </div>
+              </>
+            )}
+          </div>
+        </Modal>
 
       <Modal open={addressModalOpen} onClose={closeModal}>
         <Box className="modal-content">

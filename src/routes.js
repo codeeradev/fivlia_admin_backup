@@ -59,7 +59,7 @@ import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
 import Wallet from "layouts/Wallet/Wallet";
 import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
 import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
-
+import SetCommisson from "layouts/Commission/commisson"
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
   const password = localStorage.getItem("password");
@@ -84,6 +84,14 @@ const routes =
       icon: <Icon fontSize="small">wallet</Icon>,
       route: "/wallet",
       component: <Wallet />,
+    },
+    {
+      type: "collapse",
+      name: "Commisson",
+      key: "commisson",
+      icon: <Icon fontSize="small">payments</Icon>,
+      route: "/commisson",
+      component: <SetCommisson />,
     },
         {
       type: "collapse",

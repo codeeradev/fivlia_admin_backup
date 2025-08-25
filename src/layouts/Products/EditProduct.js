@@ -1096,7 +1096,7 @@ const handleRemoveReturnImage = () => {
     }
 
     if (selectedBrand) {
-      formData.append("brand_Name", JSON.stringify({ _id: selectedBrand._id, brandName: selectedBrand.brandName }));
+      formData.append("brand_Name", selectedBrand._id);
     }
 
     if (attributeValue.length > 0) {
