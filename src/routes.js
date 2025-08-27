@@ -60,6 +60,8 @@ import Wallet from "layouts/Wallet/Wallet";
 import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
 import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 import SetCommisson from "layouts/Commission/commisson"
+import DriversRequest from "layouts/Approvals/DriverApproval"
+import SellerRequest from "layouts/Approvals/SellerApproval"
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
   const password = localStorage.getItem("password");
@@ -110,6 +112,27 @@ const routes =
           key: "sellers-request",
           route: "/sellers-request",
           component: <SellerWithdrawal />,
+          icon: <Icon fontSize="small">seller</Icon>,
+        },
+      ]
+    },
+    {
+      type: "collapse",
+      name: "Approvals",
+      key: "approvals",
+      icon: <Icon fontSize="small">approval</Icon>,      
+      collapse:[
+      {
+      name: "Driver Applications",
+      key: "driver-approvals",
+      icon: <Icon fontSize="small">local_shipping</Icon>,
+      route: "/driver-approvals",
+      component: <DriversRequest /> 
+      },{
+          name: "Sellers Applications",
+          key: "seller-approvals",
+          route: "/seller-approvals",
+          component: <SellerRequest />,
           icon: <Icon fontSize="small">seller</Icon>,
         },
       ]

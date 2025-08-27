@@ -57,10 +57,10 @@ function SellerTable() {
 
   const getAllStores = async () => {
     try {
-      const result = await fetch("https://api.fivlia.in/getStore");
+      const result = await fetch("https://api.fivlia.in/getSeller");
       if (result.status === 200) {
         const res = await result.json();
-        setStores(res.stores);
+        setStores(res.sellers);
       } else {
         console.log("Something went wrong");
       }
@@ -145,7 +145,7 @@ function SellerTable() {
             }}
           >
             <div>
-              <span style={{ fontWeight: "bold", fontSize: 26 }}>Store List</span>
+              <span style={{ fontWeight: "bold", fontSize: 26 }}>Sellers List</span>
               <br />
               <span style={{ fontSize: 17 }}>View and manage all stores</span>
             </div>
@@ -180,7 +180,7 @@ function SellerTable() {
               <thead>
                 <tr>
                   <th style={headerCell}>Sr. No</th>
-                  <th style={headerCell}>Store Name</th>
+                  <th style={headerCell}>Seller Name</th>
                   <th style={headerCell}>Owner Info</th>
                   <th style={headerCell}>City</th>
                   <th style={headerCell}>Zone(s)</th>
@@ -198,7 +198,7 @@ function SellerTable() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {store.image ? (
                           <img
-                            src={`${process.env.REACT_APP_IMAGE_LINK}${store.image}`}
+                            src={`${process.env.REACT_APP_IMAGE_LINK}${store.storeImages}`}
                             alt="store"
                             style={{ width: 60, height: 60, borderRadius: 8, objectFit: "cover" }}
                           />
@@ -236,11 +236,11 @@ function SellerTable() {
                           setViewModalOpen(true);
                         }}
                       >
-                        <strong>{store.ownerName || "N/A"}</strong>
+                        <strong>{store.firstName || "N/A"}</strong>
                       </div>
                     </td>
 
-                    <td style={bodyCell}>{store.city?.name || "N/A"}</td>
+                    <td style={bodyCell}>{store.city || "N/A"}</td>
 
                     <td style={{ ...bodyCell, width: 140 }}>
                       {store.zone && store.zone.length > 0 ? (
@@ -352,13 +352,19 @@ function SellerTable() {
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <TextField
                   label="Owner Name"
-                  value={selectedStore.ownerName || ""}
+                  value={[selectedStore.firstName, selectedStore.lastName].filter(Boolean).join(" ") || ""}
                   fullWidth
                   InputProps={{ readOnly: true }}
                 />
                 <TextField
                   label="Phone Number"
-                  value={selectedStore.PhoneNumber || selectedStore.phone || ""}
+                  value={selectedStore.PhoneNumber || selectedStore.mobileNumber || ""}
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                />
+                 <TextField
+                  label="GST Number"
+                  value={selectedStore.gstNumber || selectedStore.mobileNumber || ""}
                   fullWidth
                   InputProps={{ readOnly: true }}
                 />

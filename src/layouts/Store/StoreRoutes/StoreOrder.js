@@ -175,6 +175,7 @@ const styles = `
     background-color: #fafafa;
   }
   .item-link {
+    color: #007bff;
     display: inline-block;
     max-width: 200px;
     overflow: hidden;
@@ -552,29 +553,17 @@ function StoreOrder({ isDashboard = false }) {
                         <tr key={order._id}>
                           <td className="body-cell">{startIndex + index + 1}</td>
                           <td className="body-cell">{order.orderId || "-"}</td>
-                          <td
-                            className="body-cell"
-                            onClick={() => openDetailsModal(order)}
-                            style={{ cursor: "pointer" }}
-                          >
-                            {item ? (
-                              <>
-                                <img
-                                  src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
-                                  alt={item.name || "Item"}
-                                  style={{
-                                    width: 40,
-                                    height: 40,
-                                    marginRight: 6,
-                                    verticalAlign: "middle",
-                                    objectFit: "cover",
-                                  }}
-                                />
-                                <span className="truncate-text">{truncateText(item.name)}</span>
-                              </>
-                            ) : (
-                              "-"
-                            )}
+                           <td className="body-cell order-details-cell">
+                            <span
+                              className="item-link"
+                              onClick={() => openDetailsModal(order)}
+                              style={{ cursor: "pointer",  display: "block", fontWeight: 500 }}
+                            >
+                              ₹{order.totalPrice?.toFixed(2) || 0}
+                            </span>
+                            <span style={{ color: "#7b809a", fontSize: "13px" }}>
+                              Quantity: {item?.quantity || 0}
+                            </span>
                           </td>
                           <td
                             className="body-cell"
@@ -684,6 +673,7 @@ function StoreOrder({ isDashboard = false }) {
                         <th style={{ width: "100px" }}>Price</th>
                         <th style={{ width: "100px" }}>Quantity</th>
                         <th style={{ width: "250px" }}>Product</th>
+                        <th style={{ width: "250px" }}>Sku</th>
                         <th style={{ width: "150px" }}>Variant</th>
                         <th style={{ width: "120px" }}>Price (Incl. GST)</th>
                         <th style={{ width: "120px" }}>Subtotal</th>
@@ -711,6 +701,7 @@ function StoreOrder({ isDashboard = false }) {
                                 {item.name || "-"}
                               </span>
                             </td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.sku || ""}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.variantName || "-"}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{subtotal}</td>

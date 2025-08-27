@@ -88,6 +88,9 @@ function EditProduct() {
   const [filterid, setFilterId] = useState('');
   const [singlefilterdata, setSingleFilterData] = useState([]);
   const [selecetdcategory, setSelectedcategory] = useState('');
+  const [isFood, setIsFood] = useState(false);
+  const [isVeg, setIsVeg] = useState(false);
+  const [isNonVeg, setIsNonVeg] = useState(false);
   const [originalFilterData, setOriginalFilterData] = useState([]);
 
   const maxSize = 500 * 1024; // 500KB
@@ -1017,6 +1020,15 @@ const handleRemoveReturnImage = () => {
     formData.append("online_visible", true);
     formData.append("status", status);
 
+     if (isFood) {
+      if (isVeg) {
+        formData.append("isVeg", 1); // Send 1 if Veg is selected
+      }
+      if (isNonVeg) {
+        formData.append("isVeg", 2); // Send 2 if Non-Veg is selected
+      }
+    }
+
     if (returnProduct.title) {
      formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
     }
@@ -1352,6 +1364,43 @@ const handleRemoveReturnImage = () => {
        </div>
      </div>
           </div>
+
+    <div className="background">
+            <div className="row-section">
+              <div className="input-container">
+                <label>
+                  Is this a food product? <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                </label>
+                <Switch checked={isFood} onChange={() => setIsFood(!isFood)} color="primary" />
+              </div>
+            </div>
+
+            {isFood && (
+              <div className="row-section">
+                <div className="input-container">
+                  <label>
+                    Select Type <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isVeg}
+                      onChange={() => setIsVeg(!isVeg)}
+                    />
+                    Veg
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isNonVeg}
+                      onChange={() => setIsNonVeg(!isNonVeg)}
+                    />
+                    Non-Veg
+                  </label>
+                </div>
+              </div>
+            )}
+</div>
 
           {/* Image Upload */}
           <div className="background" id="imagesection">
