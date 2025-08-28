@@ -234,23 +234,28 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
     }
   };
 
-  const handleInvoiceDownload = async (id) => {
+  const handleInvoiceDownload = async (orderId) => {
     try {
-      const response = await fetch("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `invoice_${id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Error downloading invoice:", err);
-      setError("Failed to download invoice");
-    }
-  };
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/thermal-invoice/${orderId}`, {
+      method: "GET", // Or POST, depending on route
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch PDF");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `thermal_invoice_${orderId}.pdf`;
+    link.click();
+
+    // Cleanup URL object
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Error downloading invoice:", err);
+  }
+};
 
   const filteredOrders = orders.filter((order) => {
     const search = searchTerm.toLowerCase();
@@ -1002,6 +1007,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                         <th style={{ width: "100px" }}>Price</th>
                         <th style={{ width: "100px" }}>Quantity</th>
                         <th style={{ width: "250px" }}>Product</th>
+                        <th style={{ width: "250px" }}>Sku</th>
                         <th style={{ width: "150px" }}>Variant</th>
                         <th style={{ width: "120px" }}>Price (Incl. GST)</th>
                         <th style={{ width: "120px" }}>Subtotal</th>
@@ -1029,6 +1035,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                                 {item.name || "-"}
                               </span>
                             </td>
+                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.sku || ""}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.variantName || "-"}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{subtotal}</td>

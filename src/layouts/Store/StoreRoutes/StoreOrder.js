@@ -65,6 +65,16 @@ const styles = `
     overflow-x: auto;
     width: 100%;
   }
+      .download-button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.3s, transform 0.2s;
+          }
   .orders-table {
     width: 100%;
     border-collapse: collapse;
@@ -429,6 +439,31 @@ function StoreOrder({ isDashboard = false }) {
     setAddressModalOpen(true);
   };
 
+// Function to download invoice PDF
+const handleDownloadInvoice = async (orderId) => {
+ try {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/thermal-invoice/${orderId}`, {
+      method: "GET", // Or POST, depending on route
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch PDF");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `thermal_invoice_${orderId}.pdf`;
+    link.click();
+
+    // Cleanup URL object
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Error downloading invoice:", err);
+  }
+};
+
+
   const openEditModal = (order) => {
     setSelectedOrder(order);
     // Try to find the status code for the current order status
@@ -540,6 +575,7 @@ function StoreOrder({ isDashboard = false }) {
                     <th className="header-cell">Order ID</th>
                     <th className="header-cell">Details</th>
                     <th className="header-cell">Address</th>
+                    <th className="header-cell">Invoice</th>
                     <th className="header-cell">Payment</th>
                     <th className="header-cell">Status</th>
                     <th className="header-cell">Action</th>
@@ -571,6 +607,14 @@ function StoreOrder({ isDashboard = false }) {
                             style={{ cursor: "pointer" }}
                           >
                             <span className="truncate-text">{truncateText(order.addressId?.fullAddress)}</span>
+                          </td>
+                          <td className="body-cell">
+                            <button
+                              className="download-button"
+                              onClick={() => handleDownloadInvoice(order.orderId)}
+                            >
+                              Download
+                            </button>
                           </td>
                           <td
                             className="body-cell"
