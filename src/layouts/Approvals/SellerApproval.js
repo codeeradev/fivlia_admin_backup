@@ -206,8 +206,8 @@ export default function SellerRequest() {
                   <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + idx + 1}</td>
                   <td style={bodyCell}>{r.storeName || "-"}</td>
                   <td style={bodyCell}>{[r.firstName, r.lastName].filter(Boolean).join(" ") || "-"}</td>
-                  <td style={bodyCell}>{r.mobileNumber || "-"}</td>
-                  <td style={bodyCell}>{r.email || "-"}</td>
+                  <td style={bodyCell}>{r.mobileNumber.mobileNO || "-"}</td>
+                  <td style={bodyCell}>{r.email.Email || "-"}</td>
                   <td style={bodyCell}>{r.city || "-"}</td>
                   <td style={bodyCell}>{r.gstNumber || "-"}</td>
                   <td style={bodyCell}>

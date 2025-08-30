@@ -162,7 +162,7 @@ function SellerTable() {
                 }}
                 onClick={() => navigate("/create-store")}
               >
-                + Create Store
+                + Create Seller
               </Button>
             </div>
           </div>

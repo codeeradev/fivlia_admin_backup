@@ -21,6 +21,8 @@ function AddBanner() {
   const [stores, setStores] = useState([]);
   const [storeId, setStoreId] = useState("");
   const [type, setType] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandId, setSelectedBrandId] = useState("");
   const [mainId, setMainId] = useState("");
   const [subId, setSubId] = useState("");
   const [subsubId, setSubsubId] = useState("");
@@ -41,6 +43,19 @@ function AddBanner() {
         console.error("Error fetching locations:", err);
       }
     };
+
+    const fetchBrands = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
+      const data = await res.json();
+      const brandList = Array.isArray(data) ? data : (data.allBrands || data.allBrand || []);
+      setBrands(brandList);
+    } catch (err) {
+    console.error("Error fetching brands:", err);
+  }
+ };
+
+fetchBrands();
 
     const fetchCategories = async () => {
       try {
@@ -135,9 +150,21 @@ function AddBanner() {
     formData.append("city", selectedCity._id);
     formData.append("image", imageFile);
     formData.append("type2", type);
+
+    if (type === "Brand") {
+    if (!selectedBrandId) {
+      dispatch(stopLoading());
+      alert("Please select a brand.");
+      return;
+    }
+    formData.append("brand", selectedBrandId);
+  } else {
+    // Append category fields only if type is not Brand
     formData.append("mainCategory", mainId);
     formData.append("subCategory", subId);
     formData.append("subSubCategory", subsubId);
+  }
+
     formData.append("storeId", storeId || "");
     formData.append("zones", JSON.stringify(zones));
 
@@ -332,6 +359,7 @@ function AddBanner() {
             }}
           >
             <option value="">--Select Type--</option>
+            <option value="Brand">Brand</option>
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
             <option value="Sub Sub-Category">Sub Sub-Category</option>
@@ -350,6 +378,24 @@ function AddBanner() {
             <option value="offer">Offer</option>
           </select>
         </div>
+
+        {type === "Brand" && (
+          <div style={formRowStyle}>
+            <label style={labelStyle}>Select Brand</label>
+            <select
+              style={inputStyle}
+              value={selectedBrandId}
+              onChange={(e) => setSelectedBrandId(e.target.value)}
+            >
+              <option value="">--Select Brand--</option>
+              {brands.map((b) => (
+                <option key={b._id} value={b._id}>
+                  {b.brandName || b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Category / SubCategory / SubSubCategory */}
         {type === "Category" && (

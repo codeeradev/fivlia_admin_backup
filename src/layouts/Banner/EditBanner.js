@@ -21,6 +21,8 @@ function EditBanner() {
   const [main, setMain] = useState([]);
   const [stores, setStores] = useState([]);
   const [storeId, setStoreId] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [brandId, setBrandId] = useState("");
   const [type, setType] = useState("");
   const [mainId, setMainId] = useState("");
   const [subId, setSubId] = useState("");
@@ -46,6 +48,12 @@ function EditBanner() {
         );
       }
       setType(data.type2 || "");
+
+      if (data.brand && data.brand._id) {
+        setBrandId(data.brand._id);
+      } else {
+        setBrandId("");
+      }
 
       if (data.mainCategory && data.mainCategory._id) {
         setMainId(data.mainCategory._id);
@@ -80,6 +88,19 @@ function EditBanner() {
         setImagePreview(null)
       }
     }
+
+    const fetchBrands = async () => {
+  try {
+    const res = await fetch("https://api.fivlia.in/getBrand");
+    const data = await res.json();
+    setBrands(data.allBrands || []);
+  } catch (err) {
+    console.error("Error fetching brands:", err);
+  }
+};
+
+fetchBrands();
+
 
     const fetchLocations = async () => {
       try {
@@ -208,11 +229,28 @@ console.log('data.result',data.result)
   formData.append("title", name);
   formData.append('city',selectedCityId)
   formData.append("type", type);
-  formData.append("mainCategory", mainId);
-  formData.append("subcategory", subId);
-  formData.append("subSubCategory", subsubId);
+  formData.append("type2", type); 
+    if (type === "Brand") {
+    if (!brandId) {
+      alert("Please select a brand for Brand type banners.");
+      dispatch(stopLoading());
+      return;
+    }
+    formData.append("brand", brandId);
+  } else {
+    if (mainId) formData.append("mainCategory", mainId);
+    if (subId) formData.append("subCategory", subId);
+    if (subsubId) formData.append("subSubCategory", subsubId);
+  }
   formData.append("storeId", storeId || "");
-  formData.append("zones", JSON.stringify(zones));
+ zones.forEach((zone, index) => {
+  formData.append(`zones[${index}][address]`, zone.address);
+  formData.append(`zones[${index}][latitude]`, zone.latitude);
+  formData.append(`zones[${index}][longitude]`, zone.longitude);
+  if (zone.range) {
+    formData.append(`zones[${index}][range]`, zone.range);
+  }
+});
 
   // If new image selected, append the new file
   if (imageFile) {
@@ -405,14 +443,34 @@ console.log('data.result',data.result)
               setMainId("");
               setSubId("");
               setSubsubId("");
+              setBrandId("");
             }}
           >
             <option value="">--Select Type--</option>
+            <option value="Brand">Brand</option>
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
             <option value="Sub Sub-Category">Sub Sub-Category</option>
           </select>
         </div>
+
+{type === "Brand" && (
+  <div style={formRowStyle}>
+    <label style={labelStyle}>Select Brand</label>
+    <select
+      style={inputStyle}
+      value={brandId}
+      onChange={(e) => setBrandId(e.target.value)}
+    >
+      <option value="">--Select Brand--</option>
+      {brands.map((brand) => (
+        <option key={brand._id} value={brand._id}>
+          {brand.brandName}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
         {/* Category / SubCategory / SubSubCategory */}
         {type === "Category" && (
