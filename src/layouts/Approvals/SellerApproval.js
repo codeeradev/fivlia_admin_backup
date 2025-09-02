@@ -72,7 +72,7 @@ export default function SellerRequest() {
       }
       setSellerRequests((prev) =>
         prev.map((r) =>
-          r._id === id ? { ...r, status: action === "approve" ? "approved" : "rejected" } : r
+          r._id === id ? { ...r, approveStatus: action === "approve" ? "approved" : "rejected" } : r
         )
       );
     } catch (e) {
@@ -94,7 +94,7 @@ export default function SellerRequest() {
       r.mobileNumber,
       r.city,
       r.gstNumber,
-      r.status,
+      r.approveStatus,
     ]
       .map(normalized)
       .join(" ");
@@ -205,29 +205,29 @@ export default function SellerRequest() {
                 <tr key={r._id}>
                   <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + idx + 1}</td>
                   <td style={bodyCell}>{r.storeName || "-"}</td>
-                  <td style={bodyCell}>{[r.firstName, r.lastName].filter(Boolean).join(" ") || "-"}</td>
-                  <td style={bodyCell}>{r.mobileNumber.mobileNO || "-"}</td>
-                  <td style={bodyCell}>{r.email.Email || "-"}</td>
+                  <td style={bodyCell}>{[r.firstName, r.lastName].filter(Boolean).join(" ") || r.ownerName || "-"}</td>
+                  <td style={bodyCell}>{r.PhoneNumber || r.mobileNumber.mobileNO || "-"}</td>
+                  <td style={bodyCell}>{r.email.Email || r.email ||"-"}</td>
                   <td style={bodyCell}>{r.city || "-"}</td>
                   <td style={bodyCell}>{r.gstNumber || "-"}</td>
                   <td style={bodyCell}>
                     <span
                       style={{
                         color:
-                          r.status === "approved"
+                          r.approveStatus === "approved"
                             ? "green"
-                            : r.status === "rejected"
+                            : r.approveStatus === "rejected"
                             ? "red"
                             : "#555",
                         fontWeight: "bold",
                         textTransform: "capitalize",
                       }}
                     >
-                      {r.status || "-"}
+                      {r.approveStatus || "-"}
                     </span>
                   </td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {r.status === "pending_admin_approval" ? (
+                    {r.approveStatus === "pending_admin_approval" ? (
                       <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                         <button
                           onClick={() => handleSellerAction(r._id, "approve")}
@@ -259,11 +259,11 @@ export default function SellerRequest() {
                     ) : (
                       <span
                         style={{
-                          color: r.status === "approved" ? "green" : "red",
+                          color: r.approveStatus === "approved" ? "green" : "red",
                           fontWeight: "bold",
                         }}
                       >
-                        {r.status}
+                        {r.approveStatus}
                       </span>
                     )}
                   </td>
