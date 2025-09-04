@@ -236,11 +236,11 @@ function SellerTable() {
                           setViewModalOpen(true);
                         }}
                       >
-                        <strong>{store.firstName || "N/A"}</strong>
+                        <strong>{store.ownerName || "N/A"}</strong>
                       </div>
                     </td>
 
-                    <td style={bodyCell}>{store.city || "N/A"}</td>
+                    <td style={bodyCell}>{store.city.name || "N/A"}</td>
 
                     <td style={{ ...bodyCell, width: 140 }}>
                       {store.zone && store.zone.length > 0 ? (
@@ -248,7 +248,7 @@ function SellerTable() {
                           {store.zone.slice(0, 2).map((z) => (
                             <Chip
                               key={z._id}
-                              label={z.title}
+                              label={z.title || z.name}
                               size="small"
                               style={{ marginRight: 4, marginBottom: 4 }}
                             />

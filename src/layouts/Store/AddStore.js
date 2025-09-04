@@ -151,7 +151,7 @@ function AddStore() {
         alert("Image size must be less than 500KB");
         return;
       }
-      setSelectedImage(URL.createObjectURL(file));
+      setSelectedImage(file);
     }
   };
 
@@ -210,10 +210,9 @@ function AddStore() {
       formData.append("isAuthorized", isAuthorized);
       formData.append("Category", JSON.stringify(selectedCategory));
 
-      if (selectedImage) {
-        const file = await fetch(selectedImage).then((res) => res.blob());
-        formData.append("image", file);
-      }
+if (selectedImage instanceof File) {
+  formData.append("image", selectedImage);
+}
 
       let response;
       if (storedetails && storedetails.store) {
