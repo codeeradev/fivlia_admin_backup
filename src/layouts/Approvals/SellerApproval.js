@@ -208,7 +208,7 @@ export default function SellerRequest() {
                   <td style={bodyCell}>{[r.firstName, r.lastName].filter(Boolean).join(" ") || r.ownerName || "-"}</td>
                   <td style={bodyCell}>{r.PhoneNumber || r.mobileNumber.mobileNO || "-"}</td>
                   <td style={bodyCell}>{r.email.Email || r.email ||"-"}</td>
-                  <td style={bodyCell}>{r.city || "-"}</td>
+                  <td style={bodyCell}>{r.city.name || "-"}</td>
                   <td style={bodyCell}>{r.gstNumber || "-"}</td>
                   <td style={bodyCell}>
                     <span
