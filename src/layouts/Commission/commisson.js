@@ -65,7 +65,7 @@ export default function SetCommission() {
           _id: subId,
           name: sub.name,
           status: sub.status ?? true,
-          commission: Number(sub.commission) || 0,
+          commission: Number(sub.commison) || 0,
           subSubCategories: (sub.subSubCategories || sub.subsubcategories || sub.subSubCat || []).map((ssc) => {
             const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
             console.log('Sub-sub category ID found:', sscId, 'from ssc:', ssc);
@@ -73,7 +73,7 @@ export default function SetCommission() {
             return {
               _id: sscId,
               name: ssc.name,
-              commission: Number(ssc.commission) || 0,
+              commission: Number(ssc.commison) || 0,
             };
           }),
         };
