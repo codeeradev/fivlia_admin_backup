@@ -9,12 +9,6 @@ import {
   Box,
   Typography,
   Collapse,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   InputAdornment,
   Snackbar,
@@ -58,24 +52,23 @@ export default function SetCommission() {
       const result = await res.json();
 
       const subs = (result.category?.subCategories || []).map((sub) => {
-        // Try different possible ID field names
         const subId = sub._id || sub.id || sub.subCategoryId || sub.subcategoryId;
-        
         return {
           _id: subId,
           name: sub.name,
           status: sub.status ?? true,
           commission: Number(sub.commison) || 0,
-          subSubCategories: (sub.subSubCategories || sub.subsubcategories || sub.subSubCat || []).map((ssc) => {
-            const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
-            console.log('Sub-sub category ID found:', sscId, 'from ssc:', ssc);
-            
-            return {
-              _id: sscId,
-              name: ssc.name,
-              commission: Number(ssc.commison) || 0,
-            };
-          }),
+          subSubCategories: (sub.subSubCategories || sub.subsubcategories || sub.subSubCat || []).map(
+            (ssc) => {
+              const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
+              console.log('Sub-sub category ID found:', sscId, 'from ssc:', ssc);
+              return {
+                _id: sscId,
+                name: ssc.name,
+                commission: Number(ssc.commison) || 0,
+              };
+            }
+          ),
         };
       });
 
@@ -99,11 +92,7 @@ export default function SetCommission() {
           const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              id: subId, 
-              commison: toggled.status ? 1 : 0, 
-              level: 'sub' 
-            }),
+            body: JSON.stringify({ id: subId, commison: toggled.status ? 1 : 0, level: "sub" }),
           });
           if (res.ok) {
             const result = await res.json();
@@ -157,14 +146,8 @@ export default function SetCommission() {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          id: id, 
-          commison: commission, 
-          level: level 
-        }),
+        body: JSON.stringify({ id, commison: commission, level }),
       });
-      
-      
       if (res.ok) {
         const result = await res.json();
         console.log('Commission saved successfully:', result);
@@ -246,95 +229,95 @@ export default function SetCommission() {
         {subCategories.length > 0 && (
           <Paper sx={{ width: "100%", overflow: "hidden" }}>
             {/* Table Header */}
-            <Box sx={{ 
-              display: "grid", 
-              gridTemplateColumns: "25% 30% 15% 30%",
-              backgroundColor: "#007bff",
-              color: "#fff",
-              fontWeight: "bold",
-              borderBottom: "1px solid #e0e0e0"
-            }}>
-              <Box sx={{ padding: "12px 16px", textAlign: "left" }}>
-                Sub-Category
-              </Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>
-                Commission
-              </Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>
-                Public
-              </Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>
-                Sub-Sub Categories
-              </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "25% 30% 15% 30%",
+                backgroundColor: "#007bff",
+                color: "#fff",
+                fontWeight: "bold",
+                borderBottom: "1px solid #e0e0e0",
+              }}
+            >
+              <Box sx={{ padding: "12px 16px", textAlign: "left" }}>Sub-Category</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Commission</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Public</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Sub-Sub Categories</Box>
             </Box>
 
             {/* Table Body */}
             {subCategories.map((sub, idx) => (
-              <Box key={`${sub._id}-${idx}`} sx={{ 
-                display: "grid", 
-                gridTemplateColumns: "25% 30% 15% 30%",
-                borderBottom: "1px solid #e0e0e0",
-                "&:hover": { backgroundColor: "#f5f5f5" }
-              }}>
-                {/* Sub-category name */}
-                <Box sx={{ padding: "12px 16px", textAlign: "left", verticalAlign: "top" }}>
-                  <Typography variant="body2" fontWeight="medium">
-                    {sub.name}
-                  </Typography>
-                </Box>
+              <Box
+                key={`${sub._id}-${idx}`}
+                sx={{
+                  borderBottom: "1px solid #e0e0e0",
+                  "&:hover": { backgroundColor: "#f5f5f5" },
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "25% 30% 15% 30%",
+                  }}
+                >
+                  {/* Sub-category name */}
+                  <Box sx={{ padding: "12px 16px", textAlign: "left", verticalAlign: "top" }}>
+                    <Typography variant="body2" fontWeight="medium">
+                      {sub.name}
+                    </Typography>
+                  </Box>
 
-                {/* Commission input */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
-                    <TextField
-                      type="number"
-                      value={sub.commission}
-                      onChange={(e) =>
-                        handleSubCommissionChange(sub._id, e.target.value)
-                      }
-                      size="small"
-                      sx={{ width: 100 }}
-                      InputProps={{
-                        inputProps: { min: 0, max: 100 },
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  {/* Commission input */}
+                  <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ maxWidth: "200px", margin: "0 auto" }}>
+                      <TextField
+                        type="number"
+                        value={sub.commission}
+                        onChange={(e) => handleSubCommissionChange(sub._id, e.target.value)}
+                        size="small"
+                        sx={{ width: 100 }}
+                        InputProps={{
+                          inputProps: { min: 0, max: 100 },
+                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          height: 36,
+                          color: "white !important",
+                          backgroundColor: "#007bff",
+                          "&:hover": { backgroundColor: "#0056b3" },
+                          minWidth: "60px",
+                        }}
+                        onClick={() => {
+                          saveCommission(sub._id, sub.commission, "sub");
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {/* Public toggle */}
+                  <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                    <Switch
+                      checked={!!sub.status}
+                      onChange={() => handleToggle(sub._id)}
+                      sx={{
+                        "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
+                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                          backgroundColor: "green !important",
+                        },
+                        "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
                       }}
                     />
-                    <Button
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        height: 36,
-                        backgroundColor: "#007bff",
-                        "&:hover": { backgroundColor: "#0056b3" },
-                      }}
-                      onClick={() => {
-                        saveCommission(sub._id, sub.commission, 'sub');
-                      }}
-                    >
-                      Save
-                    </Button>
                   </Box>
-                </Box>
 
-                {/* Public toggle */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  <Switch
-                    checked={!!sub.status}
-                    onChange={() => handleToggle(sub._id)}
-                    sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                        backgroundColor: "green !important",
-                      },
-                      "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
-                    }}
-                  />
-                </Box>
-
-                {/* Sub-sub categories */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  {sub.subSubCategories?.length > 0 ? (
-                    <Box>
+                  {/* Sub-sub categories toggle */}
+                  <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                    {sub.subSubCategories?.length > 0 ? (
                       <Button
                         size="small"
                         variant="outlined"
@@ -346,114 +329,109 @@ export default function SetCommission() {
                         }}
                         onClick={() => toggleRow(sub._id)}
                       >
-                        {openRows[sub._id] ? "Hide" : "Show"} (
-                        {sub.subSubCategories.length})
+                        {openRows[sub._id] ? "Hide" : "Show"} ({sub.subSubCategories.length})
                       </Button>
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        No sub-sub categories
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
 
-                      <Collapse in={!!openRows[sub._id]} timeout="auto" unmountOnExit>
-                        <Box mt={2} sx={{ 
-                          backgroundColor: "#f8f9fa", 
-                          borderRadius: "8px", 
-                          padding: "12px",
-                          border: "1px solid #e0e0e0"
-                        }}>
-                          <Typography variant="subtitle2" sx={{ 
-                            fontWeight: "bold", 
-                            color: "#333", 
-                            mb: 1.5,
-                            textAlign: "center",
-                            fontSize: "13px"
-                          }}>
-                            Sub-Sub Categories ({sub.subSubCategories.length})
-                          </Typography>
-                          {sub.subSubCategories.map((ssc, sIdx) => (
-                            <Box
-                              key={`${ssc._id}-${sIdx}`}
-                              display="flex"
-                              flexDirection="column"
-                              gap={1}
-                              p={1.5}
-                              mb={1}
-                              border="1px solid #dee2e6"
-                              borderRadius="6px"
-                              bgcolor="#fff"
+                {/* Sub-sub categories grid */}
+                {sub.subSubCategories?.length > 0 && (
+                  <Collapse in={!!openRows[sub._id]} timeout="auto" unmountOnExit>
+                    <Box sx={{ backgroundColor: "#f6f9fc", padding: "12px" }}>
+                      {/* Sub-sub categories header */}
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "0% 50% 25% 25%",
+                          backgroundColor: "transparent",
+                          fontWeight: "bold",
+                          color: "#333",
+                          fontSize: "13px",
+                          borderBottom: "1px solid #dee2e6",
+                        }}
+                      >
+                        <Box sx={{ padding: "8px 16px" }}></Box>
+                        <Box sx={{ padding: "8px 16px", textAlign: "left" }}>Sub-Sub Category</Box>
+                        <Box sx={{ padding: "8px 16px", textAlign: "center" }}>Commission</Box>
+                        <Box sx={{ padding: "8px 16px", textAlign: "center" }}>Action</Box>
+                      </Box>
+
+                      {/* Sub-sub categories body */}
+                      {sub.subSubCategories.map((ssc, sIdx) => (
+                        <Box
+                          key={`${ssc._id}-${sIdx}`}
+                          sx={{
+                            display: "grid",
+                            gridTemplateColumns: "0% 50% 25% 25%",
+                            borderBottom: "1px solid #dee2e6",
+                            "&:hover": { backgroundColor: "#f1f1f1" },
+                          }}
+                        >
+                          <Box sx={{ padding: "8px 16px" }}></Box>
+                          <Box sx={{ padding: "8px 16px", textAlign: "left", verticalAlign: "top" }}>
+                            <Typography variant="body2" sx={{ fontWeight: "500", color: "#333", fontSize: "13px" }}>
+                              {ssc.name}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}>
+                            <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ maxWidth: "200px", margin: "0 auto" }}>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={ssc.commission}
+                                onChange={(e) => handleSSCCommissionChange(sub._id, ssc._id, e.target.value)}
+                                sx={{
+                                  width: 90,
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "28px",
+                                    fontSize: "12px",
+                                  },
+                                }}
+                                InputProps={{
+                                  inputProps: { min: 0, max: 100 },
+                                  endAdornment: (
+                                    <InputAdornment position="end" sx={{ fontSize: "11px" }}>
+                                      %
+                                    </InputAdornment>
+                                  ),
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                          <Box sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}>
+                            <Button
+                              size="small"
+                              variant="contained"
                               sx={{
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                                transition: "all 0.2s ease",
-                                "&:hover": {
-                                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                                  transform: "translateY(-1px)"
-                                }
+                                height: 28,
+                                color: "white !important",
+                                backgroundColor: "#28a745",
+                                "&:hover": { backgroundColor: "#218838" },
+                                fontSize: "11px",
+                                textTransform: "none",
+                                fontWeight: "500",
+                                minWidth: "50px",
+                              }}
+                              onClick={() => {
+                                console.log('Sub-sub category data:', ssc);
+                                console.log('Sub-sub category ID:', ssc._id);
+                                console.log('Sub-sub category commission:', ssc.commission);
+                                saveCommission(ssc._id, ssc.commission, "subsub");
                               }}
                             >
-                              <Typography variant="body2" sx={{ 
-                                fontWeight: "500", 
-                                color: "#333",
-                                fontSize: "13px"
-                              }}>
-                                {ssc.name}
-                              </Typography>
-                              <Box display="flex" alignItems="center" gap={1} sx={{ flexWrap: "wrap" }}>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={ssc.commission}
-                                  onChange={(e) =>
-                                    handleSSCCommissionChange(
-                                      sub._id,
-                                      ssc._id,
-                                      e.target.value
-                                    )
-                                  }
-                                  sx={{ 
-                                    width: 80,
-                                    "& .MuiOutlinedInput-root": {
-                                      height: "28px",
-                                      fontSize: "12px"
-                                    }
-                                  }}
-                                  InputProps={{
-                                    inputProps: { min: 0, max: 100 },
-                                    endAdornment: (
-                                      <InputAdornment position="end" sx={{ fontSize: "11px" }}>
-                                        %
-                                      </InputAdornment>
-                                    ),
-                                  }}
-                                />
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  sx={{
-                                    height: 28,
-                                    backgroundColor: "#28a745",
-                                    "&:hover": { backgroundColor: "#218838" },
-                                    fontSize: "11px",
-                                    textTransform: "none",
-                                    fontWeight: "500",
-                                    minWidth: "50px"
-                                  }}
-                                  onClick={() => {
-                                    console.log('Sub-sub category data:', ssc);
-                                    console.log('Sub-sub category ID:', ssc._id);
-                                    console.log('Sub-sub category commission:', ssc.commission);
-                                    saveCommission(ssc._id, ssc.commission, 'subsub');
-                                  }}
-                                >
-                                  Save
-                                </Button>
-                              </Box>
-                            </Box>
-                          ))}
+                              Save
+                            </Button>
+                          </Box>
                         </Box>
-                      </Collapse>
+                      ))}
                     </Box>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      No sub-sub categories
-                    </Typography>
-                  )}
-                </Box>
+                  </Collapse>
+                )}
               </Box>
             ))}
           </Paper>

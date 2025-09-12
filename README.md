@@ -1,732 +1,432 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MDBox from "components/MDBox";
-import { Button, Menu, MenuItem, IconButton, Switch, Chip, Tooltip, Popover, Typography } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import ListIcon from "@mui/icons-material/List";
 import { useMaterialUIController } from "context";
-import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import { MoreHoriz } from "@mui/icons-material";
+import {
+  Button,
+  Switch,
+  TextField,
+  MenuItem,
+  Box,
+  Typography,
+  Collapse,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  InputAdornment,
+  Snackbar,
+  Alert,
+} from "@mui/material";
 
-// Styles for table headers and cells
-const headerCell = {
-  padding: "14px 12px",
-  border: "1px solid #ddd",
-  fontSize: 18,
-  fontWeight: "bold",
-  backgroundColor: "#007bff",
-  color: "white",
-  textAlign: "left",
-};
-
-const bodyCell = {
-  padding: "12px",
-  border: "1px solid #eee",
-  fontSize: 16,
-  backgroundColor: "#fff",
-};
-
-function ProductTable() {
+export default function SetCommission() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
-  const navigate = useNavigate();
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [menuIndex, setMenuIndex] = useState(null);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [entries, setEntries] = useState(50); // Default to 10 for API pagination
-  const [selectedCity, setSelectedCity] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [data, setData] = useState([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [publicStatus, setPublicStatus] = useState({});
-  const [popoverAnchorEl, setPopoverAnchorEl] = useState(null);
-  const [popoverData, setPopoverData] = useState([]);
-  const [popoverIndex, setPopoverIndex] = useState(null);
-  const [popoverType, setPopoverType] = useState("");
+  const [mainCategories, setMainCategories] = useState([]);
+  const [selectedMain, setSelectedMain] = useState("");
+  const [subCategories, setSubCategories] = useState([]);
+  const [openRows, setOpenRows] = useState({});
+  const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
- 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const result = await fetch(
-        `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
-      );
-      const res = await result.json();
-      setData(res.Product || []);
-      setTotalItems(res.count || 0);
-      setTotalPages(res.totalPages || 1);
+  const showSnack = (message, severity = "success") =>
+    setSnack({ open: true, message, severity });
+  const closeSnack = () => setSnack((s) => ({ ...s, open: false }));
 
-      const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
-        acc[cur._id] = cur.status === true;
-        return acc;
-      }, {});
-      setPublicStatus(initialPublicStatus);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-    }
-  };
-
-  fetchData();
-}, [searchQuery, entries, selectedCity, selectedCategory, currentPage]);
-
-  const handleMenuOpen = (event, index) => {
-    setAnchorEl(event.currentTarget);
-    setMenuIndex(index);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setMenuIndex(null);
-  };
-
-  const handleDeleteProduct = async (id) => {
-    handleMenuClose();
-    const confirmDelete = window.confirm("Are you sure you want to delete this product?");
-    if (!confirmDelete) return;
-
-    try {
-      const result = await fetch(`https://api.fivlia.in/deleteProduct/${id}`, {
-        method: "DELETE",
-      });
-
-      if (result.status === 200) {
-        alert("Product Deleted Successfully");
-        // Refetch products with current page and limit
-        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`);
-        const res = await result.json();
-        const products = res.Product || [];
-        setData(products);
-        setTotalItems(res.count || 0);
-        setTotalPages(res.totalPages || 1);
-
-        const updatedStatus = products.reduce((acc, cur) => {
-          acc[cur._id] = cur.status === true;
-          return acc;
-        }, {});
-        setPublicStatus(updatedStatus);
-      } else {
-        alert("Error");
+  // Fetch main categories
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory?page=1`);
+        if (res.ok) {
+          const result = await res.json();
+          setMainCategories(result.result || []);
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (err) {
-      console.error("Delete Error:", err);
-    }
-  };
+    })();
+  }, []);
 
-  // Filter products client-side
-  const filteredProducts = Array.isArray(data)
-    ? data
-        .filter((item) =>
-          selectedCity
-            ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity)
-            : true
-        )
-        .filter((item) =>
-          selectedCategory
-            ? item.category?.some((cat) => cat.name === selectedCategory)
-            : true
-        )
-        .filter((item) =>
-          Object.values(item).some((val) =>
-            Array.isArray(val)
-              ? val.some((v) =>
-                  typeof v === "object"
-                    ? Object.values(v).some((subVal) =>
-                        String(subVal).toLowerCase().includes(search.toLowerCase())
-                      )
-                    : String(v).toLowerCase().includes(search.toLowerCase())
-                )
-              : String(val).toLowerCase().includes(search.toLowerCase())
-          )
-        )
-    : [];
-
-    const fetchProducts = async () => {
-  try {
-    const result = await fetch(
-      `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
-    );
-    const res = await result.json();
-    setData(res.Product || []);
-    setTotalItems(res.count || 0);
-    setTotalPages(res.totalPages || 1);
-
-    const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
-      acc[cur._id] = cur.status === true;
-      return acc;
-    }, {});
-    setPublicStatus(initialPublicStatus);
-  } catch (err) {
-    console.error("Error fetching products:", err);
-  }
-};
-
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleSwitchChange = async (id) => {
+  // Fetch subcategories when a main category is selected
+  const fetchSubCategories = async (mainCatId) => {
     try {
-      const result = await fetch(`https://node-m8jb.onrender.com/edit-toggle/${id}`, {
-        method: "PUT",
-      });
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/categories?id=${mainCatId}`);
+      if (!res.ok) return;
+      const result = await res.json();
 
-      if (result.status === 200) {
-        const data = await result.json();
-        setPublicStatus((prev) => ({ ...prev, [id]: data.status }));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const toBase64 = (url) =>
-    fetch(url)
-      .then((res) => res.blob())
-      .then(
-        (blob) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          })
-      );
-
-  const exportTable = async (format) => {
-    const exportData = await Promise.all(
-      filteredProducts.map(async (item, index) => {
+      const subs = (result.category?.subCategories || []).map((sub) => {
+        const subId = sub._id || sub.id || sub.subCategoryId || sub.subcategoryId;
         return {
-          "Sr. No": (currentPage - 1) * entries + index + 1,
-          Product: item.productName,
-          ImageURL: item.productThumbnailUrl,
-          SKU: item.sku,
-          City: item.location?.map((loc) => loc.city?.[0]?.name || "N/A").join(", ") || "N/A",
-          Zone: item.location?.[0]?.zone?.[0]?.name || "N/A",
-          Price: item.variants
-            ?.map((v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`)
-            .slice(0, 2)
-            .join(", ") || "N/A",
-          Categories: item.category?.map((c) => c.name).join(", "),
-          Public: publicStatus[item._id] ? "Yes" : "No",
-        };
-      })
-    );
-
-    if (format === "excel" || format === "csv") {
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Products");
-      XLSX.writeFile(wb, `ProductList.${format === "excel" ? "xlsx" : "csv"}`);
-    } else if (format === "pdf") {
-      const doc = new jsPDF();
-      doc.setFontSize(12);
-      doc.text("Product List", 14, 15);
-
-      const columns = [
-        "Sr. No",
-        "Product",
-        "SKU",
-        "City",
-        "Zone",
-        "Price",
-        "Categories",
-        "Public",
-      ];
-
-      const rows = exportData.map((row) => [
-        row["Sr. No"],
-        row["Product"],
-        row["SKU"],
-        row["City"],
-        row["Zone"],
-        row["Price"],
-        row["Categories"],
-        row["Public"],
-      ]);
-
-      const images = await Promise.all(
-        exportData.map((row) => toBase64(row.ImageURL).catch(() => null))
-      );
-
-      autoTable(doc, {
-        head: [columns],
-        body: rows,
-        startY: 25,
-        styles: { fontSize: 8, cellPadding: 3 },
-        columnStyles: {
-          1: { cellWidth: 60 },
-        },
-        didDrawCell: (data) => {
-          if (data.column.index === 1 && data.section === "body") {
-            const imgData = images[data.row.index];
-            if (imgData) {
-              const x = data.cell.x + 2;
-              const y = data.cell.y + 2;
-              const imgHeight = 15;
-              const imgWidth = 15;
-              doc.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
-              doc.setFontSize(8);
-              doc.text(
-                rows[data.row.index][1],
-                x + imgWidth + 4,
-                y + imgHeight / 1.5
-              );
+          _id: subId,
+          name: sub.name,
+          status: sub.status ?? true,
+          commission: Number(sub.commison) || 0,
+          subSubCategories: (sub.subSubCategories || sub.subsubcategories || sub.subSubCat || []).map(
+            (ssc) => {
+              const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
+              return {
+                _id: sscId,
+                name: ssc.name,
+                commission: Number(ssc.commison) || 0,
+              };
             }
-          }
-        },
+          ),
+        };
       });
 
-      doc.save("ProductList.pdf");
+      setSubCategories(subs);
+      setOpenRows({});
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // Handle Popover
-  const handlePopoverOpen = (event, data, index, type) => {
-    setPopoverAnchorEl(event.currentTarget);
-    setPopoverData(data);
-    setPopoverIndex(index);
-    setPopoverType(type);
+  // Toggle public/private status
+  const handleToggle = useCallback((subId) => {
+    setSubCategories((prev) => {
+      const updated = prev.map((s) =>
+        s._id === subId ? { ...s, status: !s.status } : s
+      );
+      const toggled = updated.find((s) => s._id === subId);
+
+      (async () => {
+        try {
+          const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: subId, commison: toggled.status ? 1 : 0, level: "sub" }),
+          });
+          if (res.ok) {
+            showSnack("Status updated");
+          } else {
+            showSnack("Failed to update status", "error");
+          }
+        } catch (e) {
+          showSnack("Failed to update status", "error");
+        }
+      })();
+
+      return updated;
+    });
+  }, []);
+
+  // Change commission for sub-category
+  const handleSubCommissionChange = useCallback((subId, value) => {
+    setSubCategories((prev) =>
+      prev.map((s) =>
+        s._id === subId ? { ...s, commission: Math.max(0, Number(value) || 0) } : s
+      )
+    );
+  }, []);
+
+  // Change commission for sub-sub-category
+  const handleSSCCommissionChange = useCallback((subId, sscId, value) => {
+    setSubCategories((prev) =>
+      prev.map((s) =>
+        s._id !== subId
+          ? s
+          : {
+              ...s,
+              subSubCategories: s.subSubCategories.map((ssc) =>
+                ssc._id === sscId
+                  ? { ...ssc, commission: Math.max(0, Number(value) || 0) }
+                  : ssc
+              ),
+            }
+      )
+    );
+  }, []);
+
+  // Save commission (sub or sub-sub)
+  const saveCommission = async (id, commission, level) => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, commison: commission, level }),
+      });
+      if (res.ok) {
+        showSnack("Commission updated");
+      } else {
+        showSnack("Failed to update commission", "error");
+      }
+    } catch (e) {
+      showSnack("Error updating commission", "error");
+    }
   };
 
-  const handlePopoverClose = () => {
-    setPopoverAnchorEl(null);
-    setPopoverData([]);
-    setPopoverIndex(null);
-    setPopoverType("");
-  };
+  // Toggle expand/collapse of row
+  const toggleRow = useCallback((id) => {
+    setOpenRows((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  }, []);
 
   return (
-    <MDBox
-      p={2}
-      style={{
-        marginLeft: miniSidenav ? "80px" : "250px",
-        transition: "margin-left 0.3s ease",
-      }}
-    >
-      <div style={{ borderRadius: 15, padding: 20, overflowX: "auto" }}>
+    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ mt: "30px" }}>
+      <div style={{ width: "100%", padding: "0 20px" }}>
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <span style={{ fontWeight: "bold", fontSize: 26 }}>Product List</span>
-            <br />
-            <span style={{ fontSize: 17 }}>View and manage all products</span>
-          </div>
-          <Button
-            style={{
-              backgroundColor: "#00c853",
-              height: 45,
-              width: 160,
-              fontSize: 13,
-              color: "white",
-              letterSpacing: "1px",
-            }}
-            onClick={() => navigate("/add-product")}
-          >
-            + Add Product
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "flex", gap: 30 }}>
-            <div>
-              <label style={{ fontSize: 16 }}>Export:</label>
-              <select
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const confirmExport = window.confirm(
-                    `Are you sure you want to export as ${val.toUpperCase()}?`
-                  );
-                  if (confirmExport) exportTable(val);
-                }}
-                style={{ fontSize: 16, borderRadius: "6px", marginRight: "20px" }}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Export as
-                </option>
-                <option value="excel">Export Excel</option>
-                <option value="csv">Export CSV</option>
-                <option value="pdf">Export PDF</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 16 }}>Filter by City:</label>
-              <select
-                value={selectedCity}
-                onChange={(e) => {
-                  setSelectedCity(e.target.value);
-                }}
-                style={{ fontSize: 16, borderRadius: "6px" }}
-              >
-                <option value="">All Cities</option>
-                {Array.from(
-                  new Set(
-                    data.flatMap((p) => p.location?.map((loc) => loc.city?.[0]?.name)).filter(
-                      Boolean
-                    )
-                  )
-                ).map((cityName, idx) => (
-                  <option key={idx} value={cityName}>
-                    {cityName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 16 }}>Filter by Category:</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                }}
-                style={{ fontSize: 16, borderRadius: "6px" }}
-              >
-                <option value="">All Categories</option>
-                {Array.from(
-                  new Set(
-                    data.flatMap((p) => p.category?.map((cat) => cat.name)).filter(Boolean)
-                  )
-                ).map((categoryName, idx) => (
-                  <option key={idx} value={categoryName}>
-                    {categoryName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 16 }}>Search:</label>
-              <br />
-       <input
-  type="text"
-  value={searchInput}
-  onChange={(e) => setSearchInput(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      setSearchQuery(searchInput); // trigger API call only on Enter
-      setCurrentPage(1); // reset to first page
-    }
-  }}
-  placeholder="Search..."
-  style={{
-    padding: "10px",
-    borderRadius: "20px",
-    height: "40px",
-    width: "200px",
-    border: "1px solid #ccc",
-    fontSize: 16,
-    marginTop: 5,
-  }}
-/>
-
-            </div>
+            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Set Commission</h2>
+            <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
+              Set commissions for sub-categories and sub-subcategories
+            </p>
           </div>
         </div>
 
-        {/* Table */}
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+        {/* Main category selector */}
+        <Box mb={3} sx={{ width: "100%", maxWidth: 500 }}>
+          <TextField
+            select
+            label="Select Main Category"
+            value={selectedMain}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedMain(id);
+              fetchSubCategories(id);
+            }}
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            SelectProps={{ displayEmpty: true }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+                backgroundColor: "#fff",
+                height: "50px",
+                px: 2,
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: 16,
+                backgroundColor: "#fff",
+                px: 0.5,
+              },
+              "& .MuiSelect-select": {
+                py: 1.5,
+              },
+              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#007bff" },
             }}
           >
-            <thead>
-              <tr>
-                <th style={{ ...headerCell, minWidth: "80px" }}>Sr. No</th>
-                <th style={{ ...headerCell, minWidth: 250 }}>Product Name</th>
-                <th style={headerCell}>SKU</th>
-                <th style={{ ...headerCell, width: "130px" }}>City</th>
-                <th style={headerCell}>Zone</th>
-                <th style={headerCell}>Price</th>
-                <th style={headerCell}>Categories</th>
-                <th style={headerCell}>Public</th>
-                <th style={headerCell}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((item, index) => {
-                  const cities = item.location?.map((loc) => loc.city?.[0]?.name).filter(Boolean) || [];
-                  const prices = item.variants?.map(
-                    (v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`
-                  ) || [];
+            {mainCategories.map((cat) => (
+              <MenuItem key={cat._id} value={cat._id}>
+                {cat.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
 
-                  return (
-                    <tr key={item._id}>
-                      <td style={{ ...bodyCell, width: "75px" }}>
-                        {(currentPage - 1) * entries + index + 1}
-                      </td>
-                      <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: 10 }}>
-                        <img
-                          src={`${process.env.REACT_APP_IMAGE_LINK}${item.productThumbnailUrl}`}
-                          alt={item.productThumbnailUrl}
-                          style={{
-                            width: 60,
-                            height: 70,
-                            borderRadius: 6,
-                            objectFit: "cover",
-                          }}
-                        />
-                        <span style={{ fontWeight: "500" }}>{item.productName}</span>
-                      </td>
-                      <td style={bodyCell}>{item.sku}</td>
-                      <td style={bodyCell}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
-                          <div>
-                            {cities.slice(0, 2).map((city, idx) => (
-                              <Chip
-                                key={idx}
-                                label={city}
-                                size="small"
-                                style={{
-                                  backgroundColor: "#e3f2fd",
-                                  color: "#1976d2",
-                                  fontSize: 10,
-                                  marginRight: 5,
-                                }}
-                              />
-                            ))}
-                          </div>
-                          <div>
-                            {cities.length > 2 && (
-                              <Tooltip title="View all cities">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handlePopoverOpen(e, cities, index, "city")}
-                                >
-                                  <MoreVertIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </div>
-                          {!cities.length && <span>N/A</span>}
-                        </div>
-                        <Popover
-                          open={Boolean(popoverAnchorEl) && popoverIndex === index && popoverType === "city"}
-                          anchorEl={popoverAnchorEl}
-                          onClose={handlePopoverClose}
-                          anchorOrigin={{
-                            vertical: "bottom",
-                            horizontal: "left",
-                          }}
-                          transformOrigin={{
-                            vertical: "top",
-                            horizontal: "left",
-                          }}
-                        >
-                          <div style={{ padding: "10px", maxWidth: "300px" }}>
-                            <Typography variant="h6" style={{ fontSize: 14 }}>
-                              All Cities
-                            </Typography>
-                            <ul style={{ margin: 0, paddingLeft: 15 }}>
-                              {popoverData.map((city, idx) => (
-                                <li key={idx} style={{ fontSize: 12 }}>
-                                  {city}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </Popover>
-                      </td>
-                      <td style={{ ...bodyCell, width: "140px" }}>
-                        {item.location?.[0]?.zone?.[0]?.name?.split(",")[0] || "N/A"}
-                      </td>
-                      <td style={{ ...bodyCell }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
-                          <div>
-                            {item.variants?.slice(0, 2).map((variant, idx) => (
-                              <Chip
-                                key={idx}
-                                label={`${variant.attributeName} - ${variant.variantValue} - ₹${variant.sell_price}`}
-                                size="small"
-                                style={{
-                                  backgroundColor: "#f1f8e9",
-                                  color: "#388e3c",
-                                  fontSize: 10,
-                                }}
-                              />
-                            ))}
-                          </div>
-                          <div>
-                            {prices.length > 2 && (
-                              <Tooltip title="View all prices">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handlePopoverOpen(e, prices, index, "price")}
-                                >
-                                  <MoreVertIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </div>
-                          {!item.variants?.length && <span>N/A</span>}
-                        </div>
-                        <Popover
-                          open={Boolean(popoverAnchorEl) && popoverIndex === index && popoverType === "price"}
-                          anchorEl={popoverAnchorEl}
-                          onClose={handlePopoverClose}
-                          anchorOrigin={{
-                            vertical: "bottom",
-                            horizontal: "left",
-                          }}
-                          transformOrigin={{
-                            vertical: "top",
-                            horizontal: "left",
-                          }}
-                        >
-                          <div style={{ padding: "10px", maxWidth: "300px" }}>
-                            <Typography variant="h6" style={{ fontSize: 14 }}>
-                              All Prices
-                            </Typography>
-                            <ul style={{ margin: 0, paddingLeft: 15 }}>
-                              {popoverData.map((price, idx) => (
-                                <li key={idx} style={{ fontSize: 12 }}>
-                                  {price}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </Popover>
-                      </td>
-                      <td style={bodyCell}>
-                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                          {item.category?.map((category, idx) => (
-                            <Chip
-                              key={category._id || idx}
-                              label={category.name}
-                              size="small"
-                              style={{
-                                backgroundColor: "#e0f7fa",
-                                color: "#007bff",
-                                fontSize: 12,
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </td>
-                      <td style={bodyCell}>
-                        <Switch
-                          checked={publicStatus[item._id] || false}
-                          onChange={() => handleSwitchChange(item._id)}
-                          color="primary"
-                          sx={{
-                            "& .MuiSwitch-switchBase.Mui-checked": {
-                              color: "green",
-                            },
-                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                              backgroundColor: "green !important",
-                            },
-                            "& .MuiSwitch-track": {
-                              backgroundColor: "red",
-                              opacity: 1,
-                            },
-                          }}
-                        />
-                      </td>
-                      <td style={bodyCell}>
-                        <IconButton onClick={(e) => handleMenuOpen(e, index)}>
-                          <MoreVertIcon />
-                        </IconButton>
-                        <Menu
-                          anchorEl={anchorEl}
-                          open={Boolean(anchorEl) && menuIndex === index}
-                          onClose={handleMenuClose}
-                        >
-                          <MenuItem onClick={() => navigate("/edit-product", { state: item })}>
-                            Edit
-                          </MenuItem>
-                          <MenuItem onClick={() => handleDeleteProduct(item._id)}>Delete</MenuItem>
-                        </Menu>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="9" style={{ ...bodyCell, textAlign: "center" }}>
-                    No products found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Subcategories Table */}
+        {subCategories.length > 0 && (
+          <Paper sx={{ width: "100%", overflow: "hidden" }}>
+            {/* Table Header */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "25% 30% 15% 30%",
+                backgroundColor: "#007bff",
+                color: "#fff",
+                fontWeight: "bold",
+                borderBottom: "1px solid #e0e0e0",
+              }}
+            >
+              <Box sx={{ padding: "12px 16px", textAlign: "left" }}>Sub-Category</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Commission</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Public</Box>
+              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Sub-Sub Categories</Box>
+            </Box>
 
-        {/* Pagination Controls */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: 20,
-          }}
+            {/* Table Body */}
+            {subCategories.map((sub, idx) => (
+              <Box
+                key={`${sub._id}-${idx}`}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "25% 30% 15% 30%",
+                  borderBottom: "1px solid #e0e0e0",
+                  "&:hover": { backgroundColor: "#f5f5f5" },
+                }}
+              >
+                {/* Sub-category name */}
+                <Box sx={{ padding: "12px 16px", textAlign: "left", verticalAlign: "top" }}>
+                  <Typography variant="body2" fontWeight="medium">
+                    {sub.name}
+                  </Typography>
+                </Box>
+
+                {/* Commission input */}
+                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                  <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
+                    <TextField
+                      type="number"
+                      value={sub.commission}
+                      onChange={(e) => handleSubCommissionChange(sub._id, e.target.value)}
+                      size="small"
+                      sx={{ width: 100 }}
+                      InputProps={{
+                        inputProps: { min: 0, max: 100 },
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        height: 36,
+                        color: "white !important",
+                        backgroundColor: "#007bff",
+                        "&:hover": { backgroundColor: "#0056b3" },
+                      }}
+                      onClick={() => {
+                        saveCommission(sub._id, sub.commission, "sub");
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </Box>
+                </Box>
+
+                {/* Public toggle */}
+                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                  <Switch
+                    checked={!!sub.status}
+                    onChange={() => handleToggle(sub._id)}
+                    sx={{
+                      "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                        backgroundColor: "green !important",
+                      },
+                      "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
+                    }}
+                  />
+                </Box>
+
+                {/* Sub-sub categories */}
+                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
+                  {sub.subSubCategories?.length > 0 ? (
+                    <Box>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          textTransform: "none",
+                          borderColor: "#007bff",
+                          color: "#007bff",
+                          fontSize: 14,
+                        }}
+                        onClick={() => toggleRow(sub._id)}
+                      >
+                        {openRows[sub._id] ? "Hide" : "Show"} ({sub.subSubCategories.length})
+                      </Button>
+
+                      <Collapse in={!!openRows[sub._id]} timeout="auto" unmountOnExit>
+                        <TableContainer
+                          component={Paper}
+                          sx={{ mt: 2, backgroundColor: "#f8f9fa", borderRadius: "8px" }}
+                        >
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ backgroundColor: "#e0e0e0" }}>
+                                <TableCell sx={{ fontWeight: "bold", color: "#333" }}>
+                                  Sub-Sub Category
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "#333", textAlign: "center" }}>
+                                  Commission
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: "bold", color: "#333", textAlign: "center" }}>
+                                  Action
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {sub.subSubCategories.map((ssc, sIdx) => (
+                                <TableRow
+                                  key={`${ssc._id}-${sIdx}`}
+                                  sx={{
+                                    "&:hover": { backgroundColor: "#f1f1f1" },
+                                  }}
+                                >
+                                  <TableCell sx={{ color: "#333", fontSize: "13px" }}>
+                                    {ssc.name}
+                                  </TableCell>
+                                  <TableCell sx={{ textAlign: "center" }}>
+                                    <TextField
+                                      type="number"
+                                      size="small"
+                                      value={ssc.commission}
+                                      onChange={(e) =>
+                                        handleSSCCommissionChange(sub._id, ssc._id, e.target.value)
+                                      }
+                                      sx={{
+                                        width: 80,
+                                        "& .MuiOutlinedInput-root": {
+                                          height: "28px",
+                                          fontSize: "12px",
+                                        },
+                                      }}
+                                      InputProps={{
+                                        inputProps: { min: 0, max: 100 },
+                                        endAdornment: (
+                                          <InputAdornment position="end" sx={{ fontSize: "11px" }}>
+                                            %
+                                          </InputAdornment>
+                                        ),
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={{ textAlign: "center" }}>
+                                    <Button
+                                      size="small"
+                                      variant="contained"
+                                      sx={{
+                                        height: 28,
+                                        color: "white !important",
+                                        backgroundColor: "#28a745",
+                                        "&:hover": { backgroundColor: "#218838" },
+                                        fontSize: "11px",
+                                        textTransform: "none",
+                                        minWidth: "50px",
+                                      }}
+                                      onClick={() => {
+                                        saveCommission(ssc._id, ssc.commission, "subsub");
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Collapse>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">
+                      No sub-sub categories
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            ))}
+          </Paper>
+        )}
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={2500}
+          onClose={closeSnack}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
         >
-          <Button
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-            style={{
-              backgroundColor: currentPage === 1 ? "#ccc" : "#007bff",
-              color: "white",
-              padding: "8px 16px",
-              borderRadius: 5,
-              fontSize: 14,
-            }}
-          >
-            Previous Page
-          </Button>
-          <span style={{ fontSize: 16 }}>
-            Page {currentPage} of {totalPages} (Total: {totalItems} items)
-          </span>
-          <Button
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            style={{
-              backgroundColor: currentPage === totalPages ? "#ccc" : "#007bff",
-              color: "white",
-              padding: "8px 16px",
-              borderRadius: 5,
-              fontSize: 14,
-            }}
-          >
-            Next Page
-          </Button>
-        </div>
+          <Alert onClose={closeSnack} severity={snack.severity} variant="filled">
+            {snack.message}
+          </Alert>
+        </Snackbar>
       </div>
     </MDBox>
   );
 }
-
-export default ProductTable;
