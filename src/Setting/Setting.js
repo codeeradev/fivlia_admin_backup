@@ -46,6 +46,7 @@ function Setting() {
       }
     ],
     imageLink: "",
+    freeDeliveryLimit: ""
   });
 
   // Fetch settings data on component mount
@@ -125,6 +126,7 @@ function Setting() {
                   }
                 ],
             imageLink: result.settings.imageLink || "",
+            freeDeliveryLimit: result.settings.freeDeliveryLimit || ""
           });
         } else {
           dispatch(stopLoading());
@@ -404,6 +406,14 @@ const handleInputChange = (field, value) => {
               type="number"
               value={formData.minWithdrawal}
               onChange={(e) => handleInputChange("minWithdrawal", e.target.value)}
+            />
+          </div>
+            <div className="store-input">
+            <label>Free Delivery Limit</label>
+            <input
+              type="number"
+              value={formData.freeDeliveryLimit}
+              onChange={(e) => handleInputChange("freeDeliveryLimit", e.target.value)}
             />
           </div>
           </div>

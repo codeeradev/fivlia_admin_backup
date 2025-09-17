@@ -221,198 +221,204 @@ export default function SetCommission() {
 
         {/* Subcategories Table */}
         {subCategories.length > 0 && (
-          <Paper sx={{ width: "100%", overflow: "hidden" }}>
-            {/* Table Header */}
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "25% 30% 15% 30%",
-                backgroundColor: "#007bff",
-                color: "#fff",
-                fontWeight: "bold",
-                borderBottom: "1px solid #e0e0e0",
-              }}
-            >
-              <Box sx={{ padding: "12px 16px", textAlign: "left" }}>Sub-Category</Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Commission</Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Public</Box>
-              <Box sx={{ padding: "12px 16px", textAlign: "center" }}>Sub-Sub Categories</Box>
-            </Box>
+          <TableContainer component={Paper} sx={{ width: "100%", overflow: "hidden" }}>
+            <Table sx={{ tableLayout: "fixed" }}>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#007bff" }}>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold", textAlign: "left", width: "25%", padding: "12px 16px" }}>
+                    Sub-Category
+                  </TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold", textAlign: "center", width: "30%", padding: "12px 16px" }}>
+                    Commission
+                  </TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold", textAlign: "center", width: "15%", padding: "12px 16px" }}>
+                    Public
+                  </TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold", textAlign: "center", width: "30%", padding: "12px 16px" }}>
+                    Sub-Sub Categories
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {subCategories.map((sub, idx) => (
+                  <React.Fragment key={`${sub._id}-${idx}`}>
+                    <TableRow sx={{ "&:hover": { backgroundColor: "#f5f5f5" } }}>
+                      {/* Sub-category name */}
+                      <TableCell sx={{ textAlign: "left", verticalAlign: "top", width: "25%", padding: "12px 16px" }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          {sub.name}
+                        </Typography>
+                      </TableCell>
 
-            {/* Table Body */}
-            {subCategories.map((sub, idx) => (
-              <Box
-                key={`${sub._id}-${idx}`}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "25% 30% 15% 30%",
-                  borderBottom: "1px solid #e0e0e0",
-                  "&:hover": { backgroundColor: "#f5f5f5" },
-                }}
-              >
-                {/* Sub-category name */}
-                <Box sx={{ padding: "12px 16px", textAlign: "left", verticalAlign: "top" }}>
-                  <Typography variant="body2" fontWeight="medium">
-                    {sub.name}
-                  </Typography>
-                </Box>
+                      {/* Commission input */}
+                      <TableCell sx={{ textAlign: "center", verticalAlign: "top", width: "30%", padding: "12px 16px" }}>
+                        <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ maxWidth: "200px", margin: "0 auto" }}>
+                          <TextField
+                            type="number"
+                            value={sub.commission}
+                            onChange={(e) => handleSubCommissionChange(sub._id, e.target.value)}
+                            size="small"
+                            sx={{ width: 100 }}
+                            InputProps={{
+                              inputProps: { min: 0, max: 100 },
+                              endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                            }}
+                          />
+                          <Button
+                            variant="contained"
+                            size="small"
+                            sx={{
+                              height: 36,
+                              color: "white !important",
+                              backgroundColor: "#007bff",
+                              "&:hover": { backgroundColor: "#0056b3" },
+                              minWidth: "60px",
+                            }}
+                            onClick={() => {
+                              saveCommission(sub._id, sub.commission, "sub");
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </Box>
+                      </TableCell>
 
-                {/* Commission input */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
-                    <TextField
-                      type="number"
-                      value={sub.commission}
-                      onChange={(e) => handleSubCommissionChange(sub._id, e.target.value)}
-                      size="small"
-                      sx={{ width: 100 }}
-                      InputProps={{
-                        inputProps: { min: 0, max: 100 },
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        height: 36,
-                        color: "white !important",
-                        backgroundColor: "#007bff",
-                        "&:hover": { backgroundColor: "#0056b3" },
-                      }}
-                      onClick={() => {
-                        saveCommission(sub._id, sub.commission, "sub");
-                      }}
-                    >
-                      Save
-                    </Button>
-                  </Box>
-                </Box>
+                      {/* Public toggle */}
+                      <TableCell sx={{ textAlign: "center", verticalAlign: "top", width: "15%", padding: "12px 16px" }}>
+                        <Switch
+                          checked={!!sub.status}
+                          onChange={() => handleToggle(sub._id)}
+                          sx={{
+                            "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
+                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                              backgroundColor: "green !important",
+                            },
+                            "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
+                          }}
+                        />
+                      </TableCell>
 
-                {/* Public toggle */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  <Switch
-                    checked={!!sub.status}
-                    onChange={() => handleToggle(sub._id)}
-                    sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                        backgroundColor: "green !important",
-                      },
-                      "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
-                    }}
-                  />
-                </Box>
+                      {/* Sub-sub categories */}
+                      <TableCell sx={{ textAlign: "center", verticalAlign: "top", width: "30%", padding: "12px 16px" }}>
+                        {sub.subSubCategories?.length > 0 ? (
+                          <Box>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                textTransform: "none",
+                                borderColor: "#007bff",
+                                color: "#007bff",
+                                fontSize: 14,
+                              }}
+                              onClick={() => toggleRow(sub._id)}
+                            >
+                              {openRows[sub._id] ? "Hide" : "Show"} ({sub.subSubCategories.length})
+                            </Button>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary">
+                            No sub-sub categories
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
 
-                {/* Sub-sub categories */}
-                <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                  {sub.subSubCategories?.length > 0 ? (
-                    <Box>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          textTransform: "none",
-                          borderColor: "#007bff",
-                          color: "#007bff",
-                          fontSize: 14,
-                        }}
-                        onClick={() => toggleRow(sub._id)}
-                      >
-                        {openRows[sub._id] ? "Hide" : "Show"} ({sub.subSubCategories.length})
-                      </Button>
-
-                      <Collapse in={!!openRows[sub._id]} timeout="auto" unmountOnExit>
-                        <TableContainer
-                          component={Paper}
-                          sx={{ mt: 2, backgroundColor: "#f8f9fa", borderRadius: "8px" }}
-                        >
-                          <Table size="small">
-                            <TableHead>
-                              <TableRow sx={{ backgroundColor: "#e0e0e0" }}>
-                                <TableCell sx={{ fontWeight: "bold", color: "#333" }}>
-                                  Sub-Sub Category
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#333", textAlign: "center" }}>
-                                  Commission
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: "bold", color: "#333", textAlign: "center" }}>
-                                  Action
-                                </TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {sub.subSubCategories.map((ssc, sIdx) => (
-                                <TableRow
-                                  key={`${ssc._id}-${sIdx}`}
-                                  sx={{
-                                    "&:hover": { backgroundColor: "#f1f1f1" },
-                                  }}
-                                >
-                                  <TableCell sx={{ color: "#333", fontSize: "13px" }}>
-                                    {ssc.name}
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    <TextField
-                                      type="number"
-                                      size="small"
-                                      value={ssc.commission}
-                                      onChange={(e) =>
-                                        handleSSCCommissionChange(sub._id, ssc._id, e.target.value)
-                                      }
-                                      sx={{
-                                        width: 80,
-                                        "& .MuiOutlinedInput-root": {
-                                          height: "28px",
-                                          fontSize: "12px",
-                                        },
-                                      }}
-                                      InputProps={{
-                                        inputProps: { min: 0, max: 100 },
-                                        endAdornment: (
-                                          <InputAdornment position="end" sx={{ fontSize: "11px" }}>
-                                            %
-                                          </InputAdornment>
-                                        ),
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    <Button
-                                      size="small"
-                                      variant="contained"
-                                      sx={{
-                                        height: 28,
-                                        color: "white !important",
-                                        backgroundColor: "#28a745",
-                                        "&:hover": { backgroundColor: "#218838" },
-                                        fontSize: "11px",
-                                        textTransform: "none",
-                                        minWidth: "50px",
-                                      }}
-                                      onClick={() => {
-                                        saveCommission(ssc._id, ssc.commission, "subsub");
-                                      }}
+                    {/* Sub-sub categories table */}
+                    {sub.subSubCategories?.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} sx={{ padding: 0, borderBottom: "none" }}>
+                          <Collapse in={!!openRows[sub._id]} timeout="auto" unmountOnExit>
+                            <TableContainer
+                              component={Paper}
+                              sx={{ mt: 2, backgroundColor: "#f8f9fa", borderRadius: "8px" }}
+                            >
+                              <Table size="small" sx={{ tableLayout: "fixed" }}>
+                                <TableHead>
+                                  <TableRow sx={{ backgroundColor: "#e0e0e0" }}>
+                                    <TableCell sx={{ fontWeight: "bold", color: "#333", width: "40%", padding: "8px 16px" }}>
+                                      Sub-Sub Category
+                                    </TableCell>
+                                    <TableCell
+                                      sx={{ fontWeight: "bold", color: "#333", textAlign: "center", width: "30%", padding: "8px 16px" }}
                                     >
-                                      Save
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </Collapse>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      No sub-sub categories
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            ))}
-          </Paper>
+                                      Commission
+                                    </TableCell>
+                                    <TableCell
+                                      sx={{ fontWeight: "bold", color: "#333", textAlign: "center", width: "30%", padding: "8px 16px" }}
+                                    >
+                                      Action
+                                    </TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {sub.subSubCategories.map((ssc, sIdx) => (
+                                    <TableRow
+                                      key={`${ssc._id}-${sIdx}`}
+                                      sx={{ "&:hover": { backgroundColor: "#f1f1f1" } }}
+                                    >
+                                      <TableCell sx={{ color: "#333", fontSize: "13px", width: "40%", padding: "8px 16px" }}>
+                                        {ssc.name}
+                                      </TableCell>
+                                      <TableCell sx={{ textAlign: "center", width: "30%", padding: "8px 16px" }}>
+                                        <TextField
+                                          type="number"
+                                          size="small"
+                                          value={ssc.commission}
+                                          onChange={(e) =>
+                                            handleSSCCommissionChange(sub._id, ssc._id, e.target.value)
+                                          }
+                                          sx={{
+                                            width: 80,
+                                            "& .MuiOutlinedInput-root": {
+                                              height: "28px",
+                                              fontSize: "12px",
+                                            },
+                                          }}
+                                          InputProps={{
+                                            inputProps: { min: 0, max: 100 },
+                                            endAdornment: (
+                                              <InputAdornment position="end" sx={{ fontSize: "11px" }}>
+                                                %
+                                              </InputAdornment>
+                                            ),
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell sx={{ textAlign: "center", width: "30%", padding: "8px 16px" }}>
+                                        <Button
+                                          size="small"
+                                          variant="contained"
+                                          sx={{
+                                            height: 28,
+                                            color: "white !important",
+                                            backgroundColor: "#28a745",
+                                            "&:hover": { backgroundColor: "#218838" },
+                                            fontSize: "11px",
+                                            textTransform: "none",
+                                            minWidth: "50px",
+                                          }}
+                                          onClick={() => {
+                                            saveCommission(ssc._id, ssc.commission, "subsub");
+                                          }}
+                                        >
+                                          Save
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
 
         {/* Snackbar */}

@@ -1,322 +1,785 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useMaterialUIController } from "context";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 import MDBox from "components/MDBox";
+import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
+import MDInput from "components/MDInput";
+import { Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+import Card from "@mui/material/Card";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import IconButton from "@mui/material/IconButton";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import TextField from "@mui/material/TextField";
+import Chip from "@mui/material/Chip";
+import Grid from "@mui/material/Grid";
+import DataTable from "react-data-table-component";
 
-export default function SellerRequest() {
+export default function ApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const dispatch = useDispatch();
 
   const [sellerRequests, setSellerRequests] = useState([]);
+  const [locationRequests, setLocationRequests] = useState([]);
+  const [productRequests, setProductRequests] = useState([]);
+  const [brandRequests, setBrandRequests] = useState([]);
+  const [requestType, setRequestType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [productApprovalOpen, setProductApprovalOpen] = useState(false);
+  const [confirmData, setConfirmData] = useState({ type: "", id: "", action: "", description: "" });
+  const [productApprovalData, setProductApprovalData] = useState({ type: "", id: "", status: "", description: "" });
 
-  const headerCell = {
-    padding: "14px 12px",
-    border: "1px solid #ddd",
-    fontSize: 18,
-    fontWeight: "bold",
-    backgroundColor: "#007bff",
-    color: "white",
+  // Image base URL
+  const IMAGE_BASE_URL = process.env.REACT_APP_IMAGE_LINK || "";
+
+  // Row color based on type
+  const rowColor = (type) => {
+    switch (type) {
+      case "seller": return "#e3f2fd";
+      case "location": return "#e8f5e9";
+      case "product": return "#fffde7";
+      case "brand": return "#fce4ec";
+      default: return "#fff";
+    }
   };
 
-  const bodyCell = {
-    padding: "12px",
-    border: "1px solid #eee",
-    fontSize: 16,
-    backgroundColor: "#fff",
-  };
-
-  // fetch seller approval requests
+  // Fetch all approval requests
   useEffect(() => {
-    const fetchSellerRequests = async () => {
+    const fetchRequests = async () => {
       try {
         dispatch(startLoading());
         const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
+        if (!res.ok) throw new Error("Failed to fetch requests");
         const data = await res.json();
-        if (Array.isArray(data?.requests)) {
-          setSellerRequests(data.requests);
-        } else {
-          setError("Invalid response format: `requests` not found.");
-        }
+        setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
+        setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
+        setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
+        setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
       } catch (e) {
         console.error(e);
-        setError("Failed to fetch seller requests.");
+        setError("Failed to fetch requests.");
       } finally {
         dispatch(stopLoading());
       }
     };
-    fetchSellerRequests();
+    fetchRequests();
   }, [dispatch]);
 
-  // approve / reject
-  const handleSellerAction = async (id, action) => {
+  // Open confirmation modal for seller/location
+  const openConfirm = (type, id, action) => {
+    setConfirmData({ type, id, action, description: "" });
+    setConfirmOpen(true);
+  };
+
+  // Open product approval modal
+  const openProductApproval = (type, id) => {
+    setProductApprovalData({ type, id, status: "pending_admin_approval", description: "" });
+    setProductApprovalOpen(true);
+  };
+
+  // Handle confirmation for seller/location
+  const handleConfirmAction = async () => {
+    const { type, id, action, description } = confirmData;
     try {
       dispatch(startLoading());
+      const approval = action === "approve" ? "approved" : "rejected";
+      let body = { approval };
+
+      if (type === "seller") {
+        body.id = id;
+      } else if (type === "location") {
+        body.id = id;
+        body.isLocation = true;
+      }
+
       const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-        id,
-        approval: action === "approve" ? "approved" : "rejected",
-      }),
-    });
+        body: JSON.stringify(body),
+      });
+
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to ${action === "approve" ? "approve" : "reject"} the seller request`
-);
+        throw new Error(e?.message || `Failed to ${action} the request`);
       }
-      setSellerRequests((prev) =>
-        prev.map((r) =>
-          r._id === id ? { ...r, approveStatus: action === "approve" ? "approved" : "rejected" } : r
-        )
-      );
+
+      if (type === "seller") {
+        setSellerRequests((prev) => prev.filter((r) => r._id !== id));
+      } else if (type === "location") {
+        setLocationRequests((prev) => prev.filter((r) => r._id !== id));
+      }
+
+      setError("");
     } catch (e) {
       console.error(e);
       setError(e.message);
     } finally {
       dispatch(stopLoading());
+      setConfirmOpen(false);
     }
   };
 
-  // filter by your fields
+  // Handle product/brand approval
+  const handleProductApproval = async () => {
+    const { type, id, status, description } = productApprovalData;
+    try {
+      dispatch(startLoading());
+      const body = { productId: id, approval: status };
+      if (description) body.description = description;
+
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e?.message || `Failed to update ${type} request`);
+      }
+
+      if (type === "product") {
+        setProductRequests((prev) => prev.filter((r) => r._id !== id));
+      } else if (type === "brand") {
+        setBrandRequests((prev) => prev.filter((r) => r._id !== id));
+      }
+
+      setError("");
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+    } finally {
+      dispatch(stopLoading());
+      setProductApprovalOpen(false);
+    }
+  };
+
+  // Combine and filter requests
+  const allRequests = [...sellerRequests, ...locationRequests, ...productRequests, ...brandRequests];
+
   const normalized = (v) => (v || "").toString().toLowerCase();
-  const filtered = sellerRequests.filter((r) => {
-    const haystack = [
-      r.storeName,
-      r.firstName,
-      r.lastName,
-      r.email,
-      r.mobileNumber,
-      r.city,
-      r.gstNumber,
-      r.approveStatus,
-    ]
-      .map(normalized)
-      .join(" ");
-    return haystack.includes(normalized(searchTerm));
+  const filtered = allRequests.filter((r) => {
+    if (requestType !== "all" && r.type !== requestType) return false;
+
+    let haystack = [];
+    if (r.type === "seller" || r.type === "location") {
+      haystack = [
+        r.storeName,
+        r.firstName,
+        r.lastName,
+        r.ownerName,
+        r.email,
+        r.mobileNumber,
+        r.PhoneNumber,
+        r.city?.name,
+        r.gstNumber,
+        r.approveStatus,
+        r.type,
+      ];
+      if (r.type === "location") {
+        haystack.push(r.pendingAddressUpdate?.city?.name, r.pendingAddressUpdate?.status);
+      }
+    } else if (r.type === "product" || r.type === "brand") {
+      haystack = [
+        r.productName,
+        r.description,
+        r.sku,
+        r.category?.[0]?.name,
+        r.subCategory?.[0]?.name,
+        r.brand_Name?.name,
+        r.sellerProductStatus,
+        r.type,
+      ];
+      if (r.type === "brand") {
+        haystack.push(r.brandApprovelDescription);
+      }
+    }
+    return haystack.map(normalized).join(" ").includes(normalized(searchTerm));
   });
 
-  // pagination
-  const totalPages = Math.ceil(filtered.length / entriesToShow) || 1;
-  const startIndex = (currentPage - 1) * entriesToShow;
-  const endIndex = startIndex + entriesToShow;
-  const pageRows = filtered.slice(startIndex, endIndex);
+  const getStatus = (r) => {
+    if (r.type === "seller") return r.approveStatus || "pending";
+    if (r.type === "location") return r.pendingAddressUpdate?.status || "pending";
+    return r.sellerProductStatus || "pending";
+  };
+
+  const isPending = (r) => {
+    const status = getStatus(r);
+    return ["pending", "pending_admin_approval", "request_brand_approval", "submit_brand_approval"].includes(status);
+  };
+
+  const getDisplayValue = (r, field) => {
+    if (r.type === "seller" || r.type === "location") {
+      switch (field) {
+        case "name":
+          return r.storeName || "-";
+        case "owner":
+          return [r.firstName, r.lastName].filter(Boolean).join(" ") || r.ownerName || "-";
+        case "mobile":
+          return r.PhoneNumber || r.mobileNumber?.mobileNO || "-";
+        case "email":
+          return r.email?.Email || r.email || "-";
+        case "city":
+          return r.type === "location" ? `${r.city?.name || "-"} → ${r.pendingAddressUpdate?.city?.name || "-"}` : r.city?.name || "-";
+        case "gst":
+          return r.gstNumber || "-";
+        default:
+          return "-";
+      }
+    } else {
+      switch (field) {
+        case "name":
+          return r.productName || "-";
+        case "owner":
+          return r.type === "brand"
+          ? r.brandApprovelDescription || "-"
+          : r.description || "-";
+        case "mobile":
+          return r.sku || "-";
+        case "email":
+          return r.category?.[0]?.name || "-";
+        case "city":
+          return r.subCategory?.[0]?.name || "-";
+        case "gst":
+          return r.brand_Name?.name || "-";
+        default:
+          return "-";
+      }
+    }
+  };
+
+  // DataTable columns
+  const columns = useMemo(() => [
+    {
+      name: "#",
+      selector: (row, idx) => filtered.indexOf(row) + 1,
+      width: "80px",
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "Type",
+      selector: (row) => row.type.charAt(0).toUpperCase() + row.type.slice(1),
+      width: "120px",
+      style: { justifyContent: "center", fontWeight: "medium" },
+    },
+    {
+      name: "Store/Product",
+      selector: (row) => getDisplayValue(row, "name"),
+      width: "240px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "Owner/Desc",
+      selector: (row) => getDisplayValue(row, "owner"),
+      width: "200px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "Mobile/SKU",
+      selector: (row) => getDisplayValue(row, "mobile"),
+      width: "150px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "Email/Category",
+      selector: (row) => getDisplayValue(row, "email"),
+      width: "150px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "City/SubCategory",
+      selector: (row) => getDisplayValue(row, "city"),
+      width: "150px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "GST/Brand",
+      selector: (row) => getDisplayValue(row, "gst"),
+      width: "150px",
+      wrap: true,
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "Status",
+      selector: (row) => getStatus(row).replace(/_/g, " "),
+      width: "150px",
+      style: {
+        justifyContent: "center",
+        color: (row) => (getStatus(row) === "approved" ? "#2e7d32" : getStatus(row) === "rejected" ? "#d32f2f" : "#ed6c02"),
+        fontWeight: "medium",
+        textTransform: "capitalize",
+      },
+    },
+    {
+      name: "Action",
+      cell: (row) =>
+        isPending(row) ? (
+          row.type === "product" || row.type === "brand" ? (
+            <MDButton
+              variant="contained"
+              color="info"
+              size="small"
+              onClick={() => openProductApproval(row.type, row._id)}
+              sx={{ minWidth: "120px", padding: "6px 12px" }}
+            >
+              Update Status
+            </MDButton>
+          ) : (
+            <MDBox display="flex" gap={1} justifyContent="center" sx={{ minWidth: "120px" }}>
+              <MDButton
+                variant="contained"
+                color="success"
+                size="small"
+                onClick={() => openConfirm(row.type, row._id, "approve")}
+                startIcon={<CheckIcon />}
+                sx={{ minWidth: "90px", padding: "8px 16px", fontSize: "0.85rem" }}
+              >
+                Approve
+              </MDButton>
+              <MDButton
+                variant="contained"
+                color="error"
+                size="small"
+                onClick={() => openConfirm(row.type, row._id, "reject")}
+                startIcon={<CloseIcon />}
+                sx={{ minWidth: "60px", padding: "6px 12px" }}
+              >
+                Reject
+              </MDButton>
+            </MDBox>
+          )
+        ) : (
+          <MDTypography
+            variant="body2"
+            sx={{
+              color: getStatus(row) === "approved" ? "#2e7d32" : "#d32f2f",
+              fontWeight: "medium",
+              textTransform: "capitalize",
+            }}
+          >
+            {getStatus(row).replace(/_/g, " ")}
+          </MDTypography>
+        ),
+      width: "200px",
+      style: { justifyContent: "center" },
+    },
+    {
+      name: "View",
+      cell: (row) => (
+        <IconButton onClick={() => { setSelectedRequest(row); setOpenDialog(true); }} color="primary">
+          <VisibilityIcon />
+        </IconButton>
+      ),
+      width: "80px",
+      style: { justifyContent: "center" },
+    },
+  ], [filtered]);
+
+  // DataTable custom styles
+  const customStyles = {
+    table: {
+      style: {
+        width: "100%",
+        minWidth: "1000px",
+      },
+    },
+    headRow: {
+      style: {
+        backgroundColor: "#007bff",
+        color: "white",
+        fontWeight: 600,
+        fontSize: "0.875rem",
+      },
+    },
+    headCells: {
+      style: {
+        padding: "14px 16px",
+        justifyContent: "center",
+        textAlign: "center",
+      },
+    },
+    cells: {
+      style: {
+        padding: "14px 16px",
+        justifyContent: "center",
+        textAlign: "center",
+        wordBreak: "break-word",
+        whiteSpace: "normal",
+        fontSize: "0.9rem",
+      },
+    },
+    rows: {
+      style: {
+        "&:not(:last-of-type)": {
+          borderBottom: "1px solid #ddd",
+        },
+      },
+    },
+  };
+
+  // Detailed view for dialog (unchanged)
+  const renderRequestDetails = (request) => {
+    const { type } = request;
+    return (
+      <Grid container spacing={2} sx={{ p: 2 }}>
+        {type === "seller" || type === "location" ? (
+          <>
+            <Grid item xs={12} sm={6}>
+              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+                <MDTypography variant="h6" gutterBottom color="primary">Store Information</MDTypography>
+                <MDBox display="flex" flexDirection="column" gap={1}>
+                  <MDTypography variant="body2"><strong>Store Name:</strong> {request.storeName || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Owner:</strong> {request.ownerName || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Email:</strong> {request.email || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Phone:</strong> {request.PhoneNumber || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>GST:</strong> {request.gstNumber || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Address:</strong> {request.fullAddress || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>City:</strong> {request.city?.name || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Coordinates:</strong> {request.Latitude || "-"}, {request.Longitude || "-"}</MDTypography>
+                </MDBox>
+                {type === "location" && (
+                  <>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Location Update</MDTypography>
+                    <MDBox display="flex" flexDirection="column" gap={1}>
+                      <MDTypography variant="body2"><strong>New City:</strong> {request.pendingAddressUpdate?.city?.name || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>New Zone:</strong> {request.pendingAddressUpdate?.zone?.[0]?.name || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>New Coordinates:</strong> {request.pendingAddressUpdate?.Latitude || "-"}, {request.pendingAddressUpdate?.Longitude || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>Requested On:</strong> {request.pendingAddressUpdate?.requestedAt ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString() : "-"}</MDTypography>
+                    </MDBox>
+                  </>
+                )}
+              </MDBox>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+                <MDTypography variant="h6" gutterBottom color="primary">Verification Details</MDTypography>
+                <MDBox display="flex" flexDirection="column" gap={1}>
+                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.approveStatus || "Pending"} color={request.approveStatus === "approved" ? "success" : request.approveStatus === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  <MDTypography variant="body2"><strong>Authorized Store:</strong> {request.Authorized_Store ? "Yes" : "No"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Sell Food:</strong> {request.sellFood ? "Yes" : "No"}</MDTypography>
+                  <MDTypography variant="body2"><strong>FSI Number:</strong> {request.fsiNumber || "-"}</MDTypography>
+                </MDBox>
+                {request.bankDetails && (
+                  <>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Bank Details</MDTypography>
+                    <MDBox display="flex" flexDirection="column" gap={1}>
+                      <MDTypography variant="body2"><strong>Bank:</strong> {request.bankDetails.bankName || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>Holder:</strong> {request.bankDetails.accountHolder || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>Account No:</strong> {request.bankDetails.accountNumber || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>IFSC:</strong> {request.bankDetails.ifsc || "-"}</MDTypography>
+                    </MDBox>
+                  </>
+                )}
+              </MDBox>
+              {(request.aadharCard?.length > 0 || request.image) && (
+                <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
+                  <MDTypography variant="h6" gutterBottom color="primary">Documents</MDTypography>
+                  {request.aadharCard?.length > 0 && (
+                    <MDBox mb={2}>
+                      <MDTypography variant="body2">Aadhar Card:</MDTypography>
+                      <MDBox display="flex" gap={1} flexWrap="wrap">
+                        {request.aadharCard.slice(0, 2).map((img, i) => (
+                          <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt="Aadhar" style={{ maxWidth: "100px", borderRadius: "4px" }} />
+                        ))}
+                        {request.aadharCard.length > 2 && <Chip label={`+${request.aadharCard.length - 2}`} size="small" />}
+                      </MDBox>
+                    </MDBox>
+                  )}
+                  {request.image && (
+                    <MDBox>
+                      <MDTypography variant="body2">Store Image:</MDTypography>
+                      <img src={`${IMAGE_BASE_URL}${request.image}`} alt="Store" style={{ maxWidth: "150px", borderRadius: "4px" }} />
+                    </MDBox>
+                  )}
+                </MDBox>
+              )}
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid item xs={12} sm={6}>
+              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+                <MDTypography variant="h6" gutterBottom color="primary">Product Details</MDTypography>
+                <MDBox display="flex" flexDirection="column" gap={1}>
+                  <MDTypography variant="body2"><strong>Name:</strong> {request.productName || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Description:</strong> {request.description || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>SKU:</strong> {request.sku || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Category:</strong> {request.category?.[0]?.name || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Subcategory:</strong> {request.subCategory?.[0]?.name || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Brand:</strong> {request.brand_Name?.name || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Tax:</strong> {request.tax || "-"}%</MDTypography>
+                  <MDTypography variant="body2"><strong>Unit:</strong> {request.unit?.name || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.sellerProductStatus || "Pending"} color={request.sellerProductStatus === "approved" ? "success" : request.sellerProductStatus === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  {request.brandApprovelDescription && <MDTypography variant="body2"><strong>Notes:</strong> {request.brandApprovelDescription}</MDTypography>}
+                </MDBox>
+                {request.variants && request.variants.length > 0 && (
+                  <>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Variants</MDTypography>
+                    <MDBox display="flex" flexDirection="column" gap={1}>
+                      {request.variants.slice(0, 2).map((v, i) => (
+                        <MDBox key={i} p={1} border="1px solid #eee" borderRadius="sm">
+                          <MDTypography variant="body2"><strong>{v.attributeName}:</strong> {v.variantValue}</MDTypography>
+                          <MDTypography variant="body2"><strong>MRP:</strong> ₹{v.mrp} | <strong>Sell:</strong> ₹{v.sell_price} | <strong>Discount:</strong> {v.discountValue}%</MDTypography>
+                        </MDBox>
+                      ))}
+                      {request.variants.length > 2 && <Chip label={`+${request.variants.length - 2} more`} size="small" sx={{ mt: 1 }} />}
+                    </MDBox>
+                  </>
+                )}
+              </MDBox>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+                <MDTypography variant="h6" gutterBottom color="primary">Additional Details</MDTypography>
+                <MDBox display="flex" flexDirection="column" gap={1}>
+                  {request.location?.[0] && (
+                    <>
+                      <MDTypography variant="body2"><strong>City:</strong> {request.location[0].city?.[0]?.name || "-"}</MDTypography>
+                      <MDTypography variant="body2"><strong>Zone:</strong> {request.location[0].zone?.[0]?.name || "-"}</MDTypography>
+                    </>
+                  )}
+                  <MDTypography variant="body2"><strong>Return Policy:</strong> {request.returnProduct?.title || "-"}</MDTypography>
+                  <MDTypography variant="body2"><strong>Rating:</strong> {request.rating?.rate || 0} ({request.rating?.users || 0} reviews)</MDTypography>
+                  <MDTypography variant="body2"><strong>Purchases:</strong> {request.purchases || 0}</MDTypography>
+                  {request.inventory && request.inventory.length > 0 && (
+                    <MDTypography variant="body2"><strong>Stock:</strong> {request.inventory.reduce((sum, inv) => sum + inv.quantity, 0)} units</MDTypography>
+                  )}
+                </MDBox>
+                {request.filter && request.filter.length > 0 && (
+                  <>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Filters</MDTypography>
+                    <MDBox display="flex" flexWrap="wrap" gap={1}>
+                      {request.filter.flatMap(f => f.selected?.map(s => s.name) || []).slice(0, 4).map((filter, i) => (
+                        <Chip key={i} label={filter} size="small" />
+                      ))}
+                      {request.filter.flatMap(f => f.selected || []).length > 4 && <Chip label={`+${request.filter.flatMap(f => f.selected || []).length - 4}`} size="small" />}
+                    </MDBox>
+                  </>
+                )}
+              </MDBox>
+              {(request.productThumbnailUrl || request.productImageUrl?.length > 0 || request.brandApprovalDocument) && (
+                <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
+                  <MDTypography variant="h6" gutterBottom color="primary">Images</MDTypography>
+                  <MDBox display="flex" gap={1} flexWrap="wrap">
+                    {request.productThumbnailUrl && (
+                      <img src={`${IMAGE_BASE_URL}${request.productThumbnailUrl}`} alt="Thumbnail" style={{ maxWidth: "80px", borderRadius: "4px" }} />
+                    )}
+                    {request.productImageUrl?.slice(0, 2).map((url, i) => (
+                      <img key={i} src={`${IMAGE_BASE_URL}${url}`} alt={`Image ${i}`} style={{ maxWidth: "80px", borderRadius: "4px" }} />
+                    ))}
+                    {request.productImageUrl?.length > 2 && <Chip label={`+${request.productImageUrl.length - 2}`} size="small" />}
+                    {request.brandApprovalDocument && (
+                      <img src={`${IMAGE_BASE_URL}${request.brandApprovalDocument}`} alt="Brand Doc" style={{ maxWidth: "80px", borderRadius: "4px" }} />
+                    )}
+                  </MDBox>
+                </MDBox>
+              )}
+            </Grid>
+          </>
+        )}
+      </Grid>
+    );
+  };
 
   const handleEntriesChange = (e) => {
     setEntriesToShow(parseInt(e.target.value, 10));
-    setCurrentPage(1);
   };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1);
+  };
+
+  const handleTypeChange = (e) => {
+    setRequestType(e.target.value);
   };
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-      <div style={{ width: "100%", padding: "0 20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>
-              Seller Approval Requests
-            </h2>
-            <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
-              Review and approve or reject new seller requests
-            </p>
-          </div>
-        </div>
+      <MDBox width="100%" px={3}>
+        <MDBox display="flex" justifyContent="space-between" mb={3} alignItems="center">
+          <MDBox>
+            <MDTypography variant="h5" fontWeight="bold">Approval Requests</MDTypography>
+            <MDTypography variant="body2" color="textSecondary">Review and manage pending requests</MDTypography>
+          </MDBox>
+        </MDBox>
 
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          <div>
-            <label style={{ fontSize: 17 }}>Show Entries </label>
-            <select
-              value={entriesToShow}
-              onChange={handleEntriesChange}
-              style={{
-                fontSize: 16,
-                padding: "6px 10px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-              }}
-            >
-              {[5, 10, 20, 30].map((num) => (
-                <option key={num} value={num}>
-                  {num}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ marginLeft: "auto" }}>
-            <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Store, owner, email, mobile, city, GST, status…"
-              style={{
-                padding: "8px 34px",
-                borderRadius: "8px",
-                height: "42px",
-                width: "320px",
-                border: "1px solid #ccc",
-                fontSize: 16,
-                outline: "none",
-              }}
-            />
-          </div>
-        </div>
+        <Card sx={{ p: 3, mb: 3 }}>
+          <MDBox display="flex" gap={3} flexWrap="wrap" alignItems="center">
+            <MDBox display="flex" alignItems="center" gap={1}>
+              <MDTypography variant="body2" fontWeight="medium">Show Entries:</MDTypography>
+              <FormControl size="medium" sx={{ minWidth: 120 }}>
+                <InputLabel>Entries</InputLabel>
+                <Select
+                    value={entriesToShow}
+                    onChange={handleEntriesChange}
+                    label="Entries"
+                    MenuProps={{
+                      PaperProps: { style: { maxHeight: 250, minWidth: 120, fontSize: "1rem" } },
+                    }}
+                  >
+                  {[5, 10, 20, 30].map((num) => (
+                    <MenuItem key={num} value={num}>{num}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </MDBox>
+            <MDBox display="flex" alignItems="center" gap={1}>
+              <MDTypography variant="body2" fontWeight="medium">Filter by Type:</MDTypography>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Type</InputLabel>
+                <Select value={requestType} onChange={handleTypeChange} label="Type">
+                  <MenuItem value="all">All</MenuItem>
+                  <MenuItem value="seller">Seller</MenuItem>
+                  <MenuItem value="location">Location</MenuItem>
+                  <MenuItem value="product">Product</MenuItem>
+                  <MenuItem value="brand">Brand</MenuItem>
+                </Select>
+              </FormControl>
+            </MDBox>
+            <MDBox ml="auto">
+              <MDInput
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Search: Store/Product, owner/desc, email/cat, mobile/sku..."
+                size="small"
+                sx={{ width: { xs: "100%", sm: 300 } }}
+              />
+            </MDBox>
+          </MDBox>
+        </Card>
 
         {error && (
-          <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
+          <MDBox mb={2} p={2} sx={{ bgcolor: "error.light", borderRadius: 1 }}>
+            <MDTypography variant="body2" color="error">{error}</MDTypography>
+          </MDBox>
         )}
 
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontFamily: '"Urbanist", sans-serif',
-            fontSize: "17px",
-            border: "1px solid #007BFF",
-            marginTop: "20px",
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={headerCell}>#</th>
-              <th style={headerCell}>Store</th>
-              <th style={headerCell}>Owner</th>
-              <th style={headerCell}>Mobile</th>
-              <th style={headerCell}>Email</th>
-              <th style={headerCell}>City</th>
-              <th style={headerCell}>GST No.</th>
-              <th style={headerCell}>Status</th>
-              <th style={headerCell}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.length > 0 ? (
-              pageRows.map((r, idx) => (
-                <tr key={r._id}>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + idx + 1}</td>
-                  <td style={bodyCell}>{r.storeName || "-"}</td>
-                  <td style={bodyCell}>{[r.firstName, r.lastName].filter(Boolean).join(" ") || r.ownerName || "-"}</td>
-                  <td style={bodyCell}>{r.PhoneNumber || r.mobileNumber.mobileNO || "-"}</td>
-                  <td style={bodyCell}>{r.email.Email || r.email ||"-"}</td>
-                  <td style={bodyCell}>{r.city.name || "-"}</td>
-                  <td style={bodyCell}>{r.gstNumber || "-"}</td>
-                  <td style={bodyCell}>
-                    <span
-                      style={{
-                        color:
-                          r.approveStatus === "approved"
-                            ? "green"
-                            : r.approveStatus === "rejected"
-                            ? "red"
-                            : "#555",
-                        fontWeight: "bold",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {r.approveStatus || "-"}
-                    </span>
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {r.approveStatus === "pending_admin_approval" ? (
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                        <button
-                          onClick={() => handleSellerAction(r._id, "approve")}
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleSellerAction(r._id, "rejected")}
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        style={{
-                          color: r.approveStatus === "approved" ? "green" : "red",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {r.approveStatus}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
-                  No seller requests found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <Card sx={{ overflowX: "auto" }}>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            pagination
+            paginationPerPage={entriesToShow}
+            paginationRowsPerPageOptions={[5, 10, 20, 30]}
+            paginationComponentOptions={{
+              rowsPerPageText: "Entries per page:",
+              rangeSeparatorText: "of",
+            }}
+            customStyles={customStyles}
+            conditionalRowStyles={[
+              {
+                when: (row) => true,
+                style: (row) => ({
+                  backgroundColor: rowColor(row.type),
+                }),
+              },
+            ]}
+            noDataComponent={
+              <MDBox display="flex" sx={{ padding: "20px", justifyContent: "center" }}>
+                <MDTypography variant="body2" color="textSecondary">No requests found.</MDTypography>
+              </MDBox>
+            }
+          />
+        </Card>
 
-        <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-          <div>
-            Showing {filtered.length === 0 ? 0 : startIndex + 1} to{" "}
-            {Math.min(endIndex, filtered.length)} of {filtered.length} entries
-          </div>
-          <div>
-            <button
-              onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === 1 ? "#ccc" : "#007BFF",
-                color: currentPage === 1 ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                marginRight: "8px",
-              }}
+        {/* View Details Dialog */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>
+            <MDTypography variant="h5">{selectedRequest?.type.charAt(0).toUpperCase() + selectedRequest?.type.slice(1)} Details</MDTypography>
+          </DialogTitle>
+          <DialogContent>{selectedRequest && renderRequestDetails(selectedRequest)}</DialogContent>
+          <DialogActions>
+            <MDButton variant="contained" color="primary" onClick={() => setOpenDialog(false)} sx={{ padding: "6px 12px" }}>Close</MDButton>
+          </DialogActions>
+        </Dialog>
+
+        {/* Confirmation Dialog for Seller/Location */}
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+          <DialogTitle>
+            <MDTypography variant="h5">Confirm {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}</MDTypography>
+          </DialogTitle>
+          <DialogContent>
+            <MDTypography variant="body2">Are you sure you want to {confirmData.action} this {confirmData.type} request?</MDTypography>
+            {confirmData.action === "reject" && (
+              <TextField
+                multiline
+                rows={3}
+                fullWidth
+                label="Rejection Reason (optional)"
+                value={confirmData.description}
+                onChange={(e) => setConfirmData({ ...confirmData, description: e.target.value })}
+                sx={{ mt: 2 }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <MDButton onClick={() => setConfirmOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
+            <MDButton
+              variant="contained"
+              color={confirmData.action === "approve" ? "success" : "error"}
+              onClick={handleConfirmAction}
+              sx={{ padding: "6px 12px" }}
             >
-              Previous
-            </button>
-            <button
-              onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === totalPages ? "#ccc" : "#007BFF",
-                color: currentPage === totalPages ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
+              {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}
+            </MDButton>
+          </DialogActions>
+        </Dialog>
+
+        {/* Product/Brand Approval Dialog */}
+        <Dialog open={productApprovalOpen} onClose={() => setProductApprovalOpen(false)}>
+          <DialogTitle>
+            <MDTypography variant="h5">Update {productApprovalData.type.charAt(0).toUpperCase() + productApprovalData.type.slice(1)} Status</MDTypography>
+          </DialogTitle>
+          <DialogContent>
+            <MDTypography variant="body2" mb={2}>Select the status for this {productApprovalData.type} request:</MDTypography>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={productApprovalData.status}
+                onChange={(e) => setProductApprovalData({ ...productApprovalData, status: e.target.value })}
+                label="Status"
+                sx={{height:"30px"}}
+              >
+                {["request_brand_approval", "approved", "rejected"].map((status) => (
+                  <MenuItem key={status} value={status}>{status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              multiline
+              rows={3}
+              fullWidth
+              label="Description (optional)"
+              value={productApprovalData.description}
+              onChange={(e) => setProductApprovalData({ ...productApprovalData, description: e.target.value })}
+            />
+          </DialogContent>
+          <DialogActions>
+            <MDButton onClick={() => setProductApprovalOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
+            <MDButton variant="contained" color="primary" onClick={handleProductApproval} sx={{ padding: "6px 12px" }}>Update</MDButton>
+          </DialogActions>
+        </Dialog>
+      </MDBox>
     </MDBox>
   );
 }
