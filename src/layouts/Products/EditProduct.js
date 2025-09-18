@@ -1048,7 +1048,7 @@ const handleRemoveReturnImage = () => {
     const categoryData = category
       .map((catId) => {
         const cat = categories.find((c) => c._id === catId);
-        return cat ? { _id: cat._id } : null;
+        return cat ? cat._id  : null;
       })
       .filter(Boolean);
     formData.append("category", JSON.stringify(categoryData));
@@ -1056,14 +1056,14 @@ const handleRemoveReturnImage = () => {
     if (subCategory) {
       const selectedSub = subCategories.find((sub) => sub._id === subCategory);
       if (selectedSub) {
-        formData.append("subCategory", JSON.stringify({ _id: selectedSub._id, name: selectedSub.name }));
+        formData.append("subCategory", selectedSub._id);
       }
     }
 
     if (subSubCategory) {
       const selectedSubSub = subsubCategories.find((subsub) => subsub._id === subSubCategory);
       if (selectedSubSub) {
-        formData.append("subSubCategory", JSON.stringify({ _id: selectedSubSub._id, name: selectedSubSub.name }));
+        formData.append("subSubCategory", selectedSubSub._id);
       }
     }
 
@@ -1333,7 +1333,7 @@ const handleRemoveReturnImage = () => {
              {returnProduct.image && (
                <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
                  <img
-                   src={URL.createObjectURL(returnProduct.image)}
+                   src={`${process.env.REACT_APP_IMAGE_LINK}${URL.createObjectURL(returnProduct.image)}`}
                    alt="Return Policy Preview"
                    style={{
                      width: "50px",
@@ -1440,7 +1440,7 @@ const handleRemoveReturnImage = () => {
                     return (
                       <img
                         key={image.newfiles + index}
-                        src={image.newfiles}
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${image.newfiles}`}
                         alt={`preview-${index}`}
                         onClick={() => handleImageRemove(index)}
                         title="Click to remove"
@@ -2189,7 +2189,7 @@ const handleRemoveReturnImage = () => {
                     {variantImages[item.variantName]?.preview && (
                       <div style={{ marginTop: "10px" }}>
                         <img
-                          src={variantImages[item.variantName].preview}
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${variantImages[item.variantName].preview}`}
                           alt={`variant-preview-${item.variantName}`}
                           style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
                         />

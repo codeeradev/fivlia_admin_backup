@@ -1216,7 +1216,7 @@ if (attributeValue.length > 0 && !hasVariantImage) {
         {returnProduct.image && (
           <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
             <img
-              src={URL.createObjectURL(returnProduct.image)}
+              src={`${process.env.REACT_APP_IMAGE_LINK}${URL.createObjectURL(returnProduct.image)}`}
               alt="Return Policy Preview"
               style={{
                 width: "50px",
@@ -1322,7 +1322,7 @@ if (attributeValue.length > 0 && !hasVariantImage) {
                                     return (
                                         <img
                                             key={index}
-                                            src={image.newfiles}
+                                            src={`${process.env.REACT_APP_IMAGE_LINK}${image.newfiles}`}
                                             alt={`preview-${index}`}
                                             onClick={() => handleImageRemove(index)}
                                             title="Click to remove"
@@ -2025,7 +2025,7 @@ if (attributeValue.length > 0 && !hasVariantImage) {
                                 />
                                 {variantImages[item.variantName]?.preview && (
                                     <img
-                                        src={variantImages[item.variantName].preview}
+                                        src={`${process.env.REACT_APP_IMAGE_LINK}${variantImages[item.variantName].preview}`}
                                         alt={`Preview for ${item.variantName}`}
                                         style={{
                                             width: "50px",

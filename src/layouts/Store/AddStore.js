@@ -202,6 +202,7 @@ function AddStore() {
       formData.append("ownerName", ownerName);
       formData.append("PhoneNumber", phone);
       formData.append("email", email);
+      formData.append("password", password);
       formData.append("city", selectedCity);
       formData.append("zone", JSON.stringify(selectedZone));
       formData.append("Latitude", latitude);
@@ -498,7 +499,7 @@ if (selectedImage instanceof File) {
             {selectedImage && (
               <div style={{ textAlign: "center", marginTop: "10px" }}>
                 <img
-                  src={selectedImage}
+                  src={`${process.env.REACT_APP_IMAGE_LINK}${selectedImage}`}
                   alt="Preview"
                   style={{
                     width: "80%",
