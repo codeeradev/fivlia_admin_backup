@@ -157,6 +157,11 @@ export default function Drivers() {
             drivingLicence: driver.drivingLicence || { front: "", back: "" },
             address: driver.address || { city: "", locality: "", mobileNo: "" },
           }));
+          formattedDrivers.sort((a, b) => {
+    const aNum = Number(a.driverId.replace(/\D/g, "")) || 0;
+    const bNum = Number(b.driverId.replace(/\D/g, "")) || 0;
+    return bNum - aNum; // largest first
+  });
           setDrivers(formattedDrivers);
         } else {
           setError("Invalid driver data format");
@@ -538,7 +543,7 @@ export default function Drivers() {
           <thead>
             <tr>
               <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Driver ID</th>
+              <th style={headerCell}>Driver ID </th>
               <th style={headerCell}>Driver Name</th>
               <th style={headerCell}>Email</th>
               <th style={headerCell}>Mobile No</th>
@@ -1069,6 +1074,11 @@ export default function Drivers() {
                 address: { ...prev.address, mobileNo: e.target.value },
               }))
             }
+              inputProps={{
+               maxLength: 10,
+               pattern: "[0-9]*", // Enforce numeric input
+               inputMode: "numeric", // Show numeric keyboard on mobile devices
+             }}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <FormControlLabel
