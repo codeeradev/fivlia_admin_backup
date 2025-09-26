@@ -18,12 +18,13 @@ function Product() {
   const [colorError, setColorError] = useState("");
   const [activeVariant, setActiveVariant] = useState("");
   const [filterdropdown, setFilterDropdown] = useState(false);
-  const [returnProduct, setReturnProduct] = useState({ title: "", image: null });
+  const [returnProduct, setReturnProduct] = useState({ title: "No Return", image: null });
   const returnImageInputRef = useRef(null);
   const [allFilters, setAllFilters] = useState([]);
   const dispatch = useDispatch();
 
   const sectionIds = [
+    
     "basicinfo",
     "imagesection",
     "thumbnail-section",

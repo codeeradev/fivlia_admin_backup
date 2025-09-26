@@ -1,0 +1,434 @@
+import React, { useEffect, useState } from "react";
+import MDBox from "components/MDBox";
+import { useMaterialUIController } from "context";
+import {
+  Button,
+  Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Switch,
+  FormControlLabel,
+  Typography,
+  LocalizationProvider,
+  DateTimePicker,
+  AdapterMoment
+} from "@mui/material";
+import DataTable from "react-data-table-component";
+// import {  } from "@mui/x-date-pickers";
+// import {  } from "@mui/x-date-pickers/AdapterMoment";
+import moment from "moment";
+
+export default function Festival() {
+  const [controller] = useMaterialUIController();
+  const { miniSidenav } = controller;
+
+  const [events, setEvents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+
+  const [eventData, setEventData] = useState({
+    eventTitle: "",
+    type: "",
+    fontColor: "#000000",
+    startTime: null,
+    endTime: null,
+    image: null,
+    eventStatus: true,
+  });
+
+  // Fetch events
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8080/getEvent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "admin" }),
+      });
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setEvents(
+          data.map((item) => ({
+            eventTitle: item.eventDetails.eventTitle,
+            type: item.type,
+            startTime: item.startTime ? new Date(item.startTime) : null,
+            endTime: item.endTime ? new Date(item.endTime) : null,
+            eventImage: item.eventDetails.eventImage,
+            fontColor: item.eventDetails.fontColor || "#000000",
+            eventStatus: item.eventStatus ?? true,
+            _id: item._id,
+          }))
+        );
+      } else if (data.eventStatus) {
+        setEvents([
+          {
+            ...data.eventDetails,
+            eventStatus: data.eventStatus ?? true,
+            startTime: data.startTime ? new Date(data.startTime) : null,
+            endTime: data.endTime ? new Date(data.endTime) : null,
+          },
+        ]);
+      } else {
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // Modal Handlers
+  const handleOpenImageModal = (image) => {
+    setSelectedEvent({ image });
+    setImageModalOpen(true);
+  };
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedEvent(null);
+  };
+
+  const handleOpenAddModal = () => {
+    setEventData({
+      eventTitle: "",
+      type: "",
+      fontColor: "#000000",
+      startTime: null,
+      endTime: null,
+      image: null,
+      eventStatus: true,
+    });
+    setAddModalOpen(true);
+  };
+
+  const handleOpenEditModal = (event) => {
+    setSelectedEvent(event);
+    setEventData({
+      eventTitle: event.eventTitle,
+      type: event.type,
+      fontColor: event.fontColor || "#000000",
+      startTime: event.startTime ? moment(event.startTime) : null,
+      endTime: event.endTime ? moment(event.endTime) : null,
+      image: null,
+      eventStatus: event.eventStatus ?? true,
+    });
+    setEditModalOpen(true);
+  };
+
+  // Add/Edit event API calls
+  const handleAddEvent = async () => {
+    const formData = new FormData();
+    formData.append("eventTitle", eventData.eventTitle);
+    formData.append("type", eventData.type);
+    formData.append("fontColor", eventData.fontColor);
+    formData.append("startTime", eventData.startTime);
+    formData.append("endTime", eventData.endTime);
+    formData.append("eventStatus", eventData.eventStatus);
+    if (eventData.image) formData.append("image", eventData.image);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8080/addEvent", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      alert(data.message || "Event Added");
+      setAddModalOpen(false);
+      fetchEvents();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to add event");
+    }
+  };
+
+  const handleEditEvent = async () => {
+    if (!selectedEvent) return;
+    const formData = new FormData();
+    formData.append("eventTitle", eventData.eventTitle);
+    formData.append("type", eventData.type);
+    formData.append("fontColor", eventData.fontColor);
+    formData.append("startTime", eventData.startTime);
+    formData.append("endTime", eventData.endTime);
+    formData.append("eventStatus", eventData.eventStatus);
+    if (eventData.image) formData.append("image", eventData.image);
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8080/editEvent/${selectedEvent._id}`, {
+        method: "PUT",
+        body: formData,
+      });
+      const data = await response.json();
+      alert(data.message || "Event Updated");
+      setEditModalOpen(false);
+      fetchEvents();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update event");
+    }
+  };
+
+  // Status toggle with time check
+  const handleToggleStatus = (row) => {
+    if (!row.startTime || !row.endTime) {
+      setSelectedEvent(row);
+      setEventData({
+        ...eventData,
+        startTime: row.startTime ? moment(row.startTime) : null,
+        endTime: row.endTime ? moment(row.endTime) : null,
+        eventStatus: !row.eventStatus,
+      });
+      setStatusModalOpen(true);
+      return;
+    }
+    toggleStatusApi(row._id, !row.eventStatus, row.startTime, row.endTime);
+  };
+
+  const toggleStatusApi = async (_id, status, start, end) => {
+    try {
+      const formData = new FormData();
+      formData.append("eventStatus", status);
+      formData.append("startTime", start);
+      formData.append("endTime", end);
+      await fetch(`http://127.0.0.1:8080/editEvent/${_id}`, {
+        method: "PUT",
+        body: formData,
+      });
+      fetchEvents();
+      setStatusModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update status");
+    }
+  };
+
+  const columns = [
+    { name: "Title", selector: (row) => row.eventTitle, sortable: true },
+    { name: "Type", selector: (row) => row.type, sortable: true },
+    { name: "Start Time", selector: (row) => row.startTime ? moment(row.startTime).format("lll") : "-", sortable: true },
+    { name: "End Time", selector: (row) => row.endTime ? moment(row.endTime).format("lll") : "-", sortable: true },
+    {
+      name: "Image",
+      cell: (row) =>
+        row.eventImage ? (
+          <Avatar
+            src={`${process.env.REACT_APP_IMAGE_LINK}${row.eventImage}`}
+            sx={{ width: 40, height: 40, cursor: "pointer" }}
+            onClick={() => handleOpenImageModal(row.eventImage)}
+          />
+        ) : (
+          "-"
+        ),
+    },
+    {
+      name: "Status",
+      cell: (row) => (
+        <Switch
+          checked={row.eventStatus ?? true}
+          onChange={() => handleToggleStatus(row)}
+          color="primary"
+        />
+      ),
+      sortable: true,
+    },
+    {
+      name: "Action",
+      cell: (row) => (
+        <Button
+          onClick={() => handleOpenEditModal(row)}
+          sx={{ backgroundColor: "#007BFF", color: "#fff", marginRight: 1 }}
+        >
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
+  const filteredEvents = events.filter((e) =>
+    e.eventTitle.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterMoment}>
+      <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
+        <div style={{ width: "100%", padding: "0 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Event List</h2>
+              <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>View and manage events</p>
+            </div>
+            <Button
+              style={{
+                backgroundColor: "#00c853",
+                height: 45,
+                width: 150,
+                fontSize: 12,
+                color: "white",
+                letterSpacing: "1px",
+              }}
+              onClick={handleOpenAddModal}
+            >
+              + Add Event
+            </Button>
+          </div>
+
+          <div style={{ marginBottom: 20, display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <TextField
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+            />
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={filteredEvents}
+            pagination
+            highlightOnHover
+            pointerOnHover
+            noDataComponent="No events found"
+          />
+        </div>
+
+        {/* Image Modal */}
+        <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
+          <DialogTitle>Event Image</DialogTitle>
+          <DialogContent sx={{ display: "flex", justifyContent: "center", padding: "20px" }}>
+            {selectedEvent?.image && (
+              <img
+                src={`${process.env.REACT_APP_IMAGE_LINK}${selectedEvent.image}`}
+                alt="Event"
+                style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: "8px" }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseImageModal} color="error">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Add/Edit Modals */}
+        {[["Add", addModalOpen, setAddModalOpen, handleAddEvent], ["Edit", editModalOpen, setEditModalOpen, handleEditEvent]].map(
+          ([title, open, setOpen, submitHandler], idx) => (
+            <Dialog key={idx} open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>{title} Event</DialogTitle>
+              <DialogContent>
+                <TextField
+                  label="Title"
+                  fullWidth
+                  margin="normal"
+                  value={eventData.eventTitle}
+                  onChange={(e) => setEventData({ ...eventData, eventTitle: e.target.value })}
+                />
+                <TextField
+                  select
+                  label="Type"
+                  fullWidth
+                  margin="normal"
+                  value={eventData.type}
+                  onChange={(e) => setEventData({ ...eventData, type: e.target.value })}
+                >
+                  <MenuItem value="Festival">Festival</MenuItem>
+                  <MenuItem value="Alert" disabled>
+                    Alert
+                  </MenuItem>
+                </TextField>
+                <TextField
+                  label="Font Color"
+                  type="color"
+                  fullWidth
+                  margin="normal"
+                  value={eventData.fontColor}
+                  onChange={(e) => setEventData({ ...eventData, fontColor: e.target.value })}
+                />
+                <DateTimePicker
+                  label="Start Time"
+                  value={eventData.startTime}
+                  onChange={(newVal) => setEventData({ ...eventData, startTime: newVal })}
+                  renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
+                />
+                <DateTimePicker
+                  label="End Time"
+                  value={eventData.endTime}
+                  onChange={(newVal) => setEventData({ ...eventData, endTime: newVal })}
+                  renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
+                />
+                <TextField
+                  label="Image"
+                  type="file"
+                  fullWidth
+                  margin="normal"
+                  onChange={(e) => setEventData({ ...eventData, image: e.target.files[0] })}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={eventData.eventStatus}
+                      onChange={(e) => setEventData({ ...eventData, eventStatus: e.target.checked })}
+                      color="primary"
+                    />
+                  }
+                  label="Active Status"
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpen(false)} color="error">
+                  Cancel
+                </Button>
+                <Button onClick={submitHandler} color="primary">
+                  {title === "Add" ? "Add" : "Save"}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          )
+        )}
+
+        {/* Status Modal */}
+        <Dialog open={statusModalOpen} onClose={() => setStatusModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Set Event Time</DialogTitle>
+          <DialogContent>
+            <Typography>Please set Start and End time before activating event.</Typography>
+            <DateTimePicker
+              label="Start Time"
+              value={eventData.startTime}
+              onChange={(newVal) => setEventData({ ...eventData, startTime: newVal })}
+              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
+            />
+            <DateTimePicker
+              label="End Time"
+              value={eventData.endTime}
+              onChange={(newVal) => setEventData({ ...eventData, endTime: newVal })}
+              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setStatusModalOpen(false)} color="error">
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                toggleStatusApi(selectedEvent._id, eventData.eventStatus, eventData.startTime, eventData.endTime)
+              }
+              color="primary"
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </MDBox>
+    </LocalizationProvider>
+  );
+}

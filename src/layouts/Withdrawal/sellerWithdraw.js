@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useMaterialUIController } from "context";
-import { Button, TextField, Typography } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 import MDBox from "components/MDBox";
@@ -37,12 +36,12 @@ export default function SellerWithdrawal() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest");
+        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest?type=seller");
         const data = await response.json();
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
             id: request._id,
-            driverId: request.driverId,
+            storeId: request.storeId,
             amount: request.amount,
             type: request.type,
             description: request.description,
@@ -93,7 +92,7 @@ export default function SellerWithdrawal() {
   };
 
   const filteredRequests = withdrawalRequests.filter((req) =>
-    req.driverId.toLowerCase().includes(searchTerm.toLowerCase())
+    req.storeId?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredRequests.length / entriesToShow);
@@ -124,9 +123,9 @@ export default function SellerWithdrawal() {
       <div style={{ width: "100%", padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Withdrawal Requests</h2>
+            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Seller Withdrawal Requests</h2>
             <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
-              View and manage all withdrawal requests
+              View and manage all seller withdrawal requests
             </p>
           </div>
         </div>
@@ -157,7 +156,7 @@ export default function SellerWithdrawal() {
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search by Driver ID..."
+              placeholder="Search by Seller ID..."
               style={{
                 padding: "8px 34px",
                 borderRadius: "8px",
@@ -188,7 +187,7 @@ export default function SellerWithdrawal() {
           <thead>
             <tr>
               <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Driver ID</th>
+              <th style={headerCell}>Seller ID</th>
               <th style={headerCell}>Amount</th>
               <th style={headerCell}>Type</th>
               <th style={headerCell}>Description</th>
@@ -202,7 +201,7 @@ export default function SellerWithdrawal() {
               currentRequests.map((request, index) => (
                 <tr key={request.id}>
                   <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
-                  <td style={bodyCell}>{request.driverId}</td>
+                  <td style={bodyCell}>{request.storeId}</td>
                   <td style={bodyCell}>₹{request.amount}</td>
                   <td style={bodyCell}>{request.type}</td>
                   <td style={bodyCell}>{request.description}</td>

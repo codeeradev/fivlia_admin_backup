@@ -60,6 +60,7 @@ import Wallet from "layouts/Wallet/Wallet";
 import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
 import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 import SetCommisson from "layouts/Commission/commisson"
+import Festival from "layouts/Festival/Festival"
 import DriversRequest from "layouts/Approvals/DriverApproval"
 import SellerRequest from "layouts/Approvals/SellerApproval"
 const isLoggedIn = () => {
@@ -86,6 +87,14 @@ const routes =
       icon: <Icon fontSize="small">wallet</Icon>,
       route: "/wallet",
       component: <Wallet />,
+    },
+   {
+      type: "collapse",
+      name: "Festival",
+      key: "festival",
+      icon: <Icon fontSize="small">festival</Icon>,
+      route: "/festival",
+      component: <Festival />,
     },
     {
       type: "collapse",
