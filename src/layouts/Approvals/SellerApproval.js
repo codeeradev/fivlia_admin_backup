@@ -28,6 +28,7 @@ export default function ApprovalRequests() {
 
   const [sellerRequests, setSellerRequests] = useState([]);
   const [locationRequests, setLocationRequests] = useState([]);
+  const [imageRequests, setImageRequests] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
   const [brandRequests, setBrandRequests] = useState([]);
   const [requestType, setRequestType] = useState("all");
@@ -49,6 +50,7 @@ export default function ApprovalRequests() {
     switch (type) {
       case "seller": return "#e3f2fd";
       case "location": return "#e8f5e9";
+      case "image": return "#f3e5f5"; // New color for image requests
       case "product": return "#fffde7";
       case "brand": return "#fce4ec";
       default: return "#fff";
@@ -60,11 +62,12 @@ export default function ApprovalRequests() {
     const fetchRequests = async () => {
       try {
         dispatch(startLoading());
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
+        const res = await fetch(`http://127.0.0.1:8080/getSellerRequest`);
         if (!res.ok) throw new Error("Failed to fetch requests");
         const data = await res.json();
         setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
         setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
+        setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
         setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
         setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
       } catch (e) {
@@ -77,7 +80,7 @@ export default function ApprovalRequests() {
     fetchRequests();
   }, [dispatch]);
 
-  // Open confirmation modal for seller/location
+  // Open confirmation modal for seller/location/image
   const openConfirm = (type, id, action) => {
     setConfirmData({ type, id, action, description: "" });
     setConfirmOpen(true);
@@ -89,7 +92,7 @@ export default function ApprovalRequests() {
     setProductApprovalOpen(true);
   };
 
-  // Handle confirmation for seller/location
+  // Handle confirmation for seller/location/image
   const handleConfirmAction = async () => {
     const { type, id, action, description } = confirmData;
     try {
@@ -102,9 +105,12 @@ export default function ApprovalRequests() {
       } else if (type === "location") {
         body.id = id;
         body.isLocation = true;
+      } else if (type === "image") {
+        body.id = id;
+        body.isImage = true;
       }
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
+      const res = await fetch(`http://127.0.0.1:8080/acceptDeclineRequest`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -119,6 +125,8 @@ export default function ApprovalRequests() {
         setSellerRequests((prev) => prev.filter((r) => r._id !== id));
       } else if (type === "location") {
         setLocationRequests((prev) => prev.filter((r) => r._id !== id));
+      } else if (type === "image") {
+        setImageRequests((prev) => prev.filter((r) => r._id !== id));
       }
 
       setError("");
@@ -167,14 +175,14 @@ export default function ApprovalRequests() {
   };
 
   // Combine and filter requests
-  const allRequests = [...sellerRequests, ...locationRequests, ...productRequests, ...brandRequests];
+  const allRequests = [...sellerRequests, ...locationRequests, ...imageRequests, ...productRequests, ...brandRequests];
 
   const normalized = (v) => (v || "").toString().toLowerCase();
   const filtered = allRequests.filter((r) => {
     if (requestType !== "all" && r.type !== requestType) return false;
 
     let haystack = [];
-    if (r.type === "seller" || r.type === "location") {
+    if (r.type === "seller" || r.type === "location" || r.type === "image") {
       haystack = [
         r.storeName,
         r.firstName,
@@ -190,6 +198,8 @@ export default function ApprovalRequests() {
       ];
       if (r.type === "location") {
         haystack.push(r.pendingAddressUpdate?.city?.name, r.pendingAddressUpdate?.status);
+      } else if (r.type === "image") {
+        haystack.push(r.pendingAdvertisementImages?.status);
       }
     } else if (r.type === "product" || r.type === "brand") {
       haystack = [
@@ -212,6 +222,7 @@ export default function ApprovalRequests() {
   const getStatus = (r) => {
     if (r.type === "seller") return r.approveStatus || "pending";
     if (r.type === "location") return r.pendingAddressUpdate?.status || "pending";
+    if (r.type === "image") return r.pendingAdvertisementImages?.status || "pending";
     return r.sellerProductStatus || "pending";
   };
 
@@ -221,7 +232,7 @@ export default function ApprovalRequests() {
   };
 
   const getDisplayValue = (r, field) => {
-    if (r.type === "seller" || r.type === "location") {
+    if (r.type === "seller" || r.type === "location" || r.type === "image") {
       switch (field) {
         case "name":
           return r.storeName || "-";
@@ -232,7 +243,12 @@ export default function ApprovalRequests() {
         case "email":
           return r.email?.Email || r.email || "-";
         case "city":
-          return r.type === "location" ? `${r.city?.name || "-"} → ${r.pendingAddressUpdate?.city?.name || "-"}` : r.city?.name || "-";
+          if (r.type === "location") {
+            return `${r.city?.name || "-"} → ${r.pendingAddressUpdate?.city?.name || "-"}`;
+          } else if (r.type === "image") {
+            return r.city?.name || "-";
+          }
+          return r.city?.name || "-";
         case "gst":
           return r.gstNumber || "-";
         default:
@@ -244,8 +260,8 @@ export default function ApprovalRequests() {
           return r.productName || "-";
         case "owner":
           return r.type === "brand"
-          ? r.brandApprovelDescription || "-"
-          : r.description || "-";
+            ? r.brandApprovelDescription || "-"
+            : r.description || "-";
         case "mobile":
           return r.sku || "-";
         case "email":
@@ -434,12 +450,12 @@ export default function ApprovalRequests() {
     },
   };
 
-  // Detailed view for dialog (unchanged)
+  // Detailed view for dialog
   const renderRequestDetails = (request) => {
     const { type } = request;
     return (
       <Grid container spacing={2} sx={{ p: 2 }}>
-        {type === "seller" || type === "location" ? (
+        {type === "seller" || type === "location" || type === "image" ? (
           <>
             <Grid item xs={12} sm={6}>
               <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
@@ -465,6 +481,17 @@ export default function ApprovalRequests() {
                     </MDBox>
                   </>
                 )}
+                {type === "image" && (
+                  <>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Pending Advertisement Images</MDTypography>
+                    <MDBox display="flex" flexWrap="wrap" gap={1}>
+                      {request.pendingAdvertisementImages?.image?.map((img, i) => (
+                        <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt={`Pending Image ${i + 1}`} style={{ maxWidth: "150px", borderRadius: "4px" }} />
+                      ))}
+                    </MDBox>
+                    <MDTypography variant="body2" sx={{ mt: 1 }}><strong>Status:</strong> <Chip label={request.pendingAdvertisementImages?.status || "Pending"} color={request.pendingAdvertisementImages?.status === "approved" ? "success" : request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  </>
+                )}
               </MDBox>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -472,7 +499,7 @@ export default function ApprovalRequests() {
                 <MDTypography variant="h6" gutterBottom color="primary">Verification Details</MDTypography>
                 <MDBox display="flex" flexDirection="column" gap={1}>
                   <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.approveStatus || "Pending"} color={request.approveStatus === "approved" ? "success" : request.approveStatus === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.approveStatus || request.pendingAdvertisementImages?.status || "Pending"} color={request.approveStatus === "approved" || request.pendingAdvertisementImages?.status === "approved" ? "success" : request.approveStatus === "rejected" || request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
                   <MDTypography variant="body2"><strong>Authorized Store:</strong> {request.Authorized_Store ? "Yes" : "No"}</MDTypography>
                   <MDTypography variant="body2"><strong>Sell Food:</strong> {request.sellFood ? "Yes" : "No"}</MDTypography>
                   <MDTypography variant="body2"><strong>FSI Number:</strong> {request.fsiNumber || "-"}</MDTypography>
@@ -650,6 +677,7 @@ export default function ApprovalRequests() {
                   <MenuItem value="all">All</MenuItem>
                   <MenuItem value="seller">Seller</MenuItem>
                   <MenuItem value="location">Location</MenuItem>
+                  <MenuItem value="image">Image</MenuItem>
                   <MenuItem value="product">Product</MenuItem>
                   <MenuItem value="brand">Brand</MenuItem>
                 </Select>
@@ -713,7 +741,7 @@ export default function ApprovalRequests() {
           </DialogActions>
         </Dialog>
 
-        {/* Confirmation Dialog for Seller/Location */}
+        {/* Confirmation Dialog for Seller/Location/Image */}
         <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
           <DialogTitle>
             <MDTypography variant="h5">Confirm {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}</MDTypography>
