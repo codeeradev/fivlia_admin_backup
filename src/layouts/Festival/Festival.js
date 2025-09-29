@@ -12,14 +12,14 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Typography,
-  LocalizationProvider,
-  DateTimePicker,
-  AdapterMoment
+  Typography
 } from "@mui/material";
 import DataTable from "react-data-table-component";
-// import {  } from "@mui/x-date-pickers";
-// import {  } from "@mui/x-date-pickers/AdapterMoment";
+// import { LocalizationProvider } from '@mui/x-date-pickers';
+// import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+// import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import Datetime from "react-datetime";
+import "react-datetime/css/react-datetime.css";
 import moment from "moment";
 
 export default function Festival() {
@@ -259,7 +259,6 @@ export default function Festival() {
   );
 
   return (
-    <LocalizationProvider dateAdapter={AdapterMoment}>
       <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
         <div style={{ width: "100%", padding: "0 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
@@ -340,6 +339,34 @@ export default function Festival() {
                   margin="normal"
                   value={eventData.type}
                   onChange={(e) => setEventData({ ...eventData, type: e.target.value })}
+                    InputProps={{
+    sx: {
+      height: 46, // Increases the overall height
+      fontSize: "16px", // Font size of the selected value
+    },
+  }}
+  SelectProps={{
+    sx: {
+      fontSize: "14px", // Font size of the dropdown options
+    },
+    MenuProps: {
+      PaperProps: {
+        sx: {
+          fontSize: "14px",
+        },
+      },
+    },
+  }}
+  sx={{
+    "& .MuiInputBase-root": {
+      height: 46,
+      fontSize: "16px",
+    },
+    "& .MuiInputLabel-root": {
+      fontSize: "12px",
+    },
+  }}
+
                 >
                   <MenuItem value="Festival">Festival</MenuItem>
                   <MenuItem value="Alert" disabled>
@@ -354,25 +381,46 @@ export default function Festival() {
                   value={eventData.fontColor}
                   onChange={(e) => setEventData({ ...eventData, fontColor: e.target.value })}
                 />
-                <DateTimePicker
-                  label="Start Time"
-                  value={eventData.startTime}
-                  onChange={(newVal) => setEventData({ ...eventData, startTime: newVal })}
-                  renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-                />
-                <DateTimePicker
-                  label="End Time"
-                  value={eventData.endTime}
-                  onChange={(newVal) => setEventData({ ...eventData, endTime: newVal })}
-                  renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-                />
-                <TextField
-                  label="Image"
-                  type="file"
-                  fullWidth
-                  margin="normal"
-                  onChange={(e) => setEventData({ ...eventData, image: e.target.files[0] })}
-                />
+               <Typography variant="subtitle2" sx={{ mt: 2 }}>Start Time</Typography>
+<Datetime
+  value={eventData.startTime}
+  onChange={(date) => setEventData({ ...eventData, startTime: date })}
+  inputProps={{ placeholder: "Select start time", style: { width: "100%", padding: 10 } }}
+/>
+
+<Typography variant="subtitle2" sx={{ mt: 2 }}>End Time</Typography>
+<Datetime
+  value={eventData.endTime}
+  onChange={(date) => setEventData({ ...eventData, endTime: date })}
+  inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
+/>
+
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+  Upload Image
+</Typography>
+<Button
+  variant="outlined"
+  component="label"
+  fullWidth
+  sx={{
+    textAlign: "left",
+    padding: "10px 14px",
+    justifyContent: "start",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    color: "#000",
+    textOverflow: "ellipsis",
+  }}
+>
+  {eventData.image?.name || "Choose File"}
+  <input
+    type="file"
+    accept="image/*"
+    hidden
+    onChange={(e) => setEventData({ ...eventData, image: e.target.files[0] })}
+  />
+</Button>
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -401,18 +449,20 @@ export default function Festival() {
           <DialogTitle>Set Event Time</DialogTitle>
           <DialogContent>
             <Typography>Please set Start and End time before activating event.</Typography>
-            <DateTimePicker
-              label="Start Time"
-              value={eventData.startTime}
-              onChange={(newVal) => setEventData({ ...eventData, startTime: newVal })}
-              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-            />
-            <DateTimePicker
-              label="End Time"
-              value={eventData.endTime}
-              onChange={(newVal) => setEventData({ ...eventData, endTime: newVal })}
-              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-            />
+           <Typography variant="subtitle2" sx={{ mt: 2 }}>Start Time</Typography>
+<Datetime
+  value={eventData.startTime}
+  onChange={(date) => setEventData({ ...eventData, startTime: date })}
+  inputProps={{ placeholder: "Select start time", style: { width: "100%", padding: 10 } }}
+/>
+
+<Typography variant="subtitle2" sx={{ mt: 2 }}>End Time</Typography>
+<Datetime
+  value={eventData.endTime}
+  onChange={(date) => setEventData({ ...eventData, endTime: date })}
+  inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
+/>
+
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setStatusModalOpen(false)} color="error">
@@ -429,6 +479,5 @@ export default function Festival() {
           </DialogActions>
         </Dialog>
       </MDBox>
-    </LocalizationProvider>
   );
 }
