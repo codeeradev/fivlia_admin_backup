@@ -62,7 +62,7 @@ export default function ApprovalRequests() {
     const fetchRequests = async () => {
       try {
         dispatch(startLoading());
-        const res = await fetch(`http://127.0.0.1:8080/getSellerRequest`);
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
         if (!res.ok) throw new Error("Failed to fetch requests");
         const data = await res.json();
         setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
@@ -110,7 +110,7 @@ export default function ApprovalRequests() {
         body.isImage = true;
       }
 
-      const res = await fetch(`http://127.0.0.1:8080/acceptDeclineRequest`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
