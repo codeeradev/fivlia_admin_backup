@@ -50,7 +50,7 @@ export default function ApprovalRequests() {
     switch (type) {
       case "seller": return "#e3f2fd";
       case "location": return "#e8f5e9";
-      case "image": return "#f3e5f5"; // New color for image requests
+      case "image": return "#f3e5f5";
       case "product": return "#fffde7";
       case "brand": return "#fce4ec";
       default: return "#fff";
@@ -479,7 +479,7 @@ export default function ApprovalRequests() {
                       <MDTypography variant="body2"><strong>New Coordinates:</strong> {request.pendingAddressUpdate?.Latitude || "-"}, {request.pendingAddressUpdate?.Longitude || "-"}</MDTypography>
                       <MDTypography variant="body2"><strong>Requested On:</strong> {request.pendingAddressUpdate?.requestedAt ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString() : "-"}</MDTypography>
                     </MDBox>
-                  </>
+                    </>
                 )}
                 {type === "image" && (
                   <>
@@ -603,9 +603,9 @@ export default function ApprovalRequests() {
                   </>
                 )}
               </MDBox>
-              {(request.productThumbnailUrl || request.productImageUrl?.length > 0 || request.brandApprovalDocument) && (
+              {(request.productThumbnailUrl || request.productImageUrl?.length > 0) && (
                 <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Images</MDTypography>
+                  <MDTypography variant="h6" gutterBottom color="primary">Product Images</MDTypography>
                   <MDBox display="flex" gap={1} flexWrap="wrap">
                     {request.productThumbnailUrl && (
                       <img src={`${IMAGE_BASE_URL}${request.productThumbnailUrl}`} alt="Thumbnail" style={{ maxWidth: "80px", borderRadius: "4px" }} />
@@ -614,9 +614,21 @@ export default function ApprovalRequests() {
                       <img key={i} src={`${IMAGE_BASE_URL}${url}`} alt={`Image ${i}`} style={{ maxWidth: "80px", borderRadius: "4px" }} />
                     ))}
                     {request.productImageUrl?.length > 2 && <Chip label={`+${request.productImageUrl.length - 2}`} size="small" />}
-                    {request.brandApprovalDocument && (
-                      <img src={`${IMAGE_BASE_URL}${request.brandApprovalDocument}`} alt="Brand Doc" style={{ maxWidth: "80px", borderRadius: "4px" }} />
-                    )}
+                  </MDBox>
+                </MDBox>
+              )}
+              {request.type === "brand" && request.brandApprovalDocument && (
+                <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
+                  <MDTypography variant="h6" gutterBottom color="primary">Brand Approval Document</MDTypography>
+                  <MDBox display="flex" gap={1} flexWrap="wrap">
+                    <img
+                      src={`${IMAGE_BASE_URL}${request.brandApprovalDocument}`}
+                      alt="Brand Approval Document"
+                      style={{ maxWidth: "150px", borderRadius: "4px" }}
+                    />
+                    <MDTypography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
+                      Brand Approval Document
+                    </MDTypography>
                   </MDBox>
                 </MDBox>
               )}
