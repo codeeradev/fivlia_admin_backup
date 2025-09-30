@@ -110,7 +110,7 @@ export default function ApprovalRequests() {
         body.isImage = true;
       }
 
-      const res = await fetch(`http://127.0.0.1:8080/acceptDeclineRequest`, {
+      const res = await fetch(`https://api.fivlia.in/acceptDeclineRequest`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
