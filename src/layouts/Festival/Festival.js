@@ -48,7 +48,7 @@ export default function Festival() {
   // Fetch events
   const fetchEvents = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8080/getEvent", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/getEvent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: "admin" }),
@@ -138,7 +138,7 @@ export default function Festival() {
     if (eventData.image) formData.append("image", eventData.image);
 
     try {
-      const response = await fetch("http://127.0.0.1:8080/addEvent", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/addEvent`, {
         method: "POST",
         body: formData,
       });
@@ -164,7 +164,7 @@ export default function Festival() {
     if (eventData.image) formData.append("image", eventData.image);
 
     try {
-      const response = await fetch(`http://127.0.0.1:8080/editEvent/${selectedEvent._id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/editEvent/${selectedEvent._id}`, {
         method: "PUT",
         body: formData,
       });
@@ -200,7 +200,7 @@ export default function Festival() {
       formData.append("eventStatus", status);
       formData.append("startTime", start);
       formData.append("endTime", end);
-      await fetch(`http://127.0.0.1:8080/editEvent/${_id}`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/editEvent/${_id}`, {
         method: "PUT",
         body: formData,
       });

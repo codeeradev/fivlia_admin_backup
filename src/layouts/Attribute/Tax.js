@@ -30,7 +30,7 @@ function Tax() {
   useEffect(() => {
     const fetchAttribute = async () => {
       try {
-        const res = await fetch("https://node-m8jb.onrender.com/getTax");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
         const data = await res.json();
         setAttribute(data.result);
       } catch (err) {
@@ -49,7 +49,7 @@ function Tax() {
       })
       if (result.status === 200) {
         alert('Tax Deleted Successfully')
-        const res = await fetch("https://node-m8jb.onrender.com/getTax");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
         const data = await res.json();
         setAttribute(data.result);
       }

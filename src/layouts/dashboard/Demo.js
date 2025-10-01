@@ -38,6 +38,13 @@ export default function Dashboard() {
     fetchDashboardStats();
   }, []);
 
+  const formatAmount = (amount) => {
+  if (typeof amount !== "number") amount = Number(amount);
+  if (isNaN(amount)) return "0.00";
+
+  return (Math.round(amount * 100) / 100).toFixed(2);
+};
+
   useEffect(() => {
     const handleResize = () => {
       setMiniSidenav(dispatch, false);
@@ -58,7 +65,7 @@ export default function Dashboard() {
   }
 
   const data = stats ? [
-    { title: "Total Earnings", value: `₹${stats.totalRevenue}`, color: "green", icon: <FaMoneyBillWave /> },
+    { title: "Total Earnings", value: `₹${formatAmount(stats.totalRevenue)}`, color: "green", icon: <FaMoneyBillWave /> },
     { title: "Total Stores", value: stats.totalStores, color: "blue", icon: <FaStore /> },
     { title: "Total Orders", value: stats.totalOrdersMonthly, color: "yellow", icon: <FaShoppingCart /> },
     { title: "Total Items", value: stats.totalProducts, color: "lightgreen", icon: <FaBoxOpen /> },

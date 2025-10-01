@@ -1,33 +1,35 @@
 import React, { useState, useEffect } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
-import { Button, Switch, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material";
+import { Button, Switch, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, MenuItem, Select } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
-import { Paper, Grid, Typography } from "@mui/material";
+import { Paper, Typography } from "@mui/material";
 
 function Setting() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
     Owner_Name: "",
     Owner_Email: "",
     Owner_Number: "",
     GST_Number: "",
-    Platform_Fee: "",
+    Platform_Fee: 0,
     Description: "",
-    Delivery_Charges: "",
-    codLimit: "",
-    minPrice: "",
-    maxPrice: "",
-    minWithdrawal: "", 
+    Delivery_Charges: 0,
+    Delivery_Charges_Gst: 0,
+    codLimit: 0,
+    minPrice: 0,
+    maxPrice: 0,
+    minWithdrawal: 0,
     PaymentGatewayStatus: false,
-    activeGateway: "None", // Tracks the selected gateway (Razorpay, PhonePe, or None)
-    activeMode: "", // Tracks the selected mode (test or live)
+    activeGateway: "None",
+    activeMode: "",
     RazorPayKey_test: "",
     RazorPayKey_live: "",
     RazorPayKey_secret: "",
@@ -35,9 +37,9 @@ function Setting() {
     PhonePe_live: "",
     PhonePe_secret: "",
     Map_Api: {
-      google: { key: "", status: false },
-      apple: { key: "", status: false },
-      ola: { key: "", status: false }
+      google: { api_key: "", status: false },
+      apple: { api_key: "", status: false },
+      ola: { api_key: "", status: false }
     },
     Auth: [
       {
@@ -46,31 +48,52 @@ function Setting() {
       }
     ],
     imageLink: "",
-    freeDeliveryLimit: ""
+    freeDeliveryLimit: 0,
+    adminSignature: ""
   });
+  const [taxOptions, setTaxOptions] = useState([]);
+  const [adminSignatureFile, setAdminSignatureFile] = useState(null);
 
-  // Fetch settings data on component mount
+  useEffect(() => {
+    const fetchTaxOptions = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
+        const result = await response.json();
+        if (response.ok) {
+          let options = Array.isArray(result) ? result : result.result || [];
+          setTaxOptions(
+            options.map((tax) => ({
+              display: tax.value || tax,
+              value: parseFloat((tax.value || tax).replace("%", "")) || 0
+            }))
+          );
+        } else {
+          setTaxOptions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching tax options:", error);
+        setTaxOptions([]);
+      }
+    };
+    fetchTaxOptions();
+  }, []);
+
   useEffect(() => {
     const fetchSettings = async () => {
       dispatch(startLoading());
       try {
         const response = await fetch(`${process.env.REACT_APP_API_URL}/getSettings`, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" }
         });
-
         const result = await response.json();
         if (response.ok && result.settings) {
-          // Determine active gateway and mode based on available keys
           const razorpayTest = result.settings.PaymentGateways?.RazorPayKey?.test || "";
           const razorpayLive = result.settings.PaymentGateways?.RazorPayKey?.live || "";
           const phonepeTest = result.settings.PaymentGateways?.PhonePe?.test || "";
           const phonepeLive = result.settings.PaymentGateways?.PhonePe?.live || "";
           let activeGateway = "None";
           let activeMode = "";
-          
           if (razorpayTest) {
             activeGateway = "Razorpay";
             activeMode = "test";
@@ -84,25 +107,24 @@ function Setting() {
             activeGateway = "PhonePe";
             activeMode = "live";
           }
-
           const mapApi = result.settings.Map_Api?.[0] || {
             google: { api_key: "", status: false },
             apple: { api_key: "", status: false },
             ola: { api_key: "", status: false }
           };
-
           setFormData({
             Owner_Name: result.settings.Owner_Name || "",
             Owner_Email: result.settings.Owner_Email || "",
             Owner_Number: result.settings.Owner_Number || "",
             GST_Number: result.settings.GST_Number || "",
-            Platform_Fee: result.settings.Platform_Fee || "",
+            Platform_Fee: result.settings.Platform_Fee || 0,
             Description: result.settings.Description || "",
-            Delivery_Charges: result.settings.Delivery_Charges || "",
-            codLimit: result.settings.codLimit || "",
-            minPrice: result.settings.minPrice || "",
-            maxPrice: result.settings.maxPrice || "",
-            minWithdrawal: result.settings.minWithdrawal || "",
+            Delivery_Charges: result.settings.Delivery_Charges || 0,
+            Delivery_Charges_Gst: result.settings.Delivery_Charges_Gst || 0,
+            codLimit: result.settings.codLimit || 0,
+            minPrice: result.settings.minPrice || 0,
+            maxPrice: result.settings.maxPrice || 0,
+            minWithdrawal: result.settings.minWithdrawal || 0,
             PaymentGatewayStatus: result.settings.PaymentGatewayStatus || false,
             activeGateway,
             activeMode,
@@ -118,57 +140,76 @@ function Setting() {
               ola: { api_key: mapApi.ola?.api_key || "", status: mapApi.ola?.status || false }
             },
             Auth: result.settings.Auth && result.settings.Auth.length > 0
-              ? result.settings.Auth
-              : [
-                  {
-                    firebase: { status: false },
-                    whatsApp: { appKey: "", authKey: "", status: false }
+              ? result.settings.Auth.map(auth => ({
+                  firebase: { status: auth.firebase?.status || false },
+                  whatsApp: {
+                    appKey: auth.whatsApp?.appKey || "",
+                    authKey: auth.whatsApp?.authKey || "",
+                    status: auth.whatsApp?.status || false
                   }
-                ],
+                }))
+              : [{ firebase: { status: false }, whatsApp: { appKey: "", authKey: "", status: false } }],
             imageLink: result.settings.imageLink || "",
-            freeDeliveryLimit: result.settings.freeDeliveryLimit || ""
+            freeDeliveryLimit: result.settings.freeDeliveryLimit || 0,
+            adminSignature: result.settings.adminSignature || ""
           });
         } else {
-          dispatch(stopLoading());
           alert(result.message || "Failed to fetch settings");
         }
       } catch (error) {
-        dispatch(stopLoading());
         console.error("Fetch settings error =>", error);
         alert("Something went wrong while fetching settings");
       } finally {
         dispatch(stopLoading());
       }
     };
-
     fetchSettings();
   }, [dispatch]);
 
-const handleInputChange = (field, value) => {
-  setFormData(prevFormData => ({
-    ...prevFormData,
-    [field]: value,
-  }));
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: [
+        "Delivery_Charges",
+        "Delivery_Charges_Gst",
+        "Platform_Fee",
+        "codLimit",
+        "minPrice",
+        "maxPrice",
+        "minWithdrawal",
+        "freeDeliveryLimit"
+      ].includes(field)
+        ? parseFloat(value) || 0
+        : value
+    }));
+  };
+
+ const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setAdminSignatureFile(file);
+    setPreviewImage(URL.createObjectURL(file)); // only for preview
+  }
 };
 
+
   const handleGatewayChange = (gateway) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       activeGateway: gateway,
-      activeMode: "",
+      activeMode: ""
     }));
   };
 
   const handleModeChange = (mode) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      activeMode: mode,
-      // Reset the non-selected mode's key
+      activeMode: mode
     }));
   };
 
   const handleMapApiKeyChange = (provider, value) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       Map_Api: {
         ...prev.Map_Api,
@@ -178,7 +219,7 @@ const handleInputChange = (field, value) => {
   };
 
   const handleMapApiStatusChange = (provider) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       Map_Api: {
         google: { ...prev.Map_Api.google, status: provider === "google" },
@@ -189,106 +230,131 @@ const handleInputChange = (field, value) => {
   };
 
   const handleSubmit = async () => {
-    dispatch(startLoading());
-    try {
-      const filteredData = Object.entries(formData).reduce((acc, [key, value]) => {
-        if (value !== "" && key !== "activeGateway" && key !== "activeMode") acc[key] = value;
-        return acc;
-      }, {});
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  dispatch(startLoading());
 
-      // Structure PaymentGateways to send only the active gateway's selected mode key
-      filteredData.PaymentGateways = {};
-       if (formData.activeGateway === "Razorpay") {
-          filteredData.PaymentGateways.RazorPayKey = {
-            test: formData.RazorPayKey_test || "",
-            live: formData.RazorPayKey_live || "",
-            status: true,
-            secretKey: formData.RazorPayKey_secret || "",
-            activeMode: formData.activeMode
-          };
-          filteredData.PaymentGateways.PhonePe = {
-            test: formData.PhonePe_test || "",
-            live: formData.PhonePe_live || "",
-            status: false,
-            secretKey: ""
-          };
-        } else if (formData.activeGateway === "PhonePe") {
-          filteredData.PaymentGateways.PhonePe = {
-            test: formData.PhonePe_test || "",
-            live: formData.PhonePe_live || "",
-            status: true,
-            secretKey: formData.PhonePe_secret || "",
-            activeMode: formData.activeMode
-          };
-          filteredData.PaymentGateways.RazorPayKey = {
-            test: formData.RazorPayKey_test || "",
-            live: formData.RazorPayKey_live || "",
-            status: false,
-            secretKey: ""
-          };
-         } else {
-          filteredData.PaymentGateways.RazorPayKey = {
-            test: formData.RazorPayKey_test || "",
-            live: formData.RazorPayKey_live || "",
-            status: false,
-            secretKey: ""
-          };
-          filteredData.PaymentGateways.PhonePe = {
-            test: formData.PhonePe_test || "",
-            live: formData.PhonePe_live || "",
-            status: false,
-            secretKey: ""
-          };
-         }
+  try {
+    // Step 1: Filter out UI-only fields
+    const filteredData = { ...formData };
+    delete filteredData.activeGateway;
+    delete filteredData.activeMode;
 
+    // Step 2: Build PaymentGateways object
+    filteredData.PaymentGateways = {};
 
-      const mapApi = formData.Map_Api;
-      filteredData.Map_Api = [
-        {
-          google: { api_key: mapApi.google.api_key, status: mapApi.google.status },
-          apple: { api_key: mapApi.apple.api_key, status: mapApi.apple.status },
-          ola: { api_key: mapApi.ola.api_key, status: mapApi.ola.status }
-        }
-      ];
-
-      // Add Auth to payload
-      filteredData.Auth = formData.Auth;
-
-      // Remove temporary fields
-      delete filteredData.RazorPayKey_test;
-      delete filteredData.RazorPayKey_live;
-      delete filteredData.PhonePe_test;
-      delete filteredData.PhonePe_live;
-
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/adminSetting`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(filteredData),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        alert("Settings updated successfully");
-        navigate(-1);
-      } else {
-        alert(result.message || "Update failed");
-      }
-    } catch (error) {
-      console.error("Update error =>", error);
-      alert("Something went wrong");
-    } finally {
-      dispatch(stopLoading());
+    if (formData.activeGateway === "Razorpay") {
+      filteredData.PaymentGateways.RazorPayKey = {
+        test: formData.RazorPayKey_test || "",
+        live: formData.RazorPayKey_live || "",
+        secretKey: formData.RazorPayKey_secret || "",
+        status: true,
+        activeMode: formData.activeMode
+      };
+      filteredData.PaymentGateways.PhonePe = {
+        test: formData.PhonePe_test || "",
+        live: formData.PhonePe_live || "",
+        secretKey: "",
+        status: false
+      };
+    } else if (formData.activeGateway === "PhonePe") {
+      filteredData.PaymentGateways.PhonePe = {
+        test: formData.PhonePe_test || "",
+        live: formData.PhonePe_live || "",
+        secretKey: formData.PhonePe_secret || "",
+        status: true,
+        activeMode: formData.activeMode
+      };
+      filteredData.PaymentGateways.RazorPayKey = {
+        test: formData.RazorPayKey_test || "",
+        live: formData.RazorPayKey_live || "",
+        secretKey: "",
+        status: false
+      };
+    } else {
+      filteredData.PaymentGateways = {
+        RazorPayKey: { test: "", live: "", secretKey: "", status: false },
+        PhonePe: { test: "", live: "", secretKey: "", status: false }
+      };
     }
-  };
+
+    // Step 3: Ensure Map_Api array structure
+    filteredData.Map_Api = [
+      {
+        google: { api_key: formData.Map_Api.google.api_key || "", status: formData.Map_Api.google.status || false },
+        apple: { api_key: formData.Map_Api.apple.api_key || "", status: formData.Map_Api.apple.status || false },
+        ola: { api_key: formData.Map_Api.ola.api_key || "", status: formData.Map_Api.ola.status || false }
+      }
+    ];
+
+    // Step 4: Ensure Auth array is correct
+    filteredData.Auth = formData.Auth.map(auth => ({
+      firebase: { status: auth.firebase.status || false },
+      whatsApp: {
+        appKey: auth.whatsApp.appKey || "",
+        authKey: auth.whatsApp.authKey || "",
+        status: auth.whatsApp.status || false
+      }
+    }));
+
+    // Step 5: Delete temporary fields
+    delete filteredData.RazorPayKey_test;
+    delete filteredData.RazorPayKey_live;
+    delete filteredData.PhonePe_test;
+    delete filteredData.PhonePe_live;
+    delete filteredData.PhonePe_secret;
+
+    let fetchOptions = {};
+    let url = "http://127.0.0.1:8080/adminSetting";
+
+    if (adminSignatureFile) {
+      // Step 6a: File exists → use FormData
+      const form = new FormData();
+      form.append("payload", JSON.stringify(filteredData));
+      form.append("image", adminSignatureFile);
+      fetchOptions = {
+        method: "PUT",
+        body: form
+      };
+    } else {
+      // Step 6b: No file → send JSON
+      fetchOptions = {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filteredData)
+      };
+    }
+
+    // Step 7: Make request
+    const response = await fetch(url, fetchOptions);
+    const result = await response.json();
+
+    if (response.ok) {
+      setFormData(prev => ({
+        ...prev,
+        adminSignature: result.settings?.adminSignature || prev.adminSignature
+      }));
+      alert("Settings updated successfully");
+      navigate(-1);
+    } else {
+      alert(result.message || "Update failed");
+    }
+  } catch (error) {
+    console.error("Update error:", error);
+    alert("Something went wrong");
+  } finally {
+    setIsSubmitting(false);
+    dispatch(stopLoading());
+  }
+};
+
 
   return (
     <MDBox
       p={2}
       style={{
         marginLeft: miniSidenav ? "80px" : "250px",
-        transition: "margin-left 0.3s ease",
+        transition: "margin-left 0.3s ease"
       }}
     >
       <div className="store-container">
@@ -332,12 +398,37 @@ const handleInputChange = (field, value) => {
           </div>
           <div className="store-row">
             <div className="store-input">
-              <label>Platform Fee(%)</label>
+              <label>Platform Fee (%)</label>
               <input
-                type="text"
+                type="number"
                 value={formData.Platform_Fee}
                 onChange={(e) => handleInputChange("Platform_Fee", e.target.value)}
               />
+            </div>
+            <div className="store-input">
+              <label>Admin Signature</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <div style={{ minHeight: "108px" }}>
+              {previewImage ? (
+  <img
+    src={previewImage}
+    alt="Admin Signature Preview"
+    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
+  />
+) : formData.adminSignature ? (
+  <img
+    src={`${process.env.REACT_APP_IMAGE_LINK}${formData.adminSignature}`}
+    alt="Admin Signature"
+    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
+    onError={(e) => { e.target.src = "/placeholder.png"; }}
+  />
+) : null}
+
+              </div>
             </div>
           </div>
           <div className="store-row">
@@ -345,12 +436,11 @@ const handleInputChange = (field, value) => {
               <label>Image Link</label>
               <input
                 type="text"
-                value={formData.imageLink}
+                value={formData.imageLink || ""}
                 onChange={(e) => handleInputChange("imageLink", e.target.value)}
               />
             </div>
           </div>
-              
           <div className="store-row">
             <div className="store-input" style={{ flex: "1 1 100%" }}>
               <label>Description</label>
@@ -377,6 +467,24 @@ const handleInputChange = (field, value) => {
               />
             </div>
             <div className="store-input">
+              <label>Delivery Charges GST</label>
+              <Select
+                fullWidth
+                value={taxOptions.find(option => option.value === formData.Delivery_Charges_Gst)?.display || ""}
+                onChange={(e) => {
+                  const selectedOption = taxOptions.find(option => option.display === e.target.value);
+                  handleInputChange("Delivery_Charges_Gst", selectedOption ? selectedOption.value : 0);
+                }}
+                style={{ height: "37px" }}
+              >
+                {taxOptions.map((tax) => (
+                  <MenuItem key={tax.value} value={tax.display}>
+                    {tax.display}
+                  </MenuItem>
+                ))}
+              </Select>
+            </div>
+            <div className="store-input" style={{ flex: "1 1 33%" }}>
               <label>COD Limit</label>
               <input
                 type="number"
@@ -384,12 +492,14 @@ const handleInputChange = (field, value) => {
                 onChange={(e) => handleInputChange("codLimit", e.target.value)}
               />
             </div>
+          </div>
+          <div className="store-row">
             <div className="store-input">
               <label>Minimum Item Price</label>
               <input
                 type="number"
                 value={formData.minPrice}
-                onChange={(e) => handleInputChange("minPrice", e.targnpet.value)}
+                onChange={(e) => handleInputChange("minPrice", e.target.value)}
               />
             </div>
             <div className="store-input">
@@ -400,22 +510,24 @@ const handleInputChange = (field, value) => {
                 onChange={(e) => handleInputChange("maxPrice", e.target.value)}
               />
             </div>
-            <div className="store-input">
-            <label>Minimum Withdrawal</label>
-            <input
-              type="number"
-              value={formData.minWithdrawal}
-              onChange={(e) => handleInputChange("minWithdrawal", e.target.value)}
-            />
           </div>
+          <div className="store-row">
             <div className="store-input">
-            <label>Free Delivery Limit</label>
-            <input
-              type="number"
-              value={formData.freeDeliveryLimit}
-              onChange={(e) => handleInputChange("freeDeliveryLimit", e.target.value)}
-            />
-          </div>
+              <label>Minimum Withdrawal</label>
+              <input
+                type="number"
+                value={formData.minWithdrawal}
+                onChange={(e) => handleInputChange("minWithdrawal", e.target.value)}
+              />
+            </div>
+            <div className="store-input">
+              <label>Free Delivery Limit</label>
+              <input
+                type="number"
+                value={formData.freeDeliveryLimit}
+                onChange={(e) => handleInputChange("freeDeliveryLimit", e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -442,6 +554,7 @@ const handleInputChange = (field, value) => {
               >
                 <FormControlLabel value="Razorpay" control={<Radio />} label="Razorpay" />
                 <FormControlLabel value="PhonePe" control={<Radio />} label="PhonePe" />
+                <FormControlLabel value="None" control={<Radio />} label="None" />
               </RadioGroup>
             </FormControl>
           </div>
@@ -461,65 +574,63 @@ const handleInputChange = (field, value) => {
             </div>
           )}
           {formData.activeGateway === "Razorpay" && formData.activeMode && (
-  <>
-    <div className="store-row">
-      <div className="store-input">
-        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
-        <input
-          type="text"
-          value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
-          onChange={(e) =>
-            handleInputChange(
-              formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
-              e.target.value
-            )
-          }
-        />
-      </div>
-    </div>
-    <div className="store-row">
-      <div className="store-input">
-        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
-        <input
-          type="text"
-          value={formData.RazorPayKey_secret}
-          onChange={(e) => handleInputChange("RazorPayKey_secret", e.target.value)}
-        />
-      </div>
-    </div>
-  </>
-)}
-
-{formData.activeGateway === "PhonePe" && formData.activeMode && (
-  <>
-    <div className="store-row">
-      <div className="store-input">
-        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
-        <input
-          type="text"
-          value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
-          onChange={(e) =>
-            handleInputChange(
-              formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
-              e.target.value
-            )
-          }
-        />
-      </div>
-    </div>
-    <div className="store-row">
-      <div className="store-input">
-        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
-        <input
-          type="text"
-          value={formData.PhonePe_secret}
-          onChange={(e) => handleInputChange("PhonePe_secret", e.target.value)}
-        />
-      </div>
-    </div>
-  </>
-)}
-
+            <>
+              <div className="store-row">
+                <div className="store-input">
+                  <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+                  <input
+                    type="text"
+                    value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
+                    onChange={(e) =>
+                      handleInputChange(
+                        formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className="store-row">
+                <div className="store-input">
+                  <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+                  <input
+                    type="text"
+                    value={formData.RazorPayKey_secret}
+                    onChange={(e) => handleInputChange("RazorPayKey_secret", e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          {formData.activeGateway === "PhonePe" && formData.activeMode && (
+            <>
+              <div className="store-row">
+                <div className="store-input">
+                  <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+                  <input
+                    type="text"
+                    value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
+                    onChange={(e) =>
+                      handleInputChange(
+                        formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className="store-row">
+                <div className="store-input">
+                  <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+                  <input
+                    type="text"
+                    value={formData.PhonePe_secret}
+                    onChange={(e) => handleInputChange("PhonePe_secret", e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -542,7 +653,7 @@ const handleInputChange = (field, value) => {
                   padding: "16px",
                   marginBottom: "16px",
                   width: "100%",
-                  gap: "16px",
+                  gap: "16px"
                 }}
               >
                 <FormControlLabel
@@ -565,7 +676,7 @@ const handleInputChange = (field, value) => {
                     padding: "8px",
                     border: "1px solid #ccc",
                     borderRadius: "4px",
-                    fontSize: "15px",
+                    fontSize: "15px"
                   }}
                 />
                 {formData.Map_Api[provider].status && (
@@ -579,7 +690,6 @@ const handleInputChange = (field, value) => {
         </div>
       </div>
 
-      {/* Auth Section */}
       <div className="store-container">
         <div className="store-header">Authentication</div>
         <div className="store-form">
@@ -659,6 +769,7 @@ const handleInputChange = (field, value) => {
           variant="contained"
           style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
           onClick={handleSubmit}
+          disabled={isSubmitting}
         >
           SAVE
         </Button>
