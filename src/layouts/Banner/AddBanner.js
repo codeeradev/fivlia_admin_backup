@@ -34,7 +34,7 @@ function AddBanner() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAllZone");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         const data = await res.json();
         // Handle both old and new API response structures
         const cities = Array.isArray(data) ? data : (data.result || data.data || []);
@@ -59,7 +59,7 @@ fetchBrands();
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getMainCategory");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         const data = await res.json();
         // Handle both old and new API response structures
         const categories = Array.isArray(data) ? data : (data.result || data.data || []);
@@ -91,6 +91,23 @@ fetchBrands();
       setZones([]);
     }
   }, [selectedCityId, selectedCity]);
+
+  useEffect(() => {
+  const fetchStores = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllStore`);
+      const data = await res.json();
+      const storeList = Array.isArray(data) ? data : data.stores || [];
+      setStores(storeList);
+    } catch (err) {
+      console.error("Error fetching stores:", err);
+      setStores([]);
+    }
+  };
+
+  fetchStores();
+}, []);
+
 
   // Image validation and preview
   const ImagePreview = (e) => {
@@ -169,7 +186,7 @@ fetchBrands();
     formData.append("zones", JSON.stringify(zones));
 
     try {
-      const response = await fetch(`https://api.fivlia.in/banner`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/banner`, {
         method: "POST",
         body: formData,
       });
@@ -326,24 +343,21 @@ fetchBrands();
           </div>
         )}
 
-        {/* Store Selection (Only show if zones are selected) */}
-        {zones.length > 0 && (
-          <div style={formRowStyle}>
-            <label style={labelStyle}>Store</label>
-            <select
-              style={inputStyle}
-              value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
-            >
-              <option value="">--Select Store--</option>
-              {stores.map((store) => (
-                <option key={store._id} value={store._id}>
-                  {store.name} ({getShortAddress(store.zoneAddress)})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+      <div style={formRowStyle}>
+  <label style={labelStyle}>Store</label>
+  <select
+    style={inputStyle}
+    value={storeId}
+    onChange={(e) => setStoreId(e.target.value)}
+  >
+    <option value="">--Select Store--</option>
+    {stores.map((store) => (
+      <option key={store._id} value={store._id}>
+        {store.storeName} ({store.city?.name || "Unknown City"})
+      </option>
+    ))}
+  </select>
+</div>
 
         {/* Type */}
         <div style={formRowStyle}>

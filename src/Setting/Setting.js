@@ -305,7 +305,7 @@ function Setting() {
     delete filteredData.PhonePe_secret;
 
     let fetchOptions = {};
-    let url = "http://127.0.0.1:8080/adminSetting";
+    let url = "https://api.fivlia.in/adminSetting";
 
     if (adminSignatureFile) {
       // Step 6a: File exists → use FormData

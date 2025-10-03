@@ -13,7 +13,23 @@ export default function SellerWithdrawal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
+  const [note, setNote] = useState("");
+  const [image, setImage] = useState(null);
   const [error, setError] = useState("");
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(null); // "accept" | "decline" | null
+
+  const openModal = (request) => {
+    setSelectedRequest(request);
+    setIsModalOpen(true);
+  };
+  
+  const closeModal = () => {
+    setSelectedRequest(null);
+    setIsModalOpen(false);
+  };
+
 
   const headerCell = {
     padding: "14px 12px",
@@ -48,6 +64,7 @@ export default function SellerWithdrawal() {
             status: request.status,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
+            sellerDetails: request.sellerDetails
           }));
           setWithdrawalRequests(formattedRequests);
         } else {
@@ -64,32 +81,43 @@ export default function SellerWithdrawal() {
     fetchWithdrawalRequests();
   }, [dispatch]);
 
-  // Handle Accept/Decline Withdrawal Request
-  const handleWithdrawalAction = async (requestId, action) => {
-    try {
-      dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
-      }
+const handleWithdrawalAction = async (requestId, action) => {
+  try {
+    setLoadingAction(action);
 
-      setWithdrawalRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId ? { ...req, status: action === "accept" ? "Approved" : "Declined" } : req
-        )
-      );
-    } catch (error) {
-      console.error(`Error ${action}ing withdrawal request:`, error);
-      setError(`Failed to ${action} withdrawal request: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+    const formData = new FormData();
+    formData.append("note", note);
+    if (image) formData.append("image", image);
+
+    const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}/type=seller`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
     }
-  };
+
+    const updatedRequest = await response.json();
+
+    setWithdrawalRequests((prev) =>
+      prev.map((req) =>
+        req.storeId === requestId ? { ...req, status: updatedRequest.request.status } : req
+      )
+    );
+
+    setNote("");
+    setImage(null);
+    closeModal();
+  } catch (error) {
+    console.error(`Error ${action}ing withdrawal request:`, error);
+    setError(`Failed to ${action} withdrawal request: ${error.message}`);
+  } finally {
+   setLoadingAction(null); 
+  }
+};
 
   const filteredRequests = withdrawalRequests.filter((req) =>
     req.storeId?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -208,40 +236,19 @@ export default function SellerWithdrawal() {
                   <td style={bodyCell}>{request.status}</td>
                   <td style={bodyCell}>{new Date(request.createdAt).toLocaleString()}</td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {request.status === "Pending" ? (
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.id, "accept")}
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.id, "decline")}
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ color: request.status === "Approved" ? "green" : "red" }}>
-                        {request.status}
-                      </span>
-                    )}
+                    <button
+                      onClick={() => openModal(request)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        backgroundColor: "#007BFF",
+                        color: "#fff",
+                        border: "none",
+                      }}
+                    >
+                      View
+                    </button>
                   </td>
                 </tr>
               ))
@@ -293,6 +300,134 @@ export default function SellerWithdrawal() {
           </div>
         </div>
       </div>
+
+{isModalOpen && selectedRequest && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={closeModal}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              width: "600px",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              position: "relative",
+              padding: "30px 25px",
+              boxShadow: "0px 5px 20px rgba(0,0,0,0.3)",
+              transition: "all 0.3s ease",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginBottom: 15, color: "#007BFF" }}>Seller Withdrawal Details</h2>
+
+            {/* Seller Info */}
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Seller Details</h3>
+              <p><strong>Name:</strong> {selectedRequest.sellerDetails?.ownerName}</p>
+              <p><strong>Store:</strong> {selectedRequest.sellerDetails?.storeName}</p>
+              <p><strong>Phone:</strong> {selectedRequest.sellerDetails?.phoneNumber}</p>
+              <p><strong>Email:</strong> {selectedRequest.sellerDetails?.email}</p>
+              <p><strong>City:</strong> {selectedRequest.sellerDetails?.city?.name}</p>
+              <p><strong>Address:</strong> {selectedRequest.sellerDetails?.fullAddress}</p>
+            </div>
+
+            {/* GST & Wallet */}
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Bank & Payment Details</h3>
+              <p><strong>Branch Name:</strong> {selectedRequest.sellerDetails?.bankDetails?.bankName}</p>
+              <p><strong>Account Holder Name:</strong> ₹{selectedRequest.sellerDetails?.bankDetails.accountHolder}</p>
+              <p><strong>Account Number:</strong> ₹{selectedRequest.sellerDetails?.bankDetails.accountNumber}</p>
+              <p><strong>IFSC Code:</strong> {selectedRequest.sellerDetails?.bankDetails?.ifsc}</p>
+            </div>
+
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Withdrawal Request Details</h3>
+              <p><strong>Current Wallet Balance:</strong> {selectedRequest.sellerDetails?.wallet}</p>
+              <p><strong>Requested Amount:</strong> ₹{selectedRequest?.amount}</p>
+            
+            </div>
+            {/* Accept / Decline */}
+            {selectedRequest.status === "Pending" && (
+              <div style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: "10px" }}>
+                
+                {/* Optional Note */}
+                <textarea
+                  placeholder="Add a note (optional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 10,
+                    borderRadius: 6,
+                    border: "1px solid #ccc",
+                    fontSize: 15,
+                    resize: "vertical",
+                  }}
+                />
+            
+                {/* Optional Proof Document */}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setImage(e.target.files[0])}
+                  style={{ padding: 5 }}
+                />
+            
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                  <button
+                    onClick={() => handleWithdrawalAction(selectedRequest.storeId, "accept")}
+                    disabled={loadingAction === "accept" || loadingAction === "decline"}
+                    style={{
+                      flex: 1,
+                      padding: 10,
+                      backgroundColor: "#28a745",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: loadingAction ? "not-allowed" : "pointer",
+                      opacity: loadingAction ? 0.7 : 1,
+                    }}
+                  >
+                    {loadingAction === "accept" ? "Processing..." : "Accept"}
+                  </button>
+                  <button
+                    onClick={() => handleWithdrawalAction(selectedRequest.id, "decline")}
+                    disabled={loadingAction === "accept" || loadingAction === "decline"}
+                    style={{
+                      flex: 1,
+                      padding: 10,
+                      backgroundColor: "#dc3545",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: loadingAction ? "not-allowed" : "pointer",
+                      opacity: loadingAction ? 0.7 : 1,
+                    }}
+                  >
+                    {loadingAction === "decline" ? "Processing..." : "Decline"}
+                  </button>
+                </div>
+              </div>
+            )}
+            <button onClick={closeModal} style={{ position: "absolute", top: 10, right: 10, fontSize: 22, border: "none", background: "transparent", cursor: "pointer" }}>&times;</button>
+          </div>
+        </div>
+      )}
+
     </MDBox>
   );
 }

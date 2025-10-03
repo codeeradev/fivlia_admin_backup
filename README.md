@@ -1,813 +1,677 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
+import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
+import { Button, Switch, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
-import MDBox from "components/MDBox";
-import MDTypography from "components/MDTypography";
-import MDButton from "components/MDButton";
-import MDInput from "components/MDInput";
-import { Select, MenuItem, FormControl, InputLabel } from "@mui/material";
-import Card from "@mui/material/Card";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import IconButton from "@mui/material/IconButton";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import TextField from "@mui/material/TextField";
-import Chip from "@mui/material/Chip";
-import Grid from "@mui/material/Grid";
-import DataTable from "react-data-table-component";
+import { Paper, Grid, Typography } from "@mui/material";
 
-export default function ApprovalRequests() {
+function Setting() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const [sellerRequests, setSellerRequests] = useState([]);
-  const [locationRequests, setLocationRequests] = useState([]);
-  const [imageRequests, setImageRequests] = useState([]);
-  const [productRequests, setProductRequests] = useState([]);
-  const [brandRequests, setBrandRequests] = useState([]);
-  const [requestType, setRequestType] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [entriesToShow, setEntriesToShow] = useState(5);
-  const [error, setError] = useState("");
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [productApprovalOpen, setProductApprovalOpen] = useState(false);
-  const [confirmData, setConfirmData] = useState({ type: "", id: "", action: "", description: "" });
-  const [productApprovalData, setProductApprovalData] = useState({ type: "", id: "", status: "", description: "" });
+  const [formData, setFormData] = useState({
+    Owner_Name: "",
+    Owner_Email: "",
+    Owner_Number: "",
+    GST_Number: "",
+    Platform_Fee: "",
+    Description: "",
+    Delivery_Charges: "",
+    codLimit: "",
+    minPrice: "",
+    maxPrice: "",
+    minWithdrawal: "", 
+    PaymentGatewayStatus: false,
+    activeGateway: "None", // Tracks the selected gateway (Razorpay, PhonePe, or None)
+    activeMode: "", // Tracks the selected mode (test or live)
+    RazorPayKey_test: "",
+    RazorPayKey_live: "",
+    RazorPayKey_secret: "",
+    PhonePe_test: "",
+    PhonePe_live: "",
+    PhonePe_secret: "",
+    Map_Api: {
+      google: { key: "", status: false },
+      apple: { key: "", status: false },
+      ola: { key: "", status: false }
+    },
+    Auth: [
+      {
+        firebase: { status: false },
+        whatsApp: { appKey: "", authKey: "", status: false }
+      }
+    ],
+    imageLink: "",
+    freeDeliveryLimit: ""
+  });
 
-  // Image base URL
-  const IMAGE_BASE_URL = process.env.REACT_APP_IMAGE_LINK || "";
-
-  // Row color based on type
-  const rowColor = (type) => {
-    switch (type) {
-      case "seller": return "#e3f2fd";
-      case "location": return "#e8f5e9";
-      case "image": return "#f3e5f5"; // New color for image requests
-      case "product": return "#fffde7";
-      case "brand": return "#fce4ec";
-      default: return "#fff";
-    }
-  };
-
-  // Fetch all approval requests
+  // Fetch settings data on component mount
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchSettings = async () => {
+      dispatch(startLoading());
       try {
-        dispatch(startLoading());
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
-        if (!res.ok) throw new Error("Failed to fetch requests");
-        const data = await res.json();
-        setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
-        setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
-        setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
-        setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
-        setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
-      } catch (e) {
-        console.error(e);
-        setError("Failed to fetch requests.");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getSettings`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+        if (response.ok && result.settings) {
+          // Determine active gateway and mode based on available keys
+          const razorpayTest = result.settings.PaymentGateways?.RazorPayKey?.test || "";
+          const razorpayLive = result.settings.PaymentGateways?.RazorPayKey?.live || "";
+          const phonepeTest = result.settings.PaymentGateways?.PhonePe?.test || "";
+          const phonepeLive = result.settings.PaymentGateways?.PhonePe?.live || "";
+          let activeGateway = "None";
+          let activeMode = "";
+          
+          if (razorpayTest) {
+            activeGateway = "Razorpay";
+            activeMode = "test";
+          } else if (razorpayLive) {
+            activeGateway = "Razorpay";
+            activeMode = "live";
+          } else if (phonepeTest) {
+            activeGateway = "PhonePe";
+            activeMode = "test";
+          } else if (phonepeLive) {
+            activeGateway = "PhonePe";
+            activeMode = "live";
+          }
+
+          const mapApi = result.settings.Map_Api?.[0] || {
+            google: { api_key: "", status: false },
+            apple: { api_key: "", status: false },
+            ola: { api_key: "", status: false }
+          };
+
+          setFormData({
+            Owner_Name: result.settings.Owner_Name || "",
+            Owner_Email: result.settings.Owner_Email || "",
+            Owner_Number: result.settings.Owner_Number || "",
+            GST_Number: result.settings.GST_Number || "",
+            Platform_Fee: result.settings.Platform_Fee || "",
+            Description: result.settings.Description || "",
+            Delivery_Charges: result.settings.Delivery_Charges || "",
+            codLimit: result.settings.codLimit || "",
+            minPrice: result.settings.minPrice || "",
+            maxPrice: result.settings.maxPrice || "",
+            minWithdrawal: result.settings.minWithdrawal || "",
+            PaymentGatewayStatus: result.settings.PaymentGatewayStatus || false,
+            activeGateway,
+            activeMode,
+            RazorPayKey_test: razorpayTest,
+            RazorPayKey_live: razorpayLive,
+            RazorPayKey_secret: result.settings.PaymentGateways?.RazorPayKey?.secretKey || "",
+            PhonePe_test: phonepeTest,
+            PhonePe_live: phonepeLive,
+            PhonePe_secret: result.settings.PaymentGateways?.PhonePe?.secretKey || "",
+            Map_Api: {
+              google: { api_key: mapApi.google?.api_key || "", status: mapApi.google?.status || false },
+              apple: { api_key: mapApi.apple?.api_key || "", status: mapApi.apple?.status || false },
+              ola: { api_key: mapApi.ola?.api_key || "", status: mapApi.ola?.status || false }
+            },
+            Auth: result.settings.Auth && result.settings.Auth.length > 0
+              ? result.settings.Auth
+              : [
+                  {
+                    firebase: { status: false },
+                    whatsApp: { appKey: "", authKey: "", status: false }
+                  }
+                ],
+            imageLink: result.settings.imageLink || "",
+            freeDeliveryLimit: result.settings.freeDeliveryLimit || ""
+          });
+        } else {
+          dispatch(stopLoading());
+          alert(result.message || "Failed to fetch settings");
+        }
+      } catch (error) {
+        dispatch(stopLoading());
+        console.error("Fetch settings error =>", error);
+        alert("Something went wrong while fetching settings");
       } finally {
         dispatch(stopLoading());
       }
     };
-    fetchRequests();
+
+    fetchSettings();
   }, [dispatch]);
 
-  // Open confirmation modal for seller/location/image
-  const openConfirm = (type, id, action) => {
-    setConfirmData({ type, id, action, description: "" });
-    setConfirmOpen(true);
+const handleInputChange = (field, value) => {
+  setFormData(prevFormData => ({
+    ...prevFormData,
+    [field]: value,
+  }));
+};
+
+  const handleGatewayChange = (gateway) => {
+    setFormData((prev) => ({
+      ...prev,
+      activeGateway: gateway,
+      activeMode: "",
+    }));
   };
 
-  // Open product approval modal
-  const openProductApproval = (type, id) => {
-    setProductApprovalData({ type, id, status: "pending_admin_approval", description: "" });
-    setProductApprovalOpen(true);
+  const handleModeChange = (mode) => {
+    setFormData((prev) => ({
+      ...prev,
+      activeMode: mode,
+      // Reset the non-selected mode's key
+    }));
   };
 
-  // Handle confirmation for seller/location/image
-  const handleConfirmAction = async () => {
-    const { type, id, action, description } = confirmData;
+  const handleMapApiKeyChange = (provider, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      Map_Api: {
+        ...prev.Map_Api,
+        [provider]: { ...prev.Map_Api[provider], api_key: value }
+      }
+    }));
+  };
+
+  const handleMapApiStatusChange = (provider) => {
+    setFormData((prev) => ({
+      ...prev,
+      Map_Api: {
+        google: { ...prev.Map_Api.google, status: provider === "google" },
+        apple: { ...prev.Map_Api.apple, status: provider === "apple" },
+        ola: { ...prev.Map_Api.ola, status: provider === "ola" }
+      }
+    }));
+  };
+
+  const handleSubmit = async () => {
+    dispatch(startLoading());
     try {
-      dispatch(startLoading());
-      const approval = action === "approve" ? "approved" : "rejected";
-      let body = { approval };
+      const filteredData = Object.entries(formData).reduce((acc, [key, value]) => {
+        if (value !== "" && key !== "activeGateway" && key !== "activeMode") acc[key] = value;
+        return acc;
+      }, {});
 
-      if (type === "seller") {
-        body.id = id;
-      } else if (type === "location") {
-        body.id = id;
-        body.isLocation = true;
-      } else if (type === "image") {
-        body.id = id;
-        body.isImage = true;
-      }
+      // Structure PaymentGateways to send only the active gateway's selected mode key
+      filteredData.PaymentGateways = {};
+       if (formData.activeGateway === "Razorpay") {
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: true,
+            secretKey: formData.RazorPayKey_secret || "",
+            activeMode: formData.activeMode
+          };
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: false,
+            secretKey: ""
+          };
+        } else if (formData.activeGateway === "PhonePe") {
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: true,
+            secretKey: formData.PhonePe_secret || "",
+            activeMode: formData.activeMode
+          };
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: false,
+            secretKey: ""
+          };
+         } else {
+          filteredData.PaymentGateways.RazorPayKey = {
+            test: formData.RazorPayKey_test || "",
+            live: formData.RazorPayKey_live || "",
+            status: false,
+            secretKey: ""
+          };
+          filteredData.PaymentGateways.PhonePe = {
+            test: formData.PhonePe_test || "",
+            live: formData.PhonePe_live || "",
+            status: false,
+            secretKey: ""
+          };
+         }
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
 
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to ${action} the request`);
-      }
-
-      if (type === "seller") {
-        setSellerRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "location") {
-        setLocationRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "image") {
-        setImageRequests((prev) => prev.filter((r) => r._id !== id));
-      }
-
-      setError("");
-    } catch (e) {
-      console.error(e);
-      setError(e.message);
-    } finally {
-      dispatch(stopLoading());
-      setConfirmOpen(false);
-    }
-  };
-
-  // Handle product/brand approval
-  const handleProductApproval = async () => {
-    const { type, id, status, description } = productApprovalData;
-    try {
-      dispatch(startLoading());
-      const body = { productId: id, approval: status };
-      if (description) body.description = description;
-
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to update ${type} request`);
-      }
-
-      if (type === "product") {
-        setProductRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "brand") {
-        setBrandRequests((prev) => prev.filter((r) => r._id !== id));
-      }
-
-      setError("");
-    } catch (e) {
-      console.error(e);
-      setError(e.message);
-    } finally {
-      dispatch(stopLoading());
-      setProductApprovalOpen(false);
-    }
-  };
-
-  // Combine and filter requests
-  const allRequests = [...sellerRequests, ...locationRequests, ...imageRequests, ...productRequests, ...brandRequests];
-
-  const normalized = (v) => (v || "").toString().toLowerCase();
-  const filtered = allRequests.filter((r) => {
-    if (requestType !== "all" && r.type !== requestType) return false;
-
-    let haystack = [];
-    if (r.type === "seller" || r.type === "location" || r.type === "image") {
-      haystack = [
-        r.storeName,
-        r.firstName,
-        r.lastName,
-        r.ownerName,
-        r.email,
-        r.mobileNumber,
-        r.PhoneNumber,
-        r.city?.name,
-        r.gstNumber,
-        r.approveStatus,
-        r.type,
+      const mapApi = formData.Map_Api;
+      filteredData.Map_Api = [
+        {
+          google: { api_key: mapApi.google.api_key, status: mapApi.google.status },
+          apple: { api_key: mapApi.apple.api_key, status: mapApi.apple.status },
+          ola: { api_key: mapApi.ola.api_key, status: mapApi.ola.status }
+        }
       ];
-      if (r.type === "location") {
-        haystack.push(r.pendingAddressUpdate?.city?.name, r.pendingAddressUpdate?.status);
-      } else if (r.type === "image") {
-        haystack.push(r.pendingAdvertisementImages?.status);
-      }
-    } else if (r.type === "product" || r.type === "brand") {
-      haystack = [
-        r.productName,
-        r.description,
-        r.sku,
-        r.category?.[0]?.name,
-        r.subCategory?.[0]?.name,
-        r.brand_Name?.name,
-        r.sellerProductStatus,
-        r.type,
-      ];
-      if (r.type === "brand") {
-        haystack.push(r.brandApprovelDescription);
-      }
-    }
-    return haystack.map(normalized).join(" ").includes(normalized(searchTerm));
-  });
 
-  const getStatus = (r) => {
-    if (r.type === "seller") return r.approveStatus || "pending";
-    if (r.type === "location") return r.pendingAddressUpdate?.status || "pending";
-    if (r.type === "image") return r.pendingAdvertisementImages?.status || "pending";
-    return r.sellerProductStatus || "pending";
-  };
+      // Add Auth to payload
+      filteredData.Auth = formData.Auth;
 
-  const isPending = (r) => {
-    const status = getStatus(r);
-    return ["pending", "pending_admin_approval", "request_brand_approval", "submit_brand_approval"].includes(status);
-  };
+      // Remove temporary fields
+      delete filteredData.RazorPayKey_test;
+      delete filteredData.RazorPayKey_live;
+      delete filteredData.PhonePe_test;
+      delete filteredData.PhonePe_live;
 
-  const getDisplayValue = (r, field) => {
-    if (r.type === "seller" || r.type === "location" || r.type === "image") {
-      switch (field) {
-        case "name":
-          return r.storeName || "-";
-        case "owner":
-          return [r.firstName, r.lastName].filter(Boolean).join(" ") || r.ownerName || "-";
-        case "mobile":
-          return r.PhoneNumber || r.mobileNumber?.mobileNO || "-";
-        case "email":
-          return r.email?.Email || r.email || "-";
-        case "city":
-          if (r.type === "location") {
-            return `${r.city?.name || "-"} → ${r.pendingAddressUpdate?.city?.name || "-"}`;
-          } else if (r.type === "image") {
-            return r.city?.name || "-";
-          }
-          return r.city?.name || "-";
-        case "gst":
-          return r.gstNumber || "-";
-        default:
-          return "-";
-      }
-    } else {
-      switch (field) {
-        case "name":
-          return r.productName || "-";
-        case "owner":
-          return r.type === "brand"
-            ? r.brandApprovelDescription || "-"
-            : r.description || "-";
-        case "mobile":
-          return r.sku || "-";
-        case "email":
-          return r.category?.[0]?.name || "-";
-        case "city":
-          return r.subCategory?.[0]?.name || "-";
-        case "gst":
-          return r.brand_Name?.name || "-";
-        default:
-          return "-";
-      }
-    }
-  };
-
-  // DataTable columns
-  const columns = useMemo(() => [
-    {
-      name: "#",
-      selector: (row, idx) => filtered.indexOf(row) + 1,
-      width: "80px",
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Type",
-      selector: (row) => row.type.charAt(0).toUpperCase() + row.type.slice(1),
-      width: "120px",
-      style: { justifyContent: "center", fontWeight: "medium" },
-    },
-    {
-      name: "Store/Product",
-      selector: (row) => getDisplayValue(row, "name"),
-      width: "240px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Owner/Desc",
-      selector: (row) => getDisplayValue(row, "owner"),
-      width: "200px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Mobile/SKU",
-      selector: (row) => getDisplayValue(row, "mobile"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Email/Category",
-      selector: (row) => getDisplayValue(row, "email"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "City/SubCategory",
-      selector: (row) => getDisplayValue(row, "city"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "GST/Brand",
-      selector: (row) => getDisplayValue(row, "gst"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Status",
-      selector: (row) => getStatus(row).replace(/_/g, " "),
-      width: "150px",
-      style: {
-        justifyContent: "center",
-        color: (row) => (getStatus(row) === "approved" ? "#2e7d32" : getStatus(row) === "rejected" ? "#d32f2f" : "#ed6c02"),
-        fontWeight: "medium",
-        textTransform: "capitalize",
-      },
-    },
-    {
-      name: "Action",
-      cell: (row) =>
-        isPending(row) ? (
-          row.type === "product" || row.type === "brand" ? (
-            <MDButton
-              variant="contained"
-              color="info"
-              size="small"
-              onClick={() => openProductApproval(row.type, row._id)}
-              sx={{ minWidth: "120px", padding: "6px 12px" }}
-            >
-              Update Status
-            </MDButton>
-          ) : (
-            <MDBox display="flex" gap={1} justifyContent="center" sx={{ minWidth: "120px" }}>
-              <MDButton
-                variant="contained"
-                color="success"
-                size="small"
-                onClick={() => openConfirm(row.type, row._id, "approve")}
-                startIcon={<CheckIcon />}
-                sx={{ minWidth: "90px", padding: "8px 16px", fontSize: "0.85rem" }}
-              >
-                Approve
-              </MDButton>
-              <MDButton
-                variant="contained"
-                color="error"
-                size="small"
-                onClick={() => openConfirm(row.type, row._id, "reject")}
-                startIcon={<CloseIcon />}
-                sx={{ minWidth: "60px", padding: "6px 12px" }}
-              >
-                Reject
-              </MDButton>
-            </MDBox>
-          )
-        ) : (
-          <MDTypography
-            variant="body2"
-            sx={{
-              color: getStatus(row) === "approved" ? "#2e7d32" : "#d32f2f",
-              fontWeight: "medium",
-              textTransform: "capitalize",
-            }}
-          >
-            {getStatus(row).replace(/_/g, " ")}
-          </MDTypography>
-        ),
-      width: "200px",
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "View",
-      cell: (row) => (
-        <IconButton onClick={() => { setSelectedRequest(row); setOpenDialog(true); }} color="primary">
-          <VisibilityIcon />
-        </IconButton>
-      ),
-      width: "80px",
-      style: { justifyContent: "center" },
-    },
-  ], [filtered]);
-
-  // DataTable custom styles
-  const customStyles = {
-    table: {
-      style: {
-        width: "100%",
-        minWidth: "1000px",
-      },
-    },
-    headRow: {
-      style: {
-        backgroundColor: "#007bff",
-        color: "white",
-        fontWeight: 600,
-        fontSize: "0.875rem",
-      },
-    },
-    headCells: {
-      style: {
-        padding: "14px 16px",
-        justifyContent: "center",
-        textAlign: "center",
-      },
-    },
-    cells: {
-      style: {
-        padding: "14px 16px",
-        justifyContent: "center",
-        textAlign: "center",
-        wordBreak: "break-word",
-        whiteSpace: "normal",
-        fontSize: "0.9rem",
-      },
-    },
-    rows: {
-      style: {
-        "&:not(:last-of-type)": {
-          borderBottom: "1px solid #ddd",
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/adminSetting`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      },
-    },
-  };
+        body: JSON.stringify(filteredData),
+      });
 
-  // Detailed view for dialog
-  const renderRequestDetails = (request) => {
-    const { type } = request;
-    return (
-      <Grid container spacing={2} sx={{ p: 2 }}>
-        {type === "seller" || type === "location" || type === "image" ? (
-          <>
-            <Grid item xs={12} sm={6}>
-              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Store Information</MDTypography>
-                <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Store Name:</strong> {request.storeName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Owner:</strong> {request.ownerName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Email:</strong> {request.email || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Phone:</strong> {request.PhoneNumber || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>GST:</strong> {request.gstNumber || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Address:</strong> {request.fullAddress || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>City:</strong> {request.city?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Coordinates:</strong> {request.Latitude || "-"}, {request.Longitude || "-"}</MDTypography>
-                </MDBox>
-                {type === "location" && (
-                  <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Location Update</MDTypography>
-                    <MDBox display="flex" flexDirection="column" gap={1}>
-                      <MDTypography variant="body2"><strong>New City:</strong> {request.pendingAddressUpdate?.city?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>New Zone:</strong> {request.pendingAddressUpdate?.zone?.[0]?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>New Coordinates:</strong> {request.pendingAddressUpdate?.Latitude || "-"}, {request.pendingAddressUpdate?.Longitude || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Requested On:</strong> {request.pendingAddressUpdate?.requestedAt ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString() : "-"}</MDTypography>
-                    </MDBox>
-                  </>
-                )}
-                {type === "image" && (
-                  <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Pending Advertisement Images</MDTypography>
-                    <MDBox display="flex" flexWrap="wrap" gap={1}>
-                      {request.pendingAdvertisementImages?.image?.map((img, i) => (
-                        <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt={`Pending Image ${i + 1}`} style={{ maxWidth: "150px", borderRadius: "4px" }} />
-                      ))}
-                    </MDBox>
-                    <MDTypography variant="body2" sx={{ mt: 1 }}><strong>Status:</strong> <Chip label={request.pendingAdvertisementImages?.status || "Pending"} color={request.pendingAdvertisementImages?.status === "approved" ? "success" : request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  </>
-                )}
-              </MDBox>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Verification Details</MDTypography>
-                <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.approveStatus || request.pendingAdvertisementImages?.status || "Pending"} color={request.approveStatus === "approved" || request.pendingAdvertisementImages?.status === "approved" ? "success" : request.approveStatus === "rejected" || request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Authorized Store:</strong> {request.Authorized_Store ? "Yes" : "No"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Sell Food:</strong> {request.sellFood ? "Yes" : "No"}</MDTypography>
-                  <MDTypography variant="body2"><strong>FSI Number:</strong> {request.fsiNumber || "-"}</MDTypography>
-                </MDBox>
-                {request.bankDetails && (
-                  <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Bank Details</MDTypography>
-                    <MDBox display="flex" flexDirection="column" gap={1}>
-                      <MDTypography variant="body2"><strong>Bank:</strong> {request.bankDetails.bankName || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Holder:</strong> {request.bankDetails.accountHolder || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Account No:</strong> {request.bankDetails.accountNumber || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>IFSC:</strong> {request.bankDetails.ifsc || "-"}</MDTypography>
-                    </MDBox>
-                  </>
-                )}
-              </MDBox>
-              {(request.aadharCard?.length > 0 || request.image) && (
-                <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Documents</MDTypography>
-                  {request.aadharCard?.length > 0 && (
-                    <MDBox mb={2}>
-                      <MDTypography variant="body2">Aadhar Card:</MDTypography>
-                      <MDBox display="flex" gap={1} flexWrap="wrap">
-                        {request.aadharCard.slice(0, 2).map((img, i) => (
-                          <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt="Aadhar" style={{ maxWidth: "100px", borderRadius: "4px" }} />
-                        ))}
-                        {request.aadharCard.length > 2 && <Chip label={`+${request.aadharCard.length - 2}`} size="small" />}
-                      </MDBox>
-                    </MDBox>
-                  )}
-                  {request.image && (
-                    <MDBox>
-                      <MDTypography variant="body2">Store Image:</MDTypography>
-                      <img src={`${IMAGE_BASE_URL}${request.image}`} alt="Store" style={{ maxWidth: "150px", borderRadius: "4px" }} />
-                    </MDBox>
-                  )}
-                </MDBox>
-              )}
-            </Grid>
-          </>
-        ) : (
-          <>
-            <Grid item xs={12} sm={6}>
-              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Product Details</MDTypography>
-                <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Name:</strong> {request.productName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Description:</strong> {request.description || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>SKU:</strong> {request.sku || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Category:</strong> {request.category?.[0]?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Subcategory:</strong> {request.subCategory?.[0]?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Brand:</strong> {request.brand_Name?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Tax:</strong> {request.tax || "-"}%</MDTypography>
-                  <MDTypography variant="body2"><strong>Unit:</strong> {request.unit?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.sellerProductStatus || "Pending"} color={request.sellerProductStatus === "approved" ? "success" : request.sellerProductStatus === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  {request.brandApprovelDescription && <MDTypography variant="body2"><strong>Notes:</strong> {request.brandApprovelDescription}</MDTypography>}
-                </MDBox>
-                {request.variants && request.variants.length > 0 && (
-                  <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Variants</MDTypography>
-                    <MDBox display="flex" flexDirection="column" gap={1}>
-                      {request.variants.slice(0, 2).map((v, i) => (
-                        <MDBox key={i} p={1} border="1px solid #eee" borderRadius="sm">
-                          <MDTypography variant="body2"><strong>{v.attributeName}:</strong> {v.variantValue}</MDTypography>
-                          <MDTypography variant="body2"><strong>MRP:</strong> ₹{v.mrp} | <strong>Sell:</strong> ₹{v.sell_price} | <strong>Discount:</strong> {v.discountValue}%</MDTypography>
-                        </MDBox>
-                      ))}
-                      {request.variants.length > 2 && <Chip label={`+${request.variants.length - 2} more`} size="small" sx={{ mt: 1 }} />}
-                    </MDBox>
-                  </>
-                )}
-              </MDBox>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Additional Details</MDTypography>
-                <MDBox display="flex" flexDirection="column" gap={1}>
-                  {request.location?.[0] && (
-                    <>
-                      <MDTypography variant="body2"><strong>City:</strong> {request.location[0].city?.[0]?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Zone:</strong> {request.location[0].zone?.[0]?.name || "-"}</MDTypography>
-                    </>
-                  )}
-                  <MDTypography variant="body2"><strong>Return Policy:</strong> {request.returnProduct?.title || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Rating:</strong> {request.rating?.rate || 0} ({request.rating?.users || 0} reviews)</MDTypography>
-                  <MDTypography variant="body2"><strong>Purchases:</strong> {request.purchases || 0}</MDTypography>
-                  {request.inventory && request.inventory.length > 0 && (
-                    <MDTypography variant="body2"><strong>Stock:</strong> {request.inventory.reduce((sum, inv) => sum + inv.quantity, 0)} units</MDTypography>
-                  )}
-                </MDBox>
-                {request.filter && request.filter.length > 0 && (
-                  <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Filters</MDTypography>
-                    <MDBox display="flex" flexWrap="wrap" gap={1}>
-                      {request.filter.flatMap(f => f.selected?.map(s => s.name) || []).slice(0, 4).map((filter, i) => (
-                        <Chip key={i} label={filter} size="small" />
-                      ))}
-                      {request.filter.flatMap(f => f.selected || []).length > 4 && <Chip label={`+${request.filter.flatMap(f => f.selected || []).length - 4}`} size="small" />}
-                    </MDBox>
-                  </>
-                )}
-              </MDBox>
-              {(request.productThumbnailUrl || request.productImageUrl?.length > 0 || request.brandApprovalDocument) && (
-                <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Images</MDTypography>
-                  <MDBox display="flex" gap={1} flexWrap="wrap">
-                    {request.productThumbnailUrl && (
-                      <img src={`${IMAGE_BASE_URL}${request.productThumbnailUrl}`} alt="Thumbnail" style={{ maxWidth: "80px", borderRadius: "4px" }} />
-                    )}
-                    {request.productImageUrl?.slice(0, 2).map((url, i) => (
-                      <img key={i} src={`${IMAGE_BASE_URL}${url}`} alt={`Image ${i}`} style={{ maxWidth: "80px", borderRadius: "4px" }} />
-                    ))}
-                    {request.productImageUrl?.length > 2 && <Chip label={`+${request.productImageUrl.length - 2}`} size="small" />}
-                    {request.brandApprovalDocument && (
-                      <img src={`${IMAGE_BASE_URL}${request.brandApprovalDocument}`} alt="Brand Doc" style={{ maxWidth: "80px", borderRadius: "4px" }} />
-                    )}
-                  </MDBox>
-                </MDBox>
-              )}
-            </Grid>
-          </>
-        )}
-      </Grid>
-    );
-  };
-
-  const handleEntriesChange = (e) => {
-    setEntriesToShow(parseInt(e.target.value, 10));
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleTypeChange = (e) => {
-    setRequestType(e.target.value);
+      const result = await response.json();
+      if (response.ok) {
+        alert("Settings updated successfully");
+        navigate(-1);
+      } else {
+        alert(result.message || "Update failed");
+      }
+    } catch (error) {
+      console.error("Update error =>", error);
+      alert("Something went wrong");
+    } finally {
+      dispatch(stopLoading());
+    }
   };
 
   return (
-    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-      <MDBox width="100%" px={3}>
-        <MDBox display="flex" justifyContent="space-between" mb={3} alignItems="center">
-          <MDBox>
-            <MDTypography variant="h5" fontWeight="bold">Approval Requests</MDTypography>
-            <MDTypography variant="body2" color="textSecondary">Review and manage pending requests</MDTypography>
-          </MDBox>
-        </MDBox>
-
-        <Card sx={{ p: 3, mb: 3 }}>
-          <MDBox display="flex" gap={3} flexWrap="wrap" alignItems="center">
-            <MDBox display="flex" alignItems="center" gap={1}>
-              <MDTypography variant="body2" fontWeight="medium">Show Entries:</MDTypography>
-              <FormControl size="medium" sx={{ minWidth: 120 }}>
-                <InputLabel>Entries</InputLabel>
-                <Select
-                    value={entriesToShow}
-                    onChange={handleEntriesChange}
-                    label="Entries"
-                    MenuProps={{
-                      PaperProps: { style: { maxHeight: 250, minWidth: 120, fontSize: "1rem" } },
-                    }}
-                  >
-                  {[5, 10, 20, 30].map((num) => (
-                    <MenuItem key={num} value={num}>{num}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </MDBox>
-            <MDBox display="flex" alignItems="center" gap={1}>
-              <MDTypography variant="body2" fontWeight="medium">Filter by Type:</MDTypography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>Type</InputLabel>
-                <Select value={requestType} onChange={handleTypeChange} label="Type">
-                  <MenuItem value="all">All</MenuItem>
-                  <MenuItem value="seller">Seller</MenuItem>
-                  <MenuItem value="location">Location</MenuItem>
-                  <MenuItem value="image">Image</MenuItem>
-                  <MenuItem value="product">Product</MenuItem>
-                  <MenuItem value="brand">Brand</MenuItem>
-                </Select>
-              </FormControl>
-            </MDBox>
-            <MDBox ml="auto">
-              <MDInput
+    <MDBox
+      p={2}
+      style={{
+        marginLeft: miniSidenav ? "80px" : "250px",
+        transition: "margin-left 0.3s ease",
+      }}
+    >
+      <div className="store-container">
+        <div className="store-header">Personal Details</div>
+        <div className="store-form">
+          <div className="store-row">
+            <div className="store-input">
+              <label>Owner Name</label>
+              <input
                 type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search: Store/Product, owner/desc, email/cat, mobile/sku..."
-                size="small"
-                sx={{ width: { xs: "100%", sm: 300 } }}
+                value={formData.Owner_Name}
+                onChange={(e) => handleInputChange("Owner_Name", e.target.value)}
               />
-            </MDBox>
-          </MDBox>
-        </Card>
-
-        {error && (
-          <MDBox mb={2} p={2} sx={{ bgcolor: "error.light", borderRadius: 1 }}>
-            <MDTypography variant="body2" color="error">{error}</MDTypography>
-          </MDBox>
-        )}
-
-        <Card sx={{ overflowX: "auto" }}>
-          <DataTable
-            columns={columns}
-            data={filtered}
-            pagination
-            paginationPerPage={entriesToShow}
-            paginationRowsPerPageOptions={[5, 10, 20, 30]}
-            paginationComponentOptions={{
-              rowsPerPageText: "Entries per page:",
-              rangeSeparatorText: "of",
-            }}
-            customStyles={customStyles}
-            conditionalRowStyles={[
-              {
-                when: (row) => true,
-                style: (row) => ({
-                  backgroundColor: rowColor(row.type),
-                }),
-              },
-            ]}
-            noDataComponent={
-              <MDBox display="flex" sx={{ padding: "20px", justifyContent: "center" }}>
-                <MDTypography variant="body2" color="textSecondary">No requests found.</MDTypography>
-              </MDBox>
-            }
-          />
-        </Card>
-
-        {/* View Details Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle>
-            <MDTypography variant="h5">{selectedRequest?.type.charAt(0).toUpperCase() + selectedRequest?.type.slice(1)} Details</MDTypography>
-          </DialogTitle>
-          <DialogContent>{selectedRequest && renderRequestDetails(selectedRequest)}</DialogContent>
-          <DialogActions>
-            <MDButton variant="contained" color="primary" onClick={() => setOpenDialog(false)} sx={{ padding: "6px 12px" }}>Close</MDButton>
-          </DialogActions>
-        </Dialog>
-
-        {/* Confirmation Dialog for Seller/Location/Image */}
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-          <DialogTitle>
-            <MDTypography variant="h5">Confirm {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}</MDTypography>
-          </DialogTitle>
-          <DialogContent>
-            <MDTypography variant="body2">Are you sure you want to {confirmData.action} this {confirmData.type} request?</MDTypography>
-            {confirmData.action === "reject" && (
-              <TextField
-                multiline
-                rows={3}
-                fullWidth
-                label="Rejection Reason (optional)"
-                value={confirmData.description}
-                onChange={(e) => setConfirmData({ ...confirmData, description: e.target.value })}
-                sx={{ mt: 2 }}
+            </div>
+            <div className="store-input">
+              <label>Owner Email</label>
+              <input
+                type="email"
+                value={formData.Owner_Email}
+                onChange={(e) => handleInputChange("Owner_Email", e.target.value)}
               />
-            )}
-          </DialogContent>
-          <DialogActions>
-            <MDButton onClick={() => setConfirmOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
-            <MDButton
-              variant="contained"
-              color={confirmData.action === "approve" ? "success" : "error"}
-              onClick={handleConfirmAction}
-              sx={{ padding: "6px 12px" }}
-            >
-              {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}
-            </MDButton>
-          </DialogActions>
-        </Dialog>
+            </div>
+          </div>
+          <div className="store-row">
+            <div className="store-input">
+              <label>Mobile Number</label>
+              <input
+                type="number"
+                value={formData.Owner_Number}
+                onChange={(e) => handleInputChange("Owner_Number", e.target.value)}
+              />
+            </div>
+            <div className="store-input">
+              <label>GST Number</label>
+              <input
+                type="text"
+                value={formData.GST_Number}
+                onChange={(e) => handleInputChange("GST_Number", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="store-row">
+            <div className="store-input">
+              <label>Platform Fee(%)</label>
+              <input
+                type="text"
+                value={formData.Platform_Fee}
+                onChange={(e) => handleInputChange("Platform_Fee", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="store-row">
+            <div className="store-input" style={{ flex: "1 1 100%" }}>
+              <label>Image Link</label>
+              <input
+                type="text"
+                value={formData.imageLink}
+                onChange={(e) => handleInputChange("imageLink", e.target.value)}
+              />
+            </div>
+          </div>
+              
+          <div className="store-row">
+            <div className="store-input" style={{ flex: "1 1 100%" }}>
+              <label>Description</label>
+              <textarea
+                rows={4}
+                value={formData.Description}
+                onChange={(e) => handleInputChange("Description", e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Product/Brand Approval Dialog */}
-        <Dialog open={productApprovalOpen} onClose={() => setProductApprovalOpen(false)}>
-          <DialogTitle>
-            <MDTypography variant="h5">Update {productApprovalData.type.charAt(0).toUpperCase() + productApprovalData.type.slice(1)} Status</MDTypography>
-          </DialogTitle>
-          <DialogContent>
-            <MDTypography variant="body2" mb={2}>Select the status for this {productApprovalData.type} request:</MDTypography>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={productApprovalData.status}
-                onChange={(e) => setProductApprovalData({ ...productApprovalData, status: e.target.value })}
-                label="Status"
-                sx={{height:"30px"}}
-              >
-                {["request_brand_approval", "approved", "rejected"].map((status) => (
-                  <MenuItem key={status} value={status}>{status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              multiline
-              rows={3}
-              fullWidth
-              label="Description (optional)"
-              value={productApprovalData.description}
-              onChange={(e) => setProductApprovalData({ ...productApprovalData, description: e.target.value })}
+      <div className="store-container">
+        <div className="store-header">Delivery Details</div>
+        <div className="store-form">
+          <div className="store-row">
+            <div className="store-input">
+              <label>Delivery Charges</label>
+              <input
+                type="number"
+                value={formData.Delivery_Charges}
+                onChange={(e) => handleInputChange("Delivery_Charges", e.target.value)}
+              />
+            </div>
+            <div className="store-input">
+              <label>COD Limit</label>
+              <input
+                type="number"
+                value={formData.codLimit}
+                onChange={(e) => handleInputChange("codLimit", e.target.value)}
+              />
+            </div>
+            <div className="store-input">
+              <label>Minimum Item Price</label>
+              <input
+                type="number"
+                value={formData.minPrice}
+                onChange={(e) => handleInputChange("minPrice", e.targnpet.value)}
+              />
+            </div>
+            <div className="store-input">
+              <label>Maximum Item Price</label>
+              <input
+                type="number"
+                value={formData.maxPrice}
+                onChange={(e) => handleInputChange("maxPrice", e.target.value)}
+              />
+            </div>
+            <div className="store-input">
+            <label>Minimum Withdrawal</label>
+            <input
+              type="number"
+              value={formData.minWithdrawal}
+              onChange={(e) => handleInputChange("minWithdrawal", e.target.value)}
             />
-          </DialogContent>
-          <DialogActions>
-            <MDButton onClick={() => setProductApprovalOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
-            <MDButton variant="contained" color="primary" onClick={handleProductApproval} sx={{ padding: "6px 12px" }}>Update</MDButton>
-          </DialogActions>
-        </Dialog>
-      </MDBox>
+          </div>
+            <div className="store-input">
+            <label>Free Delivery Limit</label>
+            <input
+              type="number"
+              value={formData.freeDeliveryLimit}
+              onChange={(e) => handleInputChange("freeDeliveryLimit", e.target.value)}
+            />
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="store-container">
+        <div className="store-header">Payment Gateway</div>
+        <div className="store-form">
+          <div className="store-row">
+            <div className="store-input">
+              <label>Enable Payment Gateway</label>
+              <Switch
+                checked={formData.PaymentGatewayStatus}
+                onChange={(e) => handleInputChange("PaymentGatewayStatus", e.target.checked)}
+              />
+            </div>
+          </div>
+          <div className="store-row">
+            <FormControl component="fieldset">
+              <FormLabel component="legend">Select Payment Gateway</FormLabel>
+              <RadioGroup
+                row
+                value={formData.activeGateway}
+                onChange={(e) => handleGatewayChange(e.target.value)}
+              >
+                <FormControlLabel value="Razorpay" control={<Radio />} label="Razorpay" />
+                <FormControlLabel value="PhonePe" control={<Radio />} label="PhonePe" />
+              </RadioGroup>
+            </FormControl>
+          </div>
+          {(formData.activeGateway === "Razorpay" || formData.activeGateway === "PhonePe") && (
+            <div className="store-row">
+              <FormControl component="fieldset">
+                <FormLabel component="legend">Select Mode</FormLabel>
+                <RadioGroup
+                  row
+                  value={formData.activeMode}
+                  onChange={(e) => handleModeChange(e.target.value)}
+                >
+                  <FormControlLabel value="test" control={<Radio />} label="Test" />
+                  <FormControlLabel value="live" control={<Radio />} label="Live" />
+                </RadioGroup>
+              </FormControl>
+            </div>
+          )}
+          {formData.activeGateway === "Razorpay" && formData.activeMode && (
+  <>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+        <input
+          type="text"
+          value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
+          onChange={(e) =>
+            handleInputChange(
+              formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
+              e.target.value
+            )
+          }
+        />
+      </div>
+    </div>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+        <input
+          type="text"
+          value={formData.RazorPayKey_secret}
+          onChange={(e) => handleInputChange("RazorPayKey_secret", e.target.value)}
+        />
+      </div>
+    </div>
+  </>
+)}
+
+{formData.activeGateway === "PhonePe" && formData.activeMode && (
+  <>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+        <input
+          type="text"
+          value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
+          onChange={(e) =>
+            handleInputChange(
+              formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
+              e.target.value
+            )
+          }
+        />
+      </div>
+    </div>
+    <div className="store-row">
+      <div className="store-input">
+        <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+        <input
+          type="text"
+          value={formData.PhonePe_secret}
+          onChange={(e) => handleInputChange("PhonePe_secret", e.target.value)}
+        />
+      </div>
+    </div>
+  </>
+)}
+
+        </div>
+      </div>
+
+      <div className="store-container">
+        <div className="store-header">Map API Keys</div>
+        <div className="store-form">
+          <RadioGroup
+            row
+            name="mapApiStatus"
+            value={["google", "apple", "ola"].find((p) => formData.Map_Api[p].status) || ""}
+            onChange={(e) => handleMapApiStatusChange(e.target.value)}
+          >
+            {["google", "apple", "ola"].map((provider) => (
+              <Paper
+                key={provider}
+                elevation={2}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "16px",
+                  marginBottom: "16px",
+                  width: "100%",
+                  gap: "16px",
+                }}
+              >
+                <FormControlLabel
+                  value={provider}
+                  control={<Radio color="primary" />}
+                  label={
+                    <Typography variant="subtitle1" style={{ textTransform: "capitalize", fontWeight: 600 }}>
+                      {provider}
+                    </Typography>
+                  }
+                  style={{ marginRight: "24px" }}
+                />
+                <input
+                  type="text"
+                  placeholder={`Enter ${provider} API Key`}
+                  value={formData.Map_Api[provider].api_key}
+                  onChange={(e) => handleMapApiKeyChange(provider, e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    fontSize: "15px",
+                  }}
+                />
+                {formData.Map_Api[provider].status && (
+                  <span style={{ color: "#00c853", fontWeight: 500, marginLeft: 12 }}>
+                    (Active)
+                  </span>
+                )}
+              </Paper>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+
+      {/* Auth Section */}
+      <div className="store-container">
+        <div className="store-header">Authentication</div>
+        <div className="store-form">
+          <div className="store-row">
+            <div className="store-input">
+              <label>Firebase Status</label>
+              <Switch
+                checked={formData.Auth[0].firebase.status}
+                disabled={formData.Auth[0].whatsApp.status}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    Auth: [{
+                      ...prev.Auth[0],
+                      firebase: { status: e.target.checked },
+                      whatsApp: { ...prev.Auth[0].whatsApp, status: e.target.checked ? false : prev.Auth[0].whatsApp.status }
+                    }]
+                  }))
+                }
+              />
+            </div>
+            <div className="store-input">
+              <label>WhatsApp App Key</label>
+              <input
+                type="text"
+                value={formData.Auth[0].whatsApp.appKey}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    Auth: [{
+                      ...prev.Auth[0],
+                      whatsApp: { ...prev.Auth[0].whatsApp, appKey: e.target.value }
+                    }]
+                  }))
+                }
+              />
+            </div>
+            <div className="store-input">
+              <label>WhatsApp Auth Key</label>
+              <input
+                type="text"
+                value={formData.Auth[0].whatsApp.authKey}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    Auth: [{
+                      ...prev.Auth[0],
+                      whatsApp: { ...prev.Auth[0].whatsApp, authKey: e.target.value }
+                    }]
+                  }))
+                }
+              />
+            </div>
+            <div className="store-input">
+              <label>WhatsApp Status</label>
+              <Switch
+                checked={formData.Auth[0].whatsApp.status}
+                disabled={formData.Auth[0].firebase.status}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    Auth: [{
+                      ...prev.Auth[0],
+                      firebase: { status: e.target.checked ? false : prev.Auth[0].firebase.status },
+                      whatsApp: { ...prev.Auth[0].whatsApp, status: e.target.checked }
+                    }]
+                  }))
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "30px", alignItems: "center", justifyContent: "center" }}>
+        <Button
+          variant="contained"
+          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
+          onClick={handleSubmit}
+        >
+          SAVE
+        </Button>
+        <Button
+          variant="contained"
+          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
+          onClick={() => navigate(-1)}
+        >
+          BACK
+        </Button>
+      </div>
     </MDBox>
   );
 }
+
+export default Setting;
