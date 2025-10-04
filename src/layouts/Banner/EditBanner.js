@@ -413,7 +413,7 @@ useEffect(() => {
             }}
           >
             <option value="">--Select Type--</option>
-            <option value="Store">Store</option>
+            <option value="Store">Store/Seller</option>
             <option value="Brand">Brand</option>
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
@@ -429,7 +429,7 @@ useEffect(() => {
     value={storeId}
     onChange={(e) => setStoreId(e.target.value)}
   >
-    <option value="">--Select Store--</option>
+    <option value="">--Select Store/Seller--</option>
     {stores.map((store) => (
       <option key={store._id} value={store._id}>
         {store.storeName} ({store.city?.name || "Unknown City"})
