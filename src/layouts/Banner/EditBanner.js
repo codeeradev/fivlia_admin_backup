@@ -423,13 +423,13 @@ useEffect(() => {
 
    {type === "Store" && (
           <div style={formRowStyle}>
-  <label style={labelStyle}>Store</label>
+  <label style={labelStyle}>Store/Seller</label>
   <select
     style={inputStyle}
     value={storeId}
     onChange={(e) => setStoreId(e.target.value)}
   >
-    <option value="">--Select Store/Seller--</option>
+    <option value="">--Select Store--</option>
     {stores.map((store) => (
       <option key={store._id} value={store._id}>
         {store.storeName} ({store.city?.name || "Unknown City"})
