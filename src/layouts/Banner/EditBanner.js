@@ -148,44 +148,22 @@ fetchBrands();
   }, [selectedCityId, locations]);
 
   // Fetch stores when zones change
-  useEffect(() => {
-    const fetchStores = async () => {
-      if (zones.length === 0) {
-        setStores([]);
-        setStoreId("");
-        return;
-      }
+useEffect(() => {
+  const fetchStores = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllStore`);
+      const data = await res.json();
+      const storeList = Array.isArray(data) ? data : data.stores || [];
+      setStores(storeList);
+    } catch (err) {
+      console.error("Error fetching stores:", err);
+      setStores([]);
+    }
+  };
 
-      try {
-        const zoneAddresses = zones.map((zone) => zone.address);
-        const res = await fetch("https://node-m8jb.onrender.com/getStoresByZone", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ zoneAddresses }),
-        });
-        const data = await res.json();
-        const fetchedStores = data.result || [];
-console.log('data.result',data.result)
-        // Remove duplicates based on store ID
-        const uniqueStores = Array.from(
-          new Map(fetchedStores.map((store) => [store._id, store])).values()
-        );
+  fetchStores();
+}, []);
 
-        setStores(uniqueStores);
-
-        // Reset storeId if not in new stores list
-        if (storeId && !uniqueStores.some((store) => store._id === storeId)) {
-          setStoreId("");
-        }
-      } catch (err) {
-        console.error("Error fetching stores:", err);
-        setStores([]);
-        setStoreId("");
-      }
-    };
-
-    fetchStores();
-  }, [zones, storeId]);
 
   // Image preview handler
   const ImagePreview = (e) => {
@@ -237,6 +215,13 @@ console.log('data.result',data.result)
       return;
     }
     formData.append("brand", brandId);
+  } else if (type === "Store") {
+    if (!storeId) {
+      alert("Please select a Store for Store type banners.");
+      dispatch(stopLoading());
+      return;
+    }
+    formData.append("storeId", storeId);
   } else {
     if (mainId) formData.append("mainCategory", mainId);
     if (subId) formData.append("subCategory", subId);
@@ -413,25 +398,6 @@ console.log('data.result',data.result)
           </div>
         )}
 
-        {/* Store Selection (Only show if zones are selected) */}
-        {zones.length > 0 && (
-          <div style={formRowStyle}>
-            <label style={labelStyle}>Store</label>
-            <select
-              style={inputStyle}
-              value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
-            >
-              <option value="">--Select Store--</option>
-              {stores.map((store) => (
-                <option key={store._id} value={store._id}>
-                  {store.name} ({getShortAddress(store.zoneAddress)})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         {/* Type */}
         <div style={formRowStyle}>
           <label style={labelStyle}>Type</label>
@@ -447,12 +413,31 @@ console.log('data.result',data.result)
             }}
           >
             <option value="">--Select Type--</option>
+            <option value="Store">Store</option>
             <option value="Brand">Brand</option>
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
             <option value="Sub Sub-Category">Sub Sub-Category</option>
           </select>
         </div>
+
+   {type === "Store" && (
+          <div style={formRowStyle}>
+  <label style={labelStyle}>Store</label>
+  <select
+    style={inputStyle}
+    value={storeId}
+    onChange={(e) => setStoreId(e.target.value)}
+  >
+    <option value="">--Select Store--</option>
+    {stores.map((store) => (
+      <option key={store._id} value={store._id}>
+        {store.storeName} ({store.city?.name || "Unknown City"})
+      </option>
+    ))}
+  </select>
+</div>
+        )}
 
 {type === "Brand" && (
   <div style={formRowStyle}>

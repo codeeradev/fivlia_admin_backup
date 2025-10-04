@@ -87,10 +87,10 @@ const handleWithdrawalAction = async (requestId, action) => {
     setLoadingAction(action);
 
     const formData = new FormData();
-    formData.append("note", note);
+    if (note && note.trim() !== "") formData.append("note", note);
     if (image) formData.append("image", image);
 
-    const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}/type=seller`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}/seller`, {
       method: "PUT",
       body: formData,
     });
@@ -405,7 +405,7 @@ const handleWithdrawalAction = async (requestId, action) => {
                     {loadingAction === "accept" ? "Processing..." : "Accept"}
                   </button>
                   <button
-                    onClick={() => handleWithdrawalAction(selectedRequest.id, "decline")}
+                    onClick={() => handleWithdrawalAction(selectedRequest.storeId, "decline")}
                     disabled={loadingAction === "accept" || loadingAction === "decline"}
                     style={{
                       flex: 1,

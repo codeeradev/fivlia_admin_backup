@@ -175,6 +175,14 @@ fetchBrands();
       return;
     }
     formData.append("brand", selectedBrandId);
+  }
+   else if (type === "Store") {
+    if (!storeId) {
+      dispatch(stopLoading());
+      alert("Please select a Store.");
+      return;
+    }
+    formData.append("storeId", storeId || "");
   } else {
     // Append category fields only if type is not Brand
     formData.append("mainCategory", mainId);
@@ -182,7 +190,6 @@ fetchBrands();
     formData.append("subSubCategory", subsubId);
   }
 
-    formData.append("storeId", storeId || "");
     formData.append("zones", JSON.stringify(zones));
 
     try {
@@ -343,22 +350,6 @@ fetchBrands();
           </div>
         )}
 
-      <div style={formRowStyle}>
-  <label style={labelStyle}>Store</label>
-  <select
-    style={inputStyle}
-    value={storeId}
-    onChange={(e) => setStoreId(e.target.value)}
-  >
-    <option value="">--Select Store--</option>
-    {stores.map((store) => (
-      <option key={store._id} value={store._id}>
-        {store.storeName} ({store.city?.name || "Unknown City"})
-      </option>
-    ))}
-  </select>
-</div>
-
         {/* Type */}
         <div style={formRowStyle}>
           <label style={labelStyle}>Type</label>
@@ -373,6 +364,7 @@ fetchBrands();
             }}
           >
             <option value="">--Select Type--</option>
+            <option value="Store">Store</option>
             <option value="Brand">Brand</option>
             <option value="Category">Category</option>
             <option value="SubCategory">Sub-Category</option>
@@ -392,6 +384,24 @@ fetchBrands();
             <option value="offer">Offer</option>
           </select>
         </div>
+
+        {type === "Store" && (
+          <div style={formRowStyle}>
+  <label style={labelStyle}>Store</label>
+  <select
+    style={inputStyle}
+    value={storeId}
+    onChange={(e) => setStoreId(e.target.value)}
+  >
+    <option value="">--Select Store--</option>
+    {stores.map((store) => (
+      <option key={store._id} value={store._id}>
+        {store.storeName} ({store.city?.name || "Unknown City"})
+      </option>
+    ))}
+  </select>
+</div>
+        )}
 
         {type === "Brand" && (
           <div style={formRowStyle}>
