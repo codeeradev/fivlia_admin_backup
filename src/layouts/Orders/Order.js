@@ -178,7 +178,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   };
 
   const handleDriverSelection = async (mongoId) => {
-    console.log('mongoId',mongoId)
+    console.log('mongoId', mongoId)
     if (!mongoId) {
       setShowDriverModal(false);
       return;
@@ -207,22 +207,44 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
           prev.map((order) =>
             order._id === id
               ? {
-                  ...order,
-                  orderStatus: updatedOrder.update.orderStatus || order.orderStatus,
-                  driver: updatedOrder.update.driver || order.driver,
-                }
+                ...order,
+                orderStatus: updatedOrder.update.orderStatus || order.orderStatus,
+                driver: updatedOrder.update.driver || order.driver,
+              }
               : order
           )
         );
         setSelectedOrder((prev) =>
           prev?._id === id
             ? {
-                ...prev,
-                orderStatus: updatedOrder.update.orderStatus || prev.orderStatus,
-                driver: updatedOrder.update.driver || prev.driver,
-              }
+              ...prev,
+              orderStatus: updatedOrder.update.orderStatus || prev.orderStatus,
+              driver: updatedOrder.update.driver || prev.driver,
+            }
             : prev
         );
+        if (status === "Delivered") {
+        const order = orders.find((o) => o._id === id);
+        if (!order || !order.orderId) {
+          setError("Order ID not found");
+          return;
+        }
+        try {
+          const walletRes = await fetch(`${process.env.REACT_APP_API_URL}/driverWallet/${order.orderId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!walletRes.ok) {
+            console.error("Failed to update driver wallet:", await walletRes.json());
+            setError("Failed to update driver wallet");
+          } else {
+            console.log("Driver wallet updated successfully");
+          }
+        } catch (walletError) {
+          console.error("Error updating driver wallet:", walletError);
+          setError("Error updating driver wallet");
+        }
+      }
       } else {
         setError("Failed to update order");
       }
@@ -236,26 +258,26 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
   const handleInvoiceDownload = async (orderId) => {
     try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/thermal-invoice/${orderId}`, {
-      method: "GET", // Or POST, depending on route
-    });
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/thermal-invoice/${orderId}`, {
+        method: "GET", // Or POST, depending on route
+      });
 
-    if (!res.ok) throw new Error("Failed to fetch PDF");
+      if (!res.ok) throw new Error("Failed to fetch PDF");
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `thermal_invoice_${orderId}.pdf`;
-    link.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `thermal_invoice_${orderId}.pdf`;
+      link.click();
 
-    // Cleanup URL object
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Error downloading invoice:", err);
-  }
-};
+      // Cleanup URL object
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading invoice:", err);
+    }
+  };
 
   const filteredOrders = orders.filter((order) => {
     const search = searchTerm.toLowerCase();
@@ -746,7 +768,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
             {error && <div className="error-message">{error}</div>}
             <div className="header">
               <div>
-               {showHeader && (
+                {showHeader && (
                   <h2 style={{ marginBottom: "20px" }}>
                     {isDashboard ? "Recent Orders" : "Order Management"}
                   </h2>
@@ -764,22 +786,22 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
             </div>
 
             <div className="controls-container">
-            {!isDashboard && (
-              <div className="control-item">
-                 <label>Show Entries</label>
+              {!isDashboard && (
+                <div className="control-item">
+                  <label>Show Entries</label>
                   <select
-                   value={entriesToShow}
-                   onChange={(e) => {
-                   setEntriesToShow(Number(e.target.value));
-                   setCurrentPage(1);
-                  }}
-                   >
-                     <option value="5">5</option>
-                     <option value="10">10</option>
-                     <option value="20">20</option>
-                   </select>
-                 </div>
-               )}
+                    value={entriesToShow}
+                    onChange={(e) => {
+                      setEntriesToShow(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                  </select>
+                </div>
+              )}
 
               <div className="control-item">
                 <label>Store</label>
@@ -966,24 +988,24 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
               </table>
             </div>
 
-           {!isDashboard && (
-  <div className="pagination">
-    <span style={{ fontSize: "14px", color: "#7b809a" }}>
-      Showing {startIndex + 1} to {Math.min(startIndex + entriesToShow, filteredOrders.length)} of {filteredOrders.length} orders
-    </span>
-    <div style={{ display: "flex", gap: "12px" }}>
-      <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-        Previous
-      </button>
-      <button
-        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-        disabled={currentPage === totalPages}
-      >
-        Next
-      </button>
-    </div>
-  </div>
-)}
+            {!isDashboard && (
+              <div className="pagination">
+                <span style={{ fontSize: "14px", color: "#7b809a" }}>
+                  Showing {startIndex + 1} to {Math.min(startIndex + entriesToShow, filteredOrders.length)} of {filteredOrders.length} orders
+                </span>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
@@ -1035,7 +1057,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                                 {item.name || "-"}
                               </span>
                             </td>
-                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.sku || ""}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.sku || ""}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.variantName || "-"}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{subtotal}</td>
