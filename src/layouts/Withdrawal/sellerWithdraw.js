@@ -348,8 +348,8 @@ const handleWithdrawalAction = async (requestId, action) => {
             <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
               <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Bank & Payment Details</h3>
               <p><strong>Branch Name:</strong> {selectedRequest.sellerDetails?.bankDetails?.bankName}</p>
-              <p><strong>Account Holder Name:</strong> ₹{selectedRequest.sellerDetails?.bankDetails.accountHolder}</p>
-              <p><strong>Account Number:</strong> ₹{selectedRequest.sellerDetails?.bankDetails.accountNumber}</p>
+              <p><strong>Account Holder Name:</strong> {selectedRequest.sellerDetails?.bankDetails.accountHolder}</p>
+              <p><strong>Account Number:</strong> {selectedRequest.sellerDetails?.bankDetails.accountNumber}</p>
               <p><strong>IFSC Code:</strong> {selectedRequest.sellerDetails?.bankDetails?.ifsc}</p>
             </div>
 
