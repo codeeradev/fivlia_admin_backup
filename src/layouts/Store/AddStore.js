@@ -14,28 +14,29 @@ function AddStore() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
- const { apiType } = useMapsApi();
+  const { apiType } = useMapsApi();
   // Form states
-  const [storeName, setStoreName] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
+  const [storeName, setStoreName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
   const [markerPosition, setMarkerPosition] = useState({ lat: 29.1492, lng: 75.7217 });
   const [range, setRange] = useState(3);
   const [selectedZone, setSelectedZone] = useState([]);
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [des, setDescription] = useState('');
+  const [des, setDescription] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isAssured, setAssured] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [cities, setCities] = useState([]);
   const [availableZones, setAvailableZones] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
   const dispatch = useDispatch();
-  
+
   const mapRef = useRef(null);
   const inputRef = useRef(null);
   const markerRef = useRef(null);
@@ -43,7 +44,7 @@ function AddStore() {
 
   const location = useLocation();
   const storedetails = location.state;
-  const [id, setId] = useState('')
+  const [id, setId] = useState("");
 
   useEffect(() => {
     if (storedetails && storedetails.store) {
@@ -54,7 +55,7 @@ function AddStore() {
       setStoreName(storedetails.store.storeName);
       setOwnerName(storedetails.store.ownerName);
       setPhone(storedetails.store.PhoneNumber);
-      setEmail(storedetails.store.email || '');
+      setEmail(storedetails.store.email || "");
       setPassword(storedetails.store.password);
       setSelectedCity(storedetails.store.city?._id);
       setSelectedZone(zoneIds);
@@ -62,15 +63,16 @@ function AddStore() {
       setLongitude(storedetails.store.Longitude);
       setDescription(storedetails.store.Description);
       setIsAuthorized(storedetails.store.Authorized_Store);
+      setAssured(storedetails.store.fivliaAssured);
       setSelectedImage(storedetails.store.image);
       setSelectedCategory(storedetails.store.Category);
-    if (storedetails.store.Latitude && storedetails.store.Longitude) {
-      setMarkerPosition({
-        lat: parseFloat(storedetails.store.Latitude),
-        lng: parseFloat(storedetails.store.Longitude),
-      });
+      if (storedetails.store.Latitude && storedetails.store.Longitude) {
+        setMarkerPosition({
+          lat: parseFloat(storedetails.store.Latitude),
+          lng: parseFloat(storedetails.store.Longitude),
+        });
+      }
     }
-  }
   }, []);
 
   useEffect(() => {
@@ -119,28 +121,32 @@ function AddStore() {
     }
   }, [selectedCity, cities]);
 
- const handleMapClick = (e) => {
-  let lat, lng;
+  const handleMapClick = (e) => {
+    let lat, lng;
 
-  if (typeof e.lat === "number" && typeof e.lng === "number") {
-    // Ola click
-    lat = e.lat;
-    lng = e.lng;
-  } else if (e?.latLng) {
-    // Google click fallback
-    lat = e.latLng.lat();
-    lng = e.latLng.lng();
-  }
+    if (typeof e.lat === "number" && typeof e.lng === "number") {
+      // Ola click
+      lat = e.lat;
+      lng = e.lng;
+    } else if (e?.latLng) {
+      // Google click fallback
+      lat = e.latLng.lat();
+      lng = e.latLng.lng();
+    }
 
-  if (lat && lng) {
-    setMarkerPosition({ lat, lng });
-    setLatitude(lat.toString());
-    setLongitude(lng.toString());
-  }
-};
+    if (lat && lng) {
+      setMarkerPosition({ lat, lng });
+      setLatitude(lat.toString());
+      setLongitude(lng.toString());
+    }
+  };
 
   const handleSwitchChange = (event) => {
     setIsAuthorized(event.target.checked);
+  };
+
+  const handleAssuredSwitchChange = (event) => {
+    setAssured(event.target.checked);
   };
 
   const handleImageChange = (e) => {
@@ -209,11 +215,12 @@ function AddStore() {
       formData.append("Longitude", longitude);
       formData.append("Description", des);
       formData.append("isAuthorized", isAuthorized);
+      formData.append("isAssured", isAssured);
       formData.append("Category", JSON.stringify(selectedCategory));
 
-if (selectedImage instanceof File) {
-  formData.append("image", selectedImage);
-}
+      if (selectedImage instanceof File) {
+        formData.append("image", selectedImage);
+      }
 
       let response;
       if (storedetails && storedetails.store) {
@@ -317,10 +324,7 @@ if (selectedImage instanceof File) {
           <div className="store-row">
             <div className="store-input">
               <label>Select City</label>
-              <select
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-              >
+              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
                 <option value="">---Select City---</option>
                 {cities.length > 0 ? (
                   cities.map((city) => (
@@ -372,7 +376,7 @@ if (selectedImage instanceof File) {
                         }}
                         onClick={() => handleRemoveZone(zone._id)}
                       >
-                        {zone ? (zone.zoneTitle || zone.address || "Unnamed Zone") : zoneId}
+                        {zone ? zone.zoneTitle || zone.address || "Unnamed Zone" : zoneId}
                         <span style={{ marginLeft: "5px", color: "#ff0000", fontWeight: "bold" }}>
                           ×
                         </span>
@@ -395,17 +399,17 @@ if (selectedImage instanceof File) {
             </div>
           </div>
 
-           <div style={{ height: "400px", width: "100%" }}>
-      <AdaptiveMap
-        center={markerPosition}
-        zoom={13}
-        onClick={handleMapClick}
-        radiusMeters={range * 1000}
-      >
-        <Marker position={markerPosition} />
-        <Circle center={markerPosition} radius={range * 1000} />
-      </AdaptiveMap>
-    </div>
+          <div style={{ height: "400px", width: "100%" }}>
+            <AdaptiveMap
+              center={markerPosition}
+              zoom={13}
+              onClick={handleMapClick}
+              radiusMeters={range * 1000}
+            >
+              <Marker position={markerPosition} />
+              <Circle center={markerPosition} radius={range * 1000} />
+            </AdaptiveMap>
+          </div>
 
           <div className="store-row">
             <div className="store-input" style={{ flex: "1 1 100%" }}>
@@ -428,12 +432,14 @@ if (selectedImage instanceof File) {
           <div className="store-row">
             <div className="store-input">
               <label>Authorized Store</label>
-              <Switch
-                checked={isAuthorized}
-                onChange={handleSwitchChange}
-                color="success"
-              />
+              <Switch checked={isAuthorized} onChange={handleSwitchChange} color="success" />
               <p>Status: {isAuthorized ? "Authorized Store" : "Not Authorized"}</p>
+            </div>
+
+            <div className="store-input">
+              <label>Assured Store</label>
+              <Switch checked={isAssured} onChange={handleAssuredSwitchChange} color="success" />
+              <p>Status: {isAssured ? "Assured Store" : "Not Assured"}</p>
             </div>
 
             {isAuthorized && (
