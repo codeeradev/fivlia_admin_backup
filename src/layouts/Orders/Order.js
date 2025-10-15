@@ -4,11 +4,13 @@ import { useMaterialUIController } from "context";
 import Modal from "@mui/material/Modal";
 import { FaSortUp, FaSortDown, FaMapMarkerAlt, FaUser, FaPhoneAlt } from "react-icons/fa";
 import { CSVLink } from "react-csv";
+import { io } from "socket.io-client";
 
 const Orders = ({ showHeader = true, isDashboard = false }) => {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
 
+  const [socket, setSocket] = useState(null);
   const [orders, setOrders] = useState([]);
   const [stores, setStores] = useState([]);
   const [zones, setZones] = useState([]);
@@ -133,6 +135,27 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+  const newSocket = io(process.env.REACT_APP_API_URL, {
+    transports: ["websocket"],
+  });
+
+  setSocket(newSocket);
+
+  // Join admin room
+  newSocket.emit("joinAdmin");
+
+  // Listen for new orders
+  newSocket.on("storeOrder",(data) => {
+    console.log("🟢 New order received for admin:", data);
+
+    fetchData();
+  })
+  return () => {
+    newSocket.disconnect();
+  };
+}, [fetchData]);
 
   useEffect(() => {
     fetchData();
