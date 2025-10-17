@@ -14,6 +14,7 @@ function Setting() {
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [adminSignatureFile, setAdminSignatureFile] = useState(null);
   const [formData, setFormData] = useState({
     Owner_Name: "",
     Owner_Email: "",
@@ -43,8 +44,9 @@ function Setting() {
     },
     Auth: [
       {
-        firebase: { status: false },
-        whatsApp: { appKey: "", authKey: "", status: false }
+        // firebase: { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "", measurementId: "", status: false },
+        whatsApp: { appKey: "", authKey: "", status: false },
+        bulksms: { api_id: "", api_password: "", status: false }
       }
     ],
     imageLink: "",
@@ -52,7 +54,6 @@ function Setting() {
     adminSignature: ""
   });
   const [taxOptions, setTaxOptions] = useState([]);
-  const [adminSignatureFile, setAdminSignatureFile] = useState(null);
 
   useEffect(() => {
     const fetchTaxOptions = async () => {
@@ -141,14 +142,41 @@ function Setting() {
             },
             Auth: result.settings.Auth && result.settings.Auth.length > 0
               ? result.settings.Auth.map(auth => ({
-                  firebase: { status: auth.firebase?.status || false },
+                  // firebase: {
+                  //   apiKey: auth.firebase?.apiKey || "",
+                  //   authDomain: auth.firebase?.authDomain || "",
+                  //   projectId: auth.firebase?.projectId || "",
+                  //   storageBucket: auth.firebase?.storageBucket || "",
+                  //   messagingSenderId: auth.firebase?.messagingSenderId || "",
+                  //   appId: auth.firebase?.appId || "",
+                  //   measurementId: auth.firebase?.measurementId || "",
+                  //   status: auth.firebase?.status || false
+                  // },
                   whatsApp: {
                     appKey: auth.whatsApp?.appKey || "",
                     authKey: auth.whatsApp?.authKey || "",
                     status: auth.whatsApp?.status || false
+                  },
+                  bulksms: {
+                    api_id: auth.bulksms?.api_id || "",
+                    api_password: auth.bulksms?.api_password || "",
+                    status: auth.bulksms?.status || false
                   }
                 }))
-              : [{ firebase: { status: false }, whatsApp: { appKey: "", authKey: "", status: false } }],
+              : [{
+                  // firebase: {
+                  //   apiKey: "",
+                  //   authDomain: "",
+                  //   projectId: "",
+                  //   storageBucket: "",
+                  //   messagingSenderId: "",
+                  //   appId: "",
+                  //   measurementId: "",
+                  //   status: false
+                  // },
+                  whatsApp: { appKey: "", authKey: "", status: false },
+                  bulksms: { api_id: "", api_password: "", status: false }
+                }],
             imageLink: result.settings.imageLink || "",
             freeDeliveryLimit: result.settings.freeDeliveryLimit || 0,
             adminSignature: result.settings.adminSignature || ""
@@ -184,14 +212,13 @@ function Setting() {
     }));
   };
 
- const handleFileChange = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    setAdminSignatureFile(file);
-    setPreviewImage(URL.createObjectURL(file)); // only for preview
-  }
-};
-
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAdminSignatureFile(file);
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  };
 
   const handleGatewayChange = (gateway) => {
     setFormData(prev => ({
@@ -229,125 +256,157 @@ function Setting() {
     }));
   };
 
-  const handleSubmit = async () => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
-  dispatch(startLoading());
-
-  try {
-    // Step 1: Filter out UI-only fields
-    const filteredData = { ...formData };
-    delete filteredData.activeGateway;
-    delete filteredData.activeMode;
-
-    // Step 2: Build PaymentGateways object
-    filteredData.PaymentGateways = {};
-
-    if (formData.activeGateway === "Razorpay") {
-      filteredData.PaymentGateways.RazorPayKey = {
-        test: formData.RazorPayKey_test || "",
-        live: formData.RazorPayKey_live || "",
-        secretKey: formData.RazorPayKey_secret || "",
-        status: true,
-        activeMode: formData.activeMode
-      };
-      filteredData.PaymentGateways.PhonePe = {
-        test: formData.PhonePe_test || "",
-        live: formData.PhonePe_live || "",
-        secretKey: "",
-        status: false
-      };
-    } else if (formData.activeGateway === "PhonePe") {
-      filteredData.PaymentGateways.PhonePe = {
-        test: formData.PhonePe_test || "",
-        live: formData.PhonePe_live || "",
-        secretKey: formData.PhonePe_secret || "",
-        status: true,
-        activeMode: formData.activeMode
-      };
-      filteredData.PaymentGateways.RazorPayKey = {
-        test: formData.RazorPayKey_test || "",
-        live: formData.RazorPayKey_live || "",
-        secretKey: "",
-        status: false
-      };
-    } else {
-      filteredData.PaymentGateways = {
-        RazorPayKey: { test: "", live: "", secretKey: "", status: false },
-        PhonePe: { test: "", live: "", secretKey: "", status: false }
-      };
-    }
-
-    // Step 3: Ensure Map_Api array structure
-    filteredData.Map_Api = [
+  const handleAuthStatusChange = (provider, checked) => {
+  setFormData((prev) => ({
+    ...prev,
+    Auth: [
       {
-        google: { api_key: formData.Map_Api.google.api_key || "", status: formData.Map_Api.google.status || false },
-        apple: { api_key: formData.Map_Api.apple.api_key || "", status: formData.Map_Api.apple.status || false },
-        ola: { api_key: formData.Map_Api.ola.api_key || "", status: formData.Map_Api.ola.status || false }
+        ...prev.Auth[0],
+        whatsApp: {
+          ...prev.Auth[0].whatsApp,
+          status: provider === "whatsApp" ? checked : false
+        },
+        bulksms: {
+          ...prev.Auth[0].bulksms,
+          status: provider === "bulksms" ? checked : false
+        }
       }
-    ];
-
-    // Step 4: Ensure Auth array is correct
-    filteredData.Auth = formData.Auth.map(auth => ({
-      firebase: { status: auth.firebase.status || false },
-      whatsApp: {
-        appKey: auth.whatsApp.appKey || "",
-        authKey: auth.whatsApp.authKey || "",
-        status: auth.whatsApp.status || false
-      }
-    }));
-
-    // Step 5: Delete temporary fields
-    delete filteredData.RazorPayKey_test;
-    delete filteredData.RazorPayKey_live;
-    delete filteredData.PhonePe_test;
-    delete filteredData.PhonePe_live;
-    delete filteredData.PhonePe_secret;
-
-    let fetchOptions = {};
-    let url = "https://api.fivlia.in/adminSetting";
-
-    if (adminSignatureFile) {
-      // Step 6a: File exists → use FormData
-      const form = new FormData();
-      form.append("payload", JSON.stringify(filteredData));
-      form.append("image", adminSignatureFile);
-      fetchOptions = {
-        method: "PUT",
-        body: form
-      };
-    } else {
-      // Step 6b: No file → send JSON
-      fetchOptions = {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(filteredData)
-      };
-    }
-
-    // Step 7: Make request
-    const response = await fetch(url, fetchOptions);
-    const result = await response.json();
-
-    if (response.ok) {
-      setFormData(prev => ({
-        ...prev,
-        adminSignature: result.settings?.adminSignature || prev.adminSignature
-      }));
-      alert("Settings updated successfully");
-      navigate(-1);
-    } else {
-      alert(result.message || "Update failed");
-    }
-  } catch (error) {
-    console.error("Update error:", error);
-    alert("Something went wrong");
-  } finally {
-    setIsSubmitting(false);
-    dispatch(stopLoading());
-  }
+    ]
+  }));
 };
 
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    dispatch(startLoading());
+
+    try {
+      // Step 1: Filter out UI-only fields
+      const filteredData = { ...formData };
+      delete filteredData.activeGateway;
+      delete filteredData.activeMode;
+
+      // Step 2: Build PaymentGateways object
+      filteredData.PaymentGateways = {};
+
+      if (formData.activeGateway === "Razorpay") {
+        filteredData.PaymentGateways.RazorPayKey = {
+          test: formData.RazorPayKey_test || "",
+          live: formData.RazorPayKey_live || "",
+          secretKey: formData.RazorPayKey_secret || "",
+          status: true,
+          activeMode: formData.activeMode
+        };
+        filteredData.PaymentGateways.PhonePe = {
+          test: formData.PhonePe_test || "",
+          live: formData.PhonePe_live || "",
+          secretKey: "",
+          status: false
+        };
+      } else if (formData.activeGateway === "PhonePe") {
+        filteredData.PaymentGateways.PhonePe = {
+          test: formData.PhonePe_test || "",
+          live: formData.PhonePe_live || "",
+          secretKey: formData.PhonePe_secret || "",
+          status: true,
+          activeMode: formData.activeMode
+        };
+        filteredData.PaymentGateways.RazorPayKey = {
+          test: formData.RazorPayKey_test || "",
+          live: formData.RazorPayKey_live || "",
+          secretKey: "",
+          status: false
+        };
+      } else {
+        filteredData.PaymentGateways = {
+          RazorPayKey: { test: "", live: "", secretKey: "", status: false },
+          PhonePe: { test: "", live: "", secretKey: "", status: false }
+        };
+      }
+
+      // Step 3: Ensure Map_Api array structure
+      filteredData.Map_Api = [
+        {
+          google: { api_key: formData.Map_Api.google.api_key || "", status: formData.Map_Api.google.status || false },
+          apple: { api_key: formData.Map_Api.apple.api_key || "", status: formData.Map_Api.apple.status || false },
+          ola: { api_key: formData.Map_Api.ola.api_key || "", status: formData.Map_Api.ola.status || false }
+        }
+      ];
+
+      // Step 4: Ensure Auth array is correct, preserving all fields including firebase
+      filteredData.Auth = formData.Auth.map(auth => ({
+        // firebase: {
+        //   apiKey: auth.firebase?.apiKey || "",
+        //   authDomain: auth.firebase?.authDomain || "",
+        //   projectId: auth.firebase?.projectId || "",
+        //   storageBucket: auth.firebase?.storageBucket || "",
+        //   messagingSenderId: auth.firebase?.messagingSenderId || "",
+        //   appId: auth.firebase?.appId || "",
+        //   measurementId: auth.firebase?.measurementId || "",
+        //   status: auth.firebase?.status || false
+        // },
+        whatsApp: {
+          appKey: auth.whatsApp.appKey || "",
+          authKey: auth.whatsApp.authKey || "",
+          status: auth.whatsApp.status || false
+        },
+        bulksms: {
+          api_id: auth.bulksms.api_id || "",
+          api_password: auth.bulksms.api_password || "",
+          status: auth.bulksms.status || false
+        }
+      }));
+
+      // Step 5: Delete temporary fields
+      delete filteredData.RazorPayKey_test;
+      delete filteredData.RazorPayKey_live;
+      delete filteredData.PhonePe_test;
+      delete filteredData.PhonePe_live;
+      delete filteredData.PhonePe_secret;
+
+      let fetchOptions = {};
+      let url = `${process.env.REACT_APP_API_URL}/adminSetting`;
+
+      if (adminSignatureFile) {
+        // Step 6a: File exists → use FormData
+        const form = new FormData();
+        form.append("payload", JSON.stringify(filteredData));
+        form.append("image", adminSignatureFile);
+        fetchOptions = {
+          method: "PUT",
+          body: form
+        };
+      } else {
+        // Step 6b: No file → send JSON
+        fetchOptions = {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(filteredData)
+        };
+      }
+
+      // Step 7: Make request
+      const response = await fetch(url, fetchOptions);
+      const result = await response.json();
+
+      if (response.ok) {
+        setFormData(prev => ({
+          ...prev,
+          adminSignature: result.settings?.adminSignature || prev.adminSignature
+        }));
+        alert("Settings updated successfully");
+        navigate(-1);
+      } else {
+        alert(result.message || "Update failed");
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+      dispatch(stopLoading());
+    }
+  };
 
   return (
     <MDBox
@@ -413,21 +472,20 @@ function Setting() {
                 onChange={handleFileChange}
               />
               <div style={{ minHeight: "108px" }}>
-              {previewImage ? (
-  <img
-    src={previewImage}
-    alt="Admin Signature Preview"
-    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
-  />
-) : formData.adminSignature ? (
-  <img
-    src={`${process.env.REACT_APP_IMAGE_LINK}${formData.adminSignature}`}
-    alt="Admin Signature"
-    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
-    onError={(e) => { e.target.src = "/placeholder.png"; }}
-  />
-) : null}
-
+                {previewImage ? (
+                  <img
+                    src={previewImage}
+                    alt="Admin Signature Preview"
+                    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
+                  />
+                ) : formData.adminSignature ? (
+                  <img
+                    src={`${process.env.REACT_APP_IMAGE_LINK}${formData.adminSignature}`}
+                    alt="Admin Signature"
+                    style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
+                    onError={(e) => { e.target.src = "/placeholder.png"; }}
+                  />
+                ) : null}
               </div>
             </div>
           </div>
@@ -690,84 +748,53 @@ function Setting() {
         </div>
       </div>
 
-      <div className="store-container">
-        <div className="store-header">Authentication</div>
-        <div className="store-form">
-          <div className="store-row">
-            <div className="store-input">
-              <label>Firebase Status</label>
-              <Switch
-                checked={formData.Auth[0].firebase.status}
-                disabled={formData.Auth[0].whatsApp.status}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    Auth: [{
-                      ...prev.Auth[0],
-                      firebase: { status: e.target.checked },
-                      whatsApp: { ...prev.Auth[0].whatsApp, status: e.target.checked ? false : prev.Auth[0].whatsApp.status }
-                    }]
-                  }))
-                }
-              />
-            </div>
-            <div className="store-input">
-              <label>WhatsApp App Key</label>
-              <input
-                type="text"
-                value={formData.Auth[0].whatsApp.appKey}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    Auth: [{
-                      ...prev.Auth[0],
-                      whatsApp: { ...prev.Auth[0].whatsApp, appKey: e.target.value }
-                    }]
-                  }))
-                }
-              />
-            </div>
-            <div className="store-input">
-              <label>WhatsApp Auth Key</label>
-              <input
-                type="text"
-                value={formData.Auth[0].whatsApp.authKey}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    Auth: [{
-                      ...prev.Auth[0],
-                      whatsApp: { ...prev.Auth[0].whatsApp, authKey: e.target.value }
-                    }]
-                  }))
-                }
-              />
-            </div>
-            <div className="store-input">
-              <label>WhatsApp Status</label>
-              <Switch
-                checked={formData.Auth[0].whatsApp.status}
-                disabled={formData.Auth[0].firebase.status}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    Auth: [{
-                      ...prev.Auth[0],
-                      firebase: { status: e.target.checked ? false : prev.Auth[0].firebase.status },
-                      whatsApp: { ...prev.Auth[0].whatsApp, status: e.target.checked }
-                    }]
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </div>
+  <div className="store-container">
+  <div className="store-header">Authentication</div>
+  <div className="store-form">
+    <RadioGroup
+      row
+      name="authStatus"
+      value={["whatsApp", "bulksms"].find((p) => formData.Auth[0][p].status) || ""}
+      onChange={(e) => handleAuthStatusChange(e.target.value, true)}
+    >
+      <div style={{ display: "flex", marginLeft: "50px", gap: "46px", flexWrap: "wrap" }}>
+        {["whatsApp", "bulksms"].map((provider) => (
+          <Paper
+            key={provider}
+            elevation={2}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "16px",
+              width: "300px",
+              gap: "16px"
+            }}
+          >
+            <FormControlLabel
+              value={provider}
+              control={<Radio color="primary" />}
+              label={
+                <Typography variant="subtitle1" style={{ textTransform: "capitalize", fontWeight: 600 }}>
+                  {provider === "whatsApp" ? "WhatsApp" : "BulkSMS"}
+                </Typography>
+              }
+              style={{ marginRight: "24px" }}
+            />
+            {formData.Auth[0][provider].status && (
+              <span style={{ color: "#00c853", fontWeight: 500, marginLeft: 12 }}>
+                (Active)
+              </span>
+            )}
+          </Paper>
+        ))}
       </div>
-
+    </RadioGroup>
+  </div>
+</div>
       <div style={{ display: "flex", gap: "30px", alignItems: "center", justifyContent: "center" }}>
         <Button
           variant="contained"
-          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
+          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px", padding: "8px 24px" }}
           onClick={handleSubmit}
           disabled={isSubmitting}
         >
@@ -775,7 +802,7 @@ function Setting() {
         </Button>
         <Button
           variant="contained"
-          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
+          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px", padding: "8px 24px" }}
           onClick={() => navigate(-1)}
         >
           BACK
