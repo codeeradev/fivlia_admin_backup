@@ -198,7 +198,7 @@ function SellerTable() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {store.image ? (
                           <img
-                            src={`${process.env.REACT_APP_IMAGE_LINK}${store.storeImages}`}
+                            src={`${process.env.REACT_APP_IMAGE_LINK}${store.image}`}
                             alt="store"
                             style={{ width: 60, height: 60, borderRadius: 8, objectFit: "cover" }}
                           />
