@@ -120,7 +120,7 @@ export default function Drivers() {
   const fetchWalletBalances = async () => {
     try {
       const promises = drivers.map(async (driver) => {
-        const response = await fetch(`https://api.fivlia.in/transactionList/${driver.id}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/transactionList/${driver.id}`);
         const data = await response.json();
         return { driverId: driver.id, totalAmount: data.totalAmount || 0 };
       });
@@ -141,7 +141,7 @@ export default function Drivers() {
     const fetchDrivers = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch("https://api.fivlia.in/getDriver");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getDriver`);
         const data = await response.json();
         if (Array.isArray(data.Driver)) {
           const formattedDrivers = data.Driver.map((driver) => ({
@@ -178,7 +178,7 @@ export default function Drivers() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest`);
         const data = await response.json();
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
@@ -249,7 +249,7 @@ export default function Drivers() {
 
     try {
       dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/editDriver/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/editDriver/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -282,7 +282,7 @@ export default function Drivers() {
 
     try {
       dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/deleteDriver/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/deleteDriver/${id}`, {
         method: "DELETE",
       });
 
@@ -347,7 +347,7 @@ export default function Drivers() {
 
     try {
       dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/editDriver/${selectedDriver.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/${selectedDriver.id}`, {
         method: "PUT",
         body: formData,
       });
@@ -404,7 +404,7 @@ export default function Drivers() {
   const handleWithdrawalAction = async (requestId, action) => {
     try {
       dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
       });

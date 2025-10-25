@@ -35,7 +35,7 @@ function AddDriver() {
   useEffect(() => {
   const fetchCities = async () => {
     try {
-      const response = await fetch("https://api.fivlia.in/getCity");
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
       const data = await response.json();
       if (Array.isArray(data)) {
         setCities(data);
@@ -80,7 +80,7 @@ formData.append("drivingLicence", dlBack);
     );
 
     try {
-      const response = await fetch("https://api.fivlia.in/driver", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/driver`, {
         method: "POST",
         body: formData,
       });
