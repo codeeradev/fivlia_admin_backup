@@ -74,6 +74,7 @@ import Stock from "layouts/Store/StoreRoutes/Stock"
 import StoreProduct from "layouts/Store/StoreRoutes/StoreProduct";
 import AddStoreCat from "layouts/Store/StoreRoutes/AddCatStore";
 import AddPageForm from "Setting/addEditPage";
+import AddBlog from "layouts/Blogs/addBlog";
 import StoreTransaction from "layouts/Store/StoreRoutes/storeTransaction"
 import DriverTransaction from "layouts/Drivers/driverTransaction"
 
@@ -243,6 +244,7 @@ export default function App() {
                   <Route path="/edit-filter" element={<EditFilter />} />
                   <Route path="/store-login" element={<StoreLogin />} />
                   <Route path="/edit-store" element={<AddStore />} />
+                  <Route path="/add-blog" element={<AddBlog />} />
                   <Route path="/add-page" element={<AddPageForm />} />
                   <Route path="/edit-page" element={<AddPageForm />} />
                   <Route path="/driverTransaction" element={<DriverTransaction />} />
@@ -328,6 +330,7 @@ export default function App() {
               <Route path="/edit-filter" element={<EditFilter />} />
               <Route path="/store-login" element={<StoreLogin />} />
               <Route path="/edit-store" element={<AddStore />} />
+              <Route path="/add-blog" element={<AddBlog />} />
               <Route path="/add-page" element={<AddPageForm />} />
               <Route path="/edit-page" element={<AddPageForm />} />
               <Route path="/driverTransaction" element={<DriverTransaction />} />

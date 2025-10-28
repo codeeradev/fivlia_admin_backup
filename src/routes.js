@@ -61,6 +61,7 @@ import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
 import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 import SetCommisson from "layouts/Commission/commisson"
 import Festival from "layouts/Festival/Festival"
+import Blog from "layouts/Blogs/Blog"
 import DriversRequest from "layouts/Approvals/DriverApproval"
 import SellerRequest from "layouts/Approvals/SellerApproval"
 const isLoggedIn = () => {
@@ -307,6 +308,14 @@ const routes =
       icon: <Icon fontSize="small">notifications</Icon>,
       route: "/notification",
       component: <Notification />
+    },
+    {
+      type: "collapse",
+      name: "Blog",
+      key: "notification",
+      icon: <Icon fontSize="small">article</Icon>,
+      route: "/blog",
+      component: <Blog />
     },
   {
       type: "collapse",
