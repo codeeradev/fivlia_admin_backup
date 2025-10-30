@@ -68,6 +68,7 @@ import DashBoard from "layouts/Store/StoreRoutes/DashBoard";
 import Drivers from "layouts/Drivers/Drivers"
 import DeliveryStatus from "layouts/DeliveryStatus/DeliveryStatus"
 import Orders from "layouts/Orders/Order"
+import BulkOrders from "layouts/bulkOrders/bulkOrders"
 import StoreOrder from "layouts/Store/StoreRoutes/StoreOrder"
 import StoreCategories from "layouts/Store/StoreRoutes/Categories";
 import Stock from "layouts/Store/StoreRoutes/Stock"
@@ -77,6 +78,9 @@ import AddPageForm from "Setting/addEditPage";
 import AddBlog from "layouts/Blogs/addBlog";
 import StoreTransaction from "layouts/Store/StoreRoutes/storeTransaction"
 import DriverTransaction from "layouts/Drivers/driverTransaction"
+import Sitemap from "layouts/SEO/Sitemap";
+import Schema from "layouts/SEO/Schema";
+import Etc from "layouts/SEO/Etc";
 
 export default function App() {
   const [controller, dispatch] = useMaterialUIController();
@@ -248,6 +252,10 @@ export default function App() {
                   <Route path="/add-page" element={<AddPageForm />} />
                   <Route path="/edit-page" element={<AddPageForm />} />
                   <Route path="/driverTransaction" element={<DriverTransaction />} />
+                  <Route path="/sitemap" element={<Sitemap />} />
+                  <Route path="/schema" element={<Schema />} />
+                  <Route path="/etc" element={<Etc />} />
+
                   <Route path="*" element={<Navigate to="/dashboard" />} />
 
                    {/* Store Routes */}
@@ -325,6 +333,7 @@ export default function App() {
               <Route path="/drivers" element={<Drivers />} />
               <Route path="/deliveryStatus" element={<DeliveryStatus />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/bulk-orders" element={<BulkOrders />} />
               <Route path="/edit-banner" element={<EditBanner />} />
               <Route path="/add-filter" element={<AddFilter />} />
               <Route path="/edit-filter" element={<EditFilter />} />
@@ -333,6 +342,9 @@ export default function App() {
               <Route path="/add-blog" element={<AddBlog />} />
               <Route path="/add-page" element={<AddPageForm />} />
               <Route path="/edit-page" element={<AddPageForm />} />
+              <Route path="/sitemap" element={<Sitemap />} />
+              <Route path="/schema" element={<Schema />} />
+              <Route path="/etc" element={<Etc />} />
               <Route path="/driverTransaction" element={<DriverTransaction />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
 

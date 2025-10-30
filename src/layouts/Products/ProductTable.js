@@ -56,7 +56,7 @@ useEffect(() => {
   const fetchData = async () => {
     try {
       const result = await fetch(
-        `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
+        `${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
       );
       const res = await result.json();
       setData(res.Product || []);
@@ -92,14 +92,14 @@ useEffect(() => {
     if (!confirmDelete) return;
 
     try {
-      const result = await fetch(`https://api.fivlia.in/deleteProduct/${id}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/deleteProduct/${id}`, {
         method: "DELETE",
       });
 
       if (result.status === 200) {
         alert("Product Deleted Successfully");
         // Refetch products with current page and limit
-        const result = await fetch(`https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`);
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`);
         const res = await result.json();
         const products = res.Product || [];
         setData(products);
@@ -150,7 +150,7 @@ useEffect(() => {
     const fetchProducts = async () => {
   try {
     const result = await fetch(
-      `https://api.fivlia.in/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
+      `${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
     );
     const res = await result.json();
     setData(res.Product || []);

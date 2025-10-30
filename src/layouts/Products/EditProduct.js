@@ -268,7 +268,7 @@ function EditProduct() {
       const responseBody = await result.json();
       if (result.status === 200) {
         alert("Variant Deleted Successfully");
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
         setAttributeValue((prev) => prev.filter((item) => item.variantName !== variantName));
@@ -402,7 +402,7 @@ function EditProduct() {
         alert("Variant Added Successfully");
         setShowVariantPopup(false);
         setAddVarient("");
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } else {
@@ -419,7 +419,7 @@ function EditProduct() {
       return alert("Please Input Unit Name");
     }
     try {
-      const result = await fetch("https://api.fivlia.in/unit", {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/unit`, {
         method: "POST",
         body: JSON.stringify({ unitname: addUnit }),
         headers: { "Content-Type": "application/json" },
@@ -427,7 +427,7 @@ function EditProduct() {
       if (result.status === 200) {
         alert("Unit Added Successfully");
         setShowUnitPopup(false);
-        const res = await fetch("https://api.fivlia.in/getUnit");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
         const data = await res.json();
         setUnitsData(data.Result);
       } else {
@@ -467,7 +467,7 @@ function EditProduct() {
     formData.append("description", des);
     if (brandImage) formData.append("image", brandImage);
     try {
-      const result = await fetch("https://api.fivlia.in/brand", {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/brand`, {
         method: "POST",
         body: formData,
       });
@@ -478,7 +478,7 @@ function EditProduct() {
         setDes("");
         setBrandImage(null);
         if (brandImageInputRef.current) brandImageInputRef.current.value = "";
-        const res = await fetch("https://api.fivlia.in/getBrand");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
         const data = await res.json();
         setBrands(data.allBrands);
       } else {
@@ -630,7 +630,7 @@ const handleRemoveReturnImage = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getFilter");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         const data = await res.json();
         setFilters(data);
       } catch (err) {
@@ -732,7 +732,7 @@ const handleRemoveReturnImage = () => {
 
     const fetchBrands = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getBrand");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
         const data = await res.json();
         if (Array.isArray(data.allBrands)) {
           setBrands(data.allBrands);
@@ -758,7 +758,7 @@ const handleRemoveReturnImage = () => {
 
     const fetchAttribute = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } catch (err) {
@@ -768,7 +768,7 @@ const handleRemoveReturnImage = () => {
 
     const getUnits = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getUnit");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
         if (result.status === 200) {
           const res = await result.json();
           setUnitsData(res.Result);

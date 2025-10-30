@@ -423,7 +423,7 @@ function Product() {
 
       if (result.status === 200) {
         alert("Variant Deleted Successfully");
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
         setAttributeValue((prev) =>
@@ -606,7 +606,7 @@ const handleRemoveReturnImage = () => {
 
   const handleFilter = async () => {
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({
           Filter_name: filterName,
@@ -698,7 +698,7 @@ const handleRemoveReturnImage = () => {
         alert("Variant Added Successfully");
         setShowVariantPopup(false);
         setAddVarient("");
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } else {
@@ -718,7 +718,7 @@ const handleRemoveReturnImage = () => {
         return alert("Please Input Unit Name");
       }
        dispatch(startLoading());
-      const result = await fetch("https://api.fivlia.in/unit", {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/unit`, {
         method: "POST",
         body: JSON.stringify({
           unitname: addUnit,
@@ -733,7 +733,7 @@ const handleRemoveReturnImage = () => {
         setShowUnitPopup(false);
         setAddUnit("");
 
-        const res = await fetch("https://api.fivlia.in/getUnit");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
         const data = await res.json();
         setUnitsData(data.Result);
       } else {
@@ -781,7 +781,7 @@ dispatch(startLoading());
     }
 
     try {
-      const result = await fetch("https://api.fivlia.in/brand", {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/brand`, {
         method: "POST",
         body: formData,
       });
@@ -796,7 +796,7 @@ dispatch(startLoading());
         if (brandImageInputRef.current) {
           brandImageInputRef.current.value = "";
         }
-        const res = await fetch("https://api.fivlia.in/getBrand");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
         const data = await res.json();
         setBrands(data.allBrands || []);
       } else {

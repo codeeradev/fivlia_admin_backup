@@ -52,6 +52,7 @@ import DashBoard from "layouts/Store/StoreRoutes/DashBoard";
 import Drivers from "layouts/Drivers/Drivers"
 import DeliveryStatus from "layouts/DeliveryStatus/DeliveryStatus"
 import Orders from "layouts/Orders/Order"
+import BulkOrders from "layouts/bulkOrders/bulkOrders"
 import Notification from "layouts/Notification/Notification";
 import StoreOrder from "layouts/Store/StoreRoutes/StoreOrder"
 import StoreCategories from "layouts/Store/StoreRoutes/Categories";
@@ -64,6 +65,10 @@ import Festival from "layouts/Festival/Festival"
 import Blog from "layouts/Blogs/Blog"
 import DriversRequest from "layouts/Approvals/DriverApproval"
 import SellerRequest from "layouts/Approvals/SellerApproval"
+import Sitemap from "layouts/SEO/Sitemap";
+import Schema from "layouts/SEO/Schema";
+import Etc from "layouts/SEO/Etc";
+
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
   const password = localStorage.getItem("password");
@@ -302,6 +307,14 @@ const routes =
     component: <Orders />
   },
   {
+    type: "collapse",
+    name: "Bulk Orders",
+    key: "bulk-orders",
+    icon: <Icon fontSize="small">inventory_2</Icon>,
+    route: "/bulk-orders",
+    component: <BulkOrders />
+  },
+  {
       type: "collapse",
       name: "Notification",
       key: "notification",
@@ -312,11 +325,41 @@ const routes =
     {
       type: "collapse",
       name: "Blog",
-      key: "notification",
+      key: "blog",
       icon: <Icon fontSize="small">article</Icon>,
       route: "/blog",
       component: <Blog />
     },
+{
+    type: "collapse",
+    name: "SEO Settings",
+    key: "seo-settings",
+    icon: <Icon fontSize="small">search</Icon>,
+    collapse: [
+      {
+        name: "Sitemap",
+        key: "sitemap",
+        route: "/seo/sitemap",
+        component: <Sitemap />,
+        icon: <Icon fontSize="small">map</Icon>,
+      },
+      {
+        name: "Schema",
+        key: "schema",
+        route: "/seo/schema",
+        component: <Schema />,
+        icon: <Icon fontSize="small">data_object</Icon>,
+      },
+      {
+        name: "Etc",
+        key: "seo-etc",
+        route: "/seo/etc",
+        component: <Etc />,
+        icon: <Icon fontSize="small">settings</Icon>,
+      },
+    ],
+  },
+
   {
       type: "collapse",
       name: "Setting",
