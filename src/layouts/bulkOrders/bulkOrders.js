@@ -388,6 +388,7 @@ export default function BulkOrders() {
                 <h4>User Information</h4>
                 <p><strong>Name:</strong> {selectedOrder.user?.name || "Guest"}</p>
                 <p><strong>Email:</strong> {selectedOrder.user?.email || "N/A"}</p>
+                <p><strong>Phone:</strong> {selectedOrder.user?.mobileNumber || "N/A"}</p>
               </section>
 
               <section style={{ borderBottom: "1px solid #eee", paddingBottom: "10px" }}>

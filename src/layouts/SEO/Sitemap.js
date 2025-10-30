@@ -204,6 +204,7 @@ export default function Sitemap() {
               onClick={handleSave}
               disabled={loading}
               sx={{ px: 3 }}
+               style={{color:"white"}}
             >
               {loading ? (
                 <CircularProgress size={20} sx={{ color: "white" }} />
@@ -219,6 +220,18 @@ export default function Sitemap() {
               color="success"
               onClick={handleRegenerate}
               disabled={loading}
+                sx={{
+    color: '#546e7a',
+    borderColor: '#cfd8dc',
+    backgroundColor: '#f5f7f8',
+    textTransform: 'none',
+    fontWeight: 500,
+    '&:hover': {
+      backgroundColor: '#e0e0e0',
+      borderColor: '#b0bec5',
+    },
+  }}
+
             >
               Regenerate XML
             </Button>

@@ -229,7 +229,6 @@ function AddStore() {
           body: formData,
         });
       } else {
-        formData.append("password", password);
         response = await fetch("https://api.fivlia.in/createStore", {
           method: "POST",
           body: formData,

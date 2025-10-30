@@ -34,11 +34,11 @@ function BannerManagement() {
   useEffect(() => {
     const getBanner = async () => {
       try {
-        const response = await fetch("https://api.fivlia.in/getAllBanner");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getAllBanner`);
         const bannersArray = await response.json();
 
         if (Array.isArray(bannersArray)) {
-          const bannerWithStatus = bannersArray.map(banner => ({
+          const bannerWithStatus = bannersArray.map((banner) => ({
             ...banner, // ✅ include full data
             public: banner.status === true,
           }));
@@ -58,17 +58,17 @@ function BannerManagement() {
     const newStatus = !banner.public;
 
     try {
-      const res = await fetch(`https://api.fivlia.in/admin/banner/${banner._id}/status`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/${banner._id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus, zoneId: banner?.zones?.[0]?._id}),
+        body: JSON.stringify({ status: newStatus, zoneId: banner?.zones?.[0]?._id }),
       });
 
       if (res.ok) {
-        setBanners(prev =>
-          prev.map(b =>
+        setBanners((prev) =>
+          prev.map((b) =>
             b._id === banner._id ? { ...b, status: newStatus, public: newStatus } : b
           )
         );
@@ -94,7 +94,7 @@ function BannerManagement() {
 
       if (result.status === 200) {
         alert("Banner Deleted Successfully");
-        setBanners(prev => prev.filter(b => b._id !== bannerId));
+        setBanners((prev) => prev.filter((b) => b._id !== bannerId));
       } else {
         alert("Try again later");
       }
@@ -104,12 +104,14 @@ function BannerManagement() {
     }
   };
 
-  const filteredBanners = banners.filter(item => {
+  const filteredBanners = banners.filter((item) => {
     const search = searchTerm.toLowerCase();
     return (
       item.title?.toLowerCase().includes(search) ||
       item.type?.toLowerCase().includes(search) ||
-      item.city?.name?.toLowerCase().includes(search)
+      (item.city && Array.isArray(item.city)
+  ? item.city.some(c => c.name.toLowerCase().includes(search))
+  : item.city?.name?.toLowerCase().includes(search))
     );
   });
 
@@ -163,21 +165,25 @@ function BannerManagement() {
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div style={{ marginBottom: 10 }}>
               <label style={{ fontSize: 16 }}>Show Entries</label>&nbsp;
-              <select value={entriesToShow} onChange={e => {
-                setEntriesToShow(Number(e.target.value));
-                setCurrentPage(1);
-              }}>
+              <select
+                value={entriesToShow}
+                onChange={(e) => {
+                  setEntriesToShow(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 16 }}>Search</label><br />
+              <label style={{ fontSize: 16 }}>Search</label>
+              <br />
               <input
                 type="text"
                 value={searchTerm}
-                onChange={e => {
+                onChange={(e) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
@@ -221,7 +227,12 @@ function BannerManagement() {
                       </div>
                     </td>
                     <td style={bodyCell}>{item.type}</td>
-                    <td style={bodyCell}>{item.city?.name || "N/A"}</td>
+                    <td style={bodyCell}>
+                      {Array.isArray(item.city)
+                        ? item.city.map((c) => c.name).join(", ")
+                        : item.city?.name || "N/A"}
+                    </td>
+
                     <td style={bodyCell}>
                       <Switch
                         checked={item.public}
@@ -294,14 +305,15 @@ function BannerManagement() {
             }}
           >
             <span style={{ fontSize: 16 }}>
-              Showing {startIndex + 1} to {startIndex + currentBanners.length} of {filteredBanners.length} entries
+              Showing {startIndex + 1} to {startIndex + currentBanners.length} of{" "}
+              {filteredBanners.length} entries
             </span>
             <div>
               <Button
                 variant="outlined"
                 size="small"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
+                onClick={() => setCurrentPage((p) => p - 1)}
                 style={{ marginRight: 8 }}
               >
                 {"<"}
@@ -310,7 +322,7 @@ function BannerManagement() {
                 variant="outlined"
                 size="small"
                 disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage(p => p + 1)}
+                onClick={() => setCurrentPage((p) => p + 1)}
               >
                 {">"}
               </Button>

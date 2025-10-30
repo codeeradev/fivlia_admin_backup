@@ -13,13 +13,16 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import IconButton from "@mui/material/IconButton";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import TextField from "@mui/material/TextField";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
 import DataTable from "react-data-table-component";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import EditIcon from "@mui/icons-material/Edit";
+import TextField from "@mui/material/TextField";
 
 export default function ApprovalRequests() {
   const [controller] = useMaterialUIController();
@@ -35,15 +38,42 @@ export default function ApprovalRequests() {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [productApprovalOpen, setProductApprovalOpen] = useState(false);
-  const [confirmData, setConfirmData] = useState({ type: "", id: "", action: "", description: "" });
-  const [productApprovalData, setProductApprovalData] = useState({ type: "", id: "", status: "", description: "" });
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [selectedUpdate, setSelectedUpdate] = useState({ type: "", id: "", status: "", note: "" });
 
   // Image base URL
   const IMAGE_BASE_URL = process.env.REACT_APP_IMAGE_LINK || "";
+
+  // Status options with icons
+  const statusOptions = {
+    seller: [
+      { value: "approved", label: "Approved", icon: CheckIcon },
+      { value: "rejected", label: "Rejected", icon: CloseIcon },
+    ],
+    location: [
+      { value: "approved", label: "Approved", icon: CheckIcon },
+      { value: "rejected", label: "Rejected", icon: CloseIcon },
+    ],
+    image: [
+      { value: "approved", label: "Approved", icon: CheckIcon },
+      { value: "rejected", label: "Rejected", icon: CloseIcon },
+    ],
+    product: [
+      { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
+      { value: "request_brand_approval", label: "Request Brand Approval", icon: EditIcon },
+      { value: "approved", label: "Approved", icon: CheckIcon },
+      { value: "rejected", label: "Rejected", icon: CloseIcon },
+    ],
+    brand: [
+      { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
+      { value: "request_brand_approval", label: "Request Brand Approval", icon: EditIcon },
+      { value: "approved", label: "Approved", icon: CheckIcon },
+      { value: "rejected", label: "Rejected", icon: CloseIcon },
+    ],
+  };
 
   // Row color based on type
   const rowColor = (type) => {
@@ -58,94 +88,59 @@ export default function ApprovalRequests() {
   };
 
   // Fetch all approval requests
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        dispatch(startLoading());
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
-        if (!res.ok) throw new Error("Failed to fetch requests");
-        const data = await res.json();
-        setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
-        setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
-        setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
-        setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
-        setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
-      } catch (e) {
-        console.error(e);
-        setError("Failed to fetch requests.");
-      } finally {
-        dispatch(stopLoading());
-      }
-    };
-    fetchRequests();
-  }, [dispatch]);
-
-  // Open confirmation modal for seller/location/image
-  const openConfirm = (type, id, action) => {
-    setConfirmData({ type, id, action, description: "" });
-    setConfirmOpen(true);
-  };
-
-  // Open product approval modal
-  const openProductApproval = (type, id) => {
-    setProductApprovalData({ type, id, status: "pending_admin_approval", description: "" });
-    setProductApprovalOpen(true);
-  };
-
-  // Handle confirmation for seller/location/image
-  const handleConfirmAction = async () => {
-    const { type, id, action, description } = confirmData;
+  const fetchRequests = async () => {
     try {
       dispatch(startLoading());
-      const approval = action === "approve" ? "approved" : "rejected";
-      let body = { approval };
-
-      if (type === "seller") {
-        body.id = id;
-      } else if (type === "location") {
-        body.id = id;
-        body.isLocation = true;
-      } else if (type === "image") {
-        body.id = id;
-        body.isImage = true;
-      }
-
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to ${action} the request`);
-      }
-
-      if (type === "seller") {
-        setSellerRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "location") {
-        setLocationRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "image") {
-        setImageRequests((prev) => prev.filter((r) => r._id !== id));
-      }
-
-      setError("");
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
+      if (!res.ok) throw new Error("Failed to fetch requests");
+      const data = await res.json();
+      setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
+      setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
+      setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
+      setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
+      setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
     } catch (e) {
       console.error(e);
-      setError(e.message);
+      setError("Failed to fetch requests.");
     } finally {
       dispatch(stopLoading());
-      setConfirmOpen(false);
     }
   };
 
-  // Handle product/brand approval
-  const handleProductApproval = async () => {
-    const { type, id, status, description } = productApprovalData;
+  useEffect(() => {
+    fetchRequests();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Handle status update
+  const handleUpdateStatus = async () => {
+    const { type, id, status, note } = selectedUpdate;
     try {
       dispatch(startLoading());
-      const body = { productId: id, approval: status };
-      if (description) body.description = description;
+      let body = {};
+      if (["seller", "location", "image"].includes(type)) {
+        body.approval = status;
+        if (type === "seller") {
+          body.id = id;
+        } else if (type === "location") {
+          body.id = id;
+          body.isLocation = true;
+        } else if (type === "image") {
+          body.id = id;
+          body.isImage = true;
+        }
+        if (note) body.description = note;
+      } else {
+        body.productId = id;
+        body.approval = status;
+        if (note) body.description = note;
+      }
 
       const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
         method: "PUT",
@@ -155,22 +150,17 @@ export default function ApprovalRequests() {
 
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to update ${type} request`);
+        throw new Error(e?.message || `Failed to update status`);
       }
 
-      if (type === "product") {
-        setProductRequests((prev) => prev.filter((r) => r._id !== id));
-      } else if (type === "brand") {
-        setBrandRequests((prev) => prev.filter((r) => r._id !== id));
-      }
-
-      setError("");
+      setSuccess(`Status updated to ${status.replace(/_/g, " ")} successfully.`);
+      await fetchRequests();
     } catch (e) {
       console.error(e);
       setError(e.message);
     } finally {
       dispatch(stopLoading());
-      setProductApprovalOpen(false);
+      setNoteOpen(false);
     }
   };
 
@@ -346,54 +336,46 @@ export default function ApprovalRequests() {
     {
       name: "Action",
       cell: (row) =>
-        isPending(row) ? (
-          row.type === "product" || row.type === "brand" ? (
-            <MDButton
-              variant="contained"
-              color="info"
-              size="small"
-              onClick={() => openProductApproval(row.type, row._id)}
-              sx={{ minWidth: "120px", padding: "6px 12px" }}
-            >
-              Update Status
-            </MDButton>
-          ) : (
-            <MDBox display="flex" gap={1} justifyContent="center" sx={{ minWidth: "120px" }}>
-              <MDButton
-                variant="contained"
-                color="success"
-                size="small"
-                onClick={() => openConfirm(row.type, row._id, "approve")}
-                startIcon={<CheckIcon />}
-                sx={{ minWidth: "90px", padding: "8px 16px", fontSize: "0.85rem" }}
-              >
-                Approve
-              </MDButton>
-              <MDButton
-                variant="contained"
-                color="error"
-                size="small"
-                onClick={() => openConfirm(row.type, row._id, "reject")}
-                startIcon={<CloseIcon />}
-                sx={{ minWidth: "60px", padding: "6px 12px" }}
-              >
-                Reject
-              </MDButton>
-            </MDBox>
-          )
+        !isPending(row) ? (
+          <Chip
+            label={getStatus(row).replace(/_/g, " ")}
+            color={getStatus(row) === "approved" ? "success" : getStatus(row) === "rejected" ? "error" : "default"}
+            size="small"
+            sx={{ fontWeight: "medium", textTransform: "capitalize" }}
+          />
         ) : (
-          <MDTypography
-            variant="body2"
-            sx={{
-              color: getStatus(row) === "approved" ? "#2e7d32" : "#d32f2f",
-              fontWeight: "medium",
-              textTransform: "capitalize",
-            }}
-          >
-            {getStatus(row).replace(/_/g, " ")}
-          </MDTypography>
+          <FormControl size="small" sx={{ minWidth: 140,'& .MuiInputBase-root': {height: 32,backgroundColor: '#f5f6fa',
+          borderRadius: '8px',
+        },
+ }}>
+            <Select
+              displayEmpty
+              renderValue={() => <em>Update Status</em>}
+              onChange={(e) => {
+                const status = e.target.value;
+                if (status) {
+                  setSelectedUpdate({
+                    type: row.type,
+                    id: row._id,
+                    status,
+                    note: "",
+                  });
+                  setNoteOpen(true);
+                }
+              }}
+            >
+              {statusOptions[row.type].map(({ value, label, icon: Icon }) => (
+                <MenuItem key={value} value={value}>
+                  <ListItemIcon>
+                    <Icon fontSize="small" />
+                  </ListItemIcon>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         ),
-      width: "200px",
+      width: "180px",
       style: { justifyContent: "center" },
     },
     {
@@ -479,7 +461,7 @@ export default function ApprovalRequests() {
                       <MDTypography variant="body2"><strong>New Coordinates:</strong> {request.pendingAddressUpdate?.Latitude || "-"}, {request.pendingAddressUpdate?.Longitude || "-"}</MDTypography>
                       <MDTypography variant="body2"><strong>Requested On:</strong> {request.pendingAddressUpdate?.requestedAt ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString() : "-"}</MDTypography>
                     </MDBox>
-                    </>
+                  </>
                 )}
                 {type === "image" && (
                   <>
@@ -668,13 +650,13 @@ export default function ApprovalRequests() {
               <FormControl size="medium" sx={{ minWidth: 120 }}>
                 <InputLabel>Entries</InputLabel>
                 <Select
-                    value={entriesToShow}
-                    onChange={handleEntriesChange}
-                    label="Entries"
-                    MenuProps={{
-                      PaperProps: { style: { maxHeight: 250, minWidth: 120, fontSize: "1rem" } },
-                    }}
-                  >
+                  value={entriesToShow}
+                  onChange={handleEntriesChange}
+                  label="Entries"
+                  MenuProps={{
+                    PaperProps: { style: { maxHeight: 250, minWidth: 120, fontSize: "1rem" } },
+                  }}
+                >
                   {[5, 10, 20, 30].map((num) => (
                     <MenuItem key={num} value={num}>{num}</MenuItem>
                   ))}
@@ -711,6 +693,12 @@ export default function ApprovalRequests() {
         {error && (
           <MDBox mb={2} p={2} sx={{ bgcolor: "error.light", borderRadius: 1 }}>
             <MDTypography variant="body2" color="error">{error}</MDTypography>
+          </MDBox>
+        )}
+
+        {success && (
+          <MDBox mb={2} p={2} sx={{ bgcolor: "success.light", borderRadius: 1 }}>
+            <MDTypography variant="body2" color="success">{success}</MDTypography>
           </MDBox>
         )}
 
@@ -753,70 +741,32 @@ export default function ApprovalRequests() {
           </DialogActions>
         </Dialog>
 
-        {/* Confirmation Dialog for Seller/Location/Image */}
-        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        {/* Note Dialog for Status Update */}
+        <Dialog open={noteOpen} onClose={() => setNoteOpen(false)}>
           <DialogTitle>
-            <MDTypography variant="h5">Confirm {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}</MDTypography>
+            <MDTypography variant="h5">Update Status to {selectedUpdate.status.replace(/_/g, " ")}</MDTypography>
           </DialogTitle>
           <DialogContent>
-            <MDTypography variant="body2">Are you sure you want to {confirmData.action} this {confirmData.type} request?</MDTypography>
-            {confirmData.action === "reject" && (
-              <TextField
-                multiline
-                rows={3}
-                fullWidth
-                label="Rejection Reason (optional)"
-                value={confirmData.description}
-                onChange={(e) => setConfirmData({ ...confirmData, description: e.target.value })}
-                sx={{ mt: 2 }}
-              />
-            )}
-          </DialogContent>
-          <DialogActions>
-            <MDButton onClick={() => setConfirmOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
-            <MDButton
-              variant="contained"
-              color={confirmData.action === "approve" ? "success" : "error"}
-              onClick={handleConfirmAction}
-              sx={{ padding: "6px 12px" }}
-            >
-              {confirmData.action.charAt(0).toUpperCase() + confirmData.action.slice(1)}
-            </MDButton>
-          </DialogActions>
-        </Dialog>
-
-        {/* Product/Brand Approval Dialog */}
-        <Dialog open={productApprovalOpen} onClose={() => setProductApprovalOpen(false)}>
-          <DialogTitle>
-            <MDTypography variant="h5">Update {productApprovalData.type.charAt(0).toUpperCase() + productApprovalData.type.slice(1)} Status</MDTypography>
-          </DialogTitle>
-          <DialogContent>
-            <MDTypography variant="body2" mb={2}>Select the status for this {productApprovalData.type} request:</MDTypography>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={productApprovalData.status}
-                onChange={(e) => setProductApprovalData({ ...productApprovalData, status: e.target.value })}
-                label="Status"
-                sx={{height:"30px"}}
-              >
-                {["request_brand_approval", "approved", "rejected"].map((status) => (
-                  <MenuItem key={status} value={status}>{status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <MDTypography variant="body2" mb={2}>Add a note (optional):</MDTypography>
             <TextField
               multiline
               rows={3}
               fullWidth
-              label="Description (optional)"
-              value={productApprovalData.description}
-              onChange={(e) => setProductApprovalData({ ...productApprovalData, description: e.target.value })}
+              label="Note"
+              value={selectedUpdate.note}
+              onChange={(e) => setSelectedUpdate({ ...selectedUpdate, note: e.target.value })}
             />
           </DialogContent>
           <DialogActions>
-            <MDButton onClick={() => setProductApprovalOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
-            <MDButton variant="contained" color="primary" onClick={handleProductApproval} sx={{ padding: "6px 12px" }}>Update</MDButton>
+            <MDButton onClick={() => setNoteOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
+            <MDButton
+              variant="contained"
+              color="primary"
+              onClick={handleUpdateStatus}
+              sx={{ padding: "6px 12px" }}
+            >
+              Submit
+            </MDButton>
           </DialogActions>
         </Dialog>
       </MDBox>

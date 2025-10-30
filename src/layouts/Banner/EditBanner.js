@@ -36,7 +36,7 @@ function EditBanner() {
       
       setId(data._id);
       setName(data.title);
-      setSelectedCityId(data.city?._id || "");
+      setSelectedCityId(Array.isArray(data.city) ? data.city.map(c => c._id) : [data.city?._id]);
       if (Array.isArray(data.zones)) {
         setZones(
           data.zones.map((z) => ({
@@ -91,7 +91,7 @@ function EditBanner() {
 
     const fetchBrands = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getBrand");
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
     const data = await res.json();
     setBrands(data.allBrands || []);
   } catch (err) {
@@ -104,7 +104,7 @@ fetchBrands();
 
     const fetchLocations = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAllZone");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         const data = await res.json();
         const cities = Array.isArray(data) ? data : (data.result || data.data || []);
         setLocations(cities);
@@ -115,7 +115,7 @@ fetchBrands();
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getMainCategory");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         const data = await res.json();
         setMain(data.result || []);
       } catch (err) {
@@ -128,24 +128,26 @@ fetchBrands();
   }, [location.state]);
 
   useEffect(() => {
-    if (!selectedCityId) {
-      setZones([]);
-      return;
-    }
+  const selectedCitiesData = locations.filter(loc => selectedCityId.includes(loc._id));
 
-    const selectedCity = locations.find((loc) => loc._id === selectedCityId);
-    if (selectedCity && Array.isArray(selectedCity.zones)) {
-      const allZones = selectedCity.zones.map((zone) => ({
-        address: zone.address,
-        latitude: zone.latitude,
-        longitude: zone.longitude,
-        range: zone.range
-      }));
-      setZones(allZones);
-    } else {
-      setZones([]);
+  let allZones = [];
+  selectedCitiesData.forEach(city => {
+    if (city.zones) {
+      allZones = [
+        ...allZones,
+        ...city.zones.map(z => ({
+          address: z.address,
+          latitude: z.latitude,
+          longitude: z.longitude,
+          range: z.range
+        }))
+      ];
     }
-  }, [selectedCityId, locations]);
+  });
+
+  setZones(allZones);
+}, [selectedCityId, locations]);
+
 
   // Fetch stores when zones change
 useEffect(() => {
@@ -205,7 +207,7 @@ useEffect(() => {
   const formData = new FormData();
   dispatch(startLoading());
   formData.append("title", name);
-  formData.append('city',selectedCityId)
+  formData.append("city", JSON.stringify(selectedCityId));
   formData.append("type", type);
   formData.append("type2", type); 
     if (type === "Brand") {
@@ -245,7 +247,7 @@ useEffect(() => {
   }
 
   try {
-    const response = await fetch(`https://api.fivlia.in/admin/banner/${id}/status`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/banner/${id}/status`, {
       method: "PATCH",
       body: formData,
     });
@@ -334,23 +336,27 @@ useEffect(() => {
         </div>
 
         {/* City */}
-        <div style={formRowStyle}>
-          <label style={labelStyle}>City</label>
-          <select
-            style={inputStyle}
-            value={selectedCityId}
-            onChange={(e) => {
-              setSelectedCityId(e.target.value);
-            }}
-          >
-            <option value="">-- Select City --</option>
-            {locations.map((loc) => (
-              <option key={loc._id} value={loc._id}>
-                {loc.city}
-              </option>
-            ))}
-          </select>
-        </div>
+<div style={formRowStyle}>
+  <label style={labelStyle}>City</label>
+  <select
+    style={inputStyle}
+    value=""
+    onChange={(e) => {
+      const value = e.target.value;
+      if (!value) return;
+
+      setSelectedCityId(prev => prev.includes(value) ? prev : [...prev, value]);
+    }}
+  >
+    <option value="">-- Select City --</option>
+    {locations.map((loc) => (
+      <option key={loc._id} value={loc._id}>
+        {loc.city || loc.name || "Unknown City"}
+      </option>
+    ))}
+  </select>
+</div>
+
 
         {/* Display Selected Zones */}
         {selectedCityId && (
