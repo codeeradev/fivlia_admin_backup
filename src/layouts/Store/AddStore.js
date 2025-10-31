@@ -551,7 +551,7 @@ function AddStore() {
           }}
           onClick={() => navigate(-1)}
         >
-          BACK
+          CANCEL
         </Button>
       </div>
     </MDBox>

@@ -13,15 +13,17 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import IconButton from "@mui/material/IconButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
 import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 import DataTable from "react-data-table-component";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CheckIcon from "@mui/icons-material/Check";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import CloseIcon from "@mui/icons-material/Close";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import EditIcon from "@mui/icons-material/Edit";
+import VerifiedIcon from "@mui/icons-material/Verified";
 import TextField from "@mui/material/TextField";
 
 export default function ApprovalRequests() {
@@ -50,30 +52,50 @@ export default function ApprovalRequests() {
   // Status options with icons
   const statusOptions = {
     seller: [
-      { value: "approved", label: "Approved", icon: CheckIcon },
-      { value: "rejected", label: "Rejected", icon: CloseIcon },
+      { value: "approved", label: "Accept", icon: CheckIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
     ],
     location: [
-      { value: "approved", label: "Approved", icon: CheckIcon },
-      { value: "rejected", label: "Rejected", icon: CloseIcon },
+      { value: "approved", label: "Accept", icon: CheckIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
     ],
     image: [
-      { value: "approved", label: "Approved", icon: CheckIcon },
-      { value: "rejected", label: "Rejected", icon: CloseIcon },
+      { value: "approved", label: "Accept", icon: CheckIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
     ],
     product: [
-      { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
-      { value: "request_brand_approval", label: "Request Brand Approval", icon: EditIcon },
-      { value: "approved", label: "Approved", icon: CheckIcon },
-      { value: "rejected", label: "Rejected", icon: CloseIcon },
+      // { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
+      { value: "approved", label: "Accept", icon: CheckIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
+      { value: "request_brand_approval", label: "Need Brand Approval", icon: LocalOfferIcon },
     ],
     brand: [
-      { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
-      { value: "request_brand_approval", label: "Request Brand Approval", icon: EditIcon },
-      { value: "approved", label: "Approved", icon: CheckIcon },
-      { value: "rejected", label: "Rejected", icon: CloseIcon },
+      // { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
+      // { value: "request_brand_approval", label: "Need Brand Approval", icon: EditIcon },
+      { value: "approved", label: "Accept", icon: VerifiedIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
     ],
   };
+
+  // Status to icon mapping
+  const statusToIcon = useMemo(() => ({
+    pending: ScheduleIcon,
+    "pending_admin_approval": ScheduleIcon,
+    "request_brand_approval": LocalOfferIcon,
+    "submit_brand_approval": EditIcon,
+    approved: CheckIcon,
+    rejected: CloseIcon,
+  }), []);
+
+  // Status color mapping
+  const statusToColor = useMemo(() => ({
+    approved: "#2e7d32",
+    rejected: "#d32f2f",
+    pending: "#ed6c02",
+    "pending_admin_approval": "#ed6c02",
+    "request_brand_approval": "#0059ffff",
+    "submit_brand_approval": "#ed6c02",
+  }), []);
 
   // Row color based on type
   const rowColor = (type) => {
@@ -98,7 +120,8 @@ export default function ApprovalRequests() {
       setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
       setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
       setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
-      setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
+      setBrandRequests((data.brandRequest ||
+         []).map((r) => ({ ...r, type: "brand" })));
     } catch (e) {
       console.error(e);
       setError("Failed to fetch requests.");
@@ -208,6 +231,15 @@ export default function ApprovalRequests() {
     }
     return haystack.map(normalized).join(" ").includes(normalized(searchTerm));
   });
+  const statusDisplayMap = {
+  pending: "Pending",
+  pending_admin_approval: "Pending Approval",
+  request_brand_approval: "Brand Approval Needed",
+  submit_brand_approval: "Brand Submitted",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
 
   const getStatus = (r) => {
     if (r.type === "seller") return r.approveStatus || "pending";
@@ -324,13 +356,22 @@ export default function ApprovalRequests() {
     },
     {
       name: "Status",
-      selector: (row) => getStatus(row).replace(/_/g, " "),
+      cell: (row) => {
+        const status = getStatus(row);
+        const displayStatus = statusDisplayMap[status] || status.replace(/_/g, " ");
+        const color = statusToColor[status] || "#ed6c02";
+        return (      
+          <Tooltip title={displayStatus} arrow>
+            <MDTypography variant="body2" fontWeight="medium" sx={{ color }}>
+              {displayStatus}
+            </MDTypography>
+          </Tooltip>
+        );
+      },
       width: "150px",
       style: {
         justifyContent: "center",
-        color: (row) => (getStatus(row) === "approved" ? "#2e7d32" : getStatus(row) === "rejected" ? "#d32f2f" : "#ed6c02"),
         fontWeight: "medium",
-        textTransform: "capitalize",
       },
     },
     {
@@ -338,44 +379,52 @@ export default function ApprovalRequests() {
       cell: (row) =>
         !isPending(row) ? (
           <Chip
-            label={getStatus(row).replace(/_/g, " ")}
+            label={statusDisplayMap[getStatus(row)] || getStatus(row).replace(/_/g, " ")}
             color={getStatus(row) === "approved" ? "success" : getStatus(row) === "rejected" ? "error" : "default"}
             size="small"
             sx={{ fontWeight: "medium", textTransform: "capitalize" }}
           />
         ) : (
-          <FormControl size="small" sx={{ minWidth: 140,'& .MuiInputBase-root': {height: 32,backgroundColor: '#f5f6fa',
-          borderRadius: '8px',
-        },
- }}>
-            <Select
-              displayEmpty
-              renderValue={() => <em>Update Status</em>}
-              onChange={(e) => {
-                const status = e.target.value;
-                if (status) {
-                  setSelectedUpdate({
-                    type: row.type,
-                    id: row._id,
-                    status,
-                    note: "",
-                  });
-                  setNoteOpen(true);
-                }
-              }}
-            >
-              {statusOptions[row.type].map(({ value, label, icon: Icon }) => (
-                <MenuItem key={value} value={value}>
-                  <ListItemIcon>
-                    <Icon fontSize="small" />
-                  </ListItemIcon>
-                  {label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <MDBox display="flex" gap={2} justifyContent="center" flexWrap="wrap">
+            {statusOptions[row.type].map(({ value, label, icon: Icon }) => {
+              const color = statusToColor[value] || "#ed6c02";
+              return (
+                <Tooltip key={value} title={label} arrow>
+                  <MDBox
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    gap={0.5}
+                    onClick={() => {
+                      setSelectedUpdate({
+                        type: row.type,
+                        id: row._id,
+                        status: value,
+                        note: "",
+                      });
+                      setNoteOpen(true);
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      p: 1,
+                      borderRadius: 1,
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
+                    }}
+                  >
+                    <Icon sx={{ color, fontSize: "1.75rem" }} />
+                    <MDTypography variant="caption" sx={{ color, fontWeight: "medium", textAlign: "center" }}>
+                      {label}
+                    </MDTypography>
+                  </MDBox>
+                </Tooltip>
+              );
+            })}
+          </MDBox>
         ),
-      width: "180px",
+      width: "300px",
       style: { justifyContent: "center" },
     },
     {
@@ -388,7 +437,7 @@ export default function ApprovalRequests() {
       width: "80px",
       style: { justifyContent: "center" },
     },
-  ], [filtered]);
+  ], [filtered, statusToIcon, statusToColor]);
 
   // DataTable custom styles
   const customStyles = {
