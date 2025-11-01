@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useMaterialUIController } from "context";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
+import Swal from "sweetalert2";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -176,11 +177,29 @@ export default function ApprovalRequests() {
         throw new Error(e?.message || `Failed to update status`);
       }
 
-      setSuccess(`Status updated to ${status.replace(/_/g, " ")} successfully.`);
+      const statusLabel = status === "approved" ? "approved" : status === "rejected" ? "rejected" : status.replace(/_/g, " ");
+      setSuccess(`Status updated to ${statusLabel} successfully.`);
+      
+      // Show success popup
+      Swal.fire({
+        icon: status === "approved" ? "success" : status === "rejected" ? "error" : "info",
+        title: status === "approved" ? "Approved!" : status === "rejected" ? "Rejected!" : "Status Updated!",
+        text: `The request has been ${statusLabel} successfully.`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+
       await fetchRequests();
     } catch (e) {
       console.error(e);
       setError(e.message);
+      
+      // Show error popup
+      Swal.fire({
+        icon: "error",
+        title: "Error!",
+        text: e.message || "Failed to update status. Please try again.",
+      });
     } finally {
       dispatch(stopLoading());
       setNoteOpen(false);

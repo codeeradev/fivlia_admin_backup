@@ -60,6 +60,7 @@ import EditProduct from "layouts/Products/EditProduct";
 import EditBanner from "layouts/Banner/EditBanner";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import GlobalLoader from "components/loader/GlobalLoader";
 import StoreLogin from "layouts/Store/StoreLogin";
 import Filter from "layouts/Attribute/Filter";
 import AddFilter from "layouts/Attribute/AddFilter";
@@ -276,6 +277,7 @@ export default function App() {
         )}
         {layout === "vr" && <Configurator />}
         <ToastContainer position="top-right" autoClose={3000} />
+        <GlobalLoader />
       </ThemeProvider>
     </CacheProvider>
   ) : (
@@ -369,6 +371,7 @@ export default function App() {
       )}
       {layout === "vr" && <Configurator />}
       <ToastContainer position="top-right" autoClose={3000} />
+      <GlobalLoader />
     </ThemeProvider>
   );
 }

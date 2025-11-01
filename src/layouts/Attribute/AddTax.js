@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 import { Button } from "@mui/material";
 
 
@@ -9,6 +11,7 @@ function Addtax() {
     const [controller] = useMaterialUIController();
     const { miniSidenav } = controller;
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const [name, setName] = useState('');
 
 
@@ -18,6 +21,7 @@ function Addtax() {
                 alert('Invalid Name')
                 return;
             }
+            dispatch(startLoading());
             const result=await fetch('https://node-m8jb.onrender.com/postTax',{
                 method:'POST',
                 body:JSON.stringify({
@@ -34,7 +38,11 @@ function Addtax() {
             }
         }
         catch(err){
-            console.log(err);      
+            console.log(err);
+            alert('Error inserting tax');
+        }
+        finally{
+            dispatch(stopLoading());
         }
     }
     return (

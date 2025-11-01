@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 import { Button, Chip } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -9,6 +11,7 @@ function EditFilter() {
     const [controller] = useMaterialUIController();
     const { miniSidenav } = controller;
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const location = useLocation();
 
     const [name, setName] = useState('');
@@ -33,6 +36,7 @@ function EditFilter() {
                 alert('Invalid Filter Name');
                 return;
             }
+            dispatch(startLoading());
             const formattedFilter = filterData.map(item => ({ name: item }));
               const payload = {
             Filter_name: name,
@@ -54,6 +58,10 @@ function EditFilter() {
             }
         } catch (err) {
             console.log(err);
+            alert('Error updating filter');
+        }
+        finally{
+            dispatch(stopLoading());
         }
     };
 

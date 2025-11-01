@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 import { Button } from "@mui/material";
 import { useLocation } from "react-router-dom";
 
@@ -10,6 +12,7 @@ function Editunit() {
     const [controller] = useMaterialUIController();
     const { miniSidenav } = controller;
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const [name, setName] = useState('');
     const location=useLocation();
     const [id,setId]=useState('')
@@ -27,6 +30,7 @@ function Editunit() {
                 alert('Invalid Name')
                 return;
             }
+            dispatch(startLoading());
             const result=await fetch(`https://node-m8jb.onrender.com/edit-unit/${id}`,{
                 method:'PUT',
                 body:JSON.stringify({
@@ -43,7 +47,11 @@ function Editunit() {
             }
         }
         catch(err){
-            console.log(err);      
+            console.log(err);
+            alert('Error updating unit');
+        }
+        finally{
+            dispatch(stopLoading());
         }
     }
     return (

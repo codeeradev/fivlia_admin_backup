@@ -72,7 +72,7 @@ function SellerTable() {
 
   const getAllStores = async () => {
     try {
-      const result = await fetch("https://api.fivlia.in/getSeller");
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/getSeller`);
       if (result.status === 200) {
         const res = await result.json();
         setStores(res.sellers || []);
@@ -135,7 +135,7 @@ function SellerTable() {
 
   const handleStatusToggle = async (storeId, newStatus) => {
     try {
-      const response = await fetch(`https://api.fivlia.in/storeEdit/${storeId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),

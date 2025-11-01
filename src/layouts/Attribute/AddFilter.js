@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 import { Button, Chip } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close'; 
 
@@ -9,6 +11,7 @@ function AddFilter() {
     const [controller] = useMaterialUIController();
     const { miniSidenav } = controller;
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     const [name, setName] = useState('');
     const [filter, setFilter] = useState('');
@@ -20,6 +23,7 @@ function AddFilter() {
                 alert('Invalid Name');
                 return;
             }
+            dispatch(startLoading());
             const formattedFilter = filterData.map(item => ({ name: item }));
             const result = await fetch(`https://api.fivlia.in/addFilter`, {
                 method: "POST",
@@ -40,6 +44,10 @@ function AddFilter() {
             }
         } catch (err) {
             console.log(err);
+            alert('Error adding filter');
+        }
+        finally{
+            dispatch(stopLoading());
         }
     };
 

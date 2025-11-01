@@ -32,6 +32,8 @@ function AddStore() {
   const [isAssured, setAssured] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState([]);
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
   const [cities, setCities] = useState([]);
   const [availableZones, setAvailableZones] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
@@ -66,6 +68,8 @@ function AddStore() {
       setAssured(storedetails.store.fivliaAssured);
       setSelectedImage(storedetails.store.image);
       setSelectedCategory(storedetails.store.Category);
+      setOpenTime(storedetails.store.openTime || "");
+      setCloseTime(storedetails.store.closeTime || "");
       if (storedetails.store.Latitude && storedetails.store.Longitude) {
         setMarkerPosition({
           lat: parseFloat(storedetails.store.Latitude),
@@ -78,7 +82,7 @@ function AddStore() {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch("https://api.fivlia.in/getMainCategory");
+        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         if (data.status === 200) {
           const result = await data.json();
           setMainCategories(result.result);
@@ -92,7 +96,7 @@ function AddStore() {
 
     const fetchCities = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAllZone");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         const data = await res.json();
         if (data) {
           setCities(data);
@@ -217,6 +221,8 @@ function AddStore() {
       formData.append("isAuthorized", isAuthorized);
       formData.append("isAssured", isAssured);
       formData.append("Category", JSON.stringify(selectedCategory));
+      if (openTime) formData.append("openTime", openTime);
+      if (closeTime) formData.append("closeTime", closeTime);
 
       if (selectedImage instanceof File) {
         formData.append("image", selectedImage);
@@ -224,12 +230,12 @@ function AddStore() {
 
       let response;
       if (storedetails && storedetails.store) {
-        response = await fetch(`https://api.fivlia.in/storeEdit/${id}`, {
+        response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${id}`, {
           method: "PUT",
           body: formData,
         });
       } else {
-        response = await fetch("https://api.fivlia.in/createStore", {
+        response = await fetch(`${process.env.REACT_APP_API_URL}/createStore`, {
           method: "POST",
           body: formData,
         });
@@ -318,6 +324,28 @@ function AddStore() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {storedetails && storedetails.store && (
+              <>
+                <div className="store-input">
+                  <label>Open Time</label>
+                  <input
+                    type="time"
+                    value={openTime}
+                    onChange={(e) => setOpenTime(e.target.value)}
+                    placeholder="HH:MM"
+                  />
+                </div>
+                <div className="store-input">
+                  <label>Close Time</label>
+                  <input
+                    type="time"
+                    value={closeTime}
+                    onChange={(e) => setCloseTime(e.target.value)}
+                    placeholder="HH:MM"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="store-row">

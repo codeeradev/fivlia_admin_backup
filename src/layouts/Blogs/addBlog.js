@@ -11,11 +11,14 @@ import {
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { startLoading, stopLoading } from "components/loader/appSlice";
 
 function AddBlog() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { state } = useLocation();
 
   const [form, setForm] = useState({
@@ -46,6 +49,7 @@ function AddBlog() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      dispatch(startLoading());
       const formData = new FormData();
       for (let key in form) formData.append(key, form[key]);
 
@@ -64,6 +68,10 @@ function AddBlog() {
       }
     } catch (err) {
       console.error("Error saving blog:", err);
+      alert("Error saving blog. Please try again.");
+    }
+    finally{
+      dispatch(stopLoading());
     }
   };
 
