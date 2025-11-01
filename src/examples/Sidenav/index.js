@@ -16,6 +16,8 @@ Coded by www.creative-tim.com
 import { useEffect, useState } from "react";
 import { useLocation, NavLink } from "react-router-dom";
 import PropTypes from "prop-types";
+import Drawer from "@mui/material/Drawer";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
@@ -222,47 +224,79 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   return returnValue;
 });
 
+  const isMobile = useMediaQuery("(max-width:1200px)");
 
   return (
-    <SidenavRoot
-      {...rest}
-      variant="permanent"
-      ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
-    >
-      <MDBox pt={3} pb={1} px={4} textAlign="center">
-        <MDBox
-          display={{ xs: "block", xl: "none" }}
-          position="absolute"
-          top={0}
-          right={0}
-          p={1.625}
-          onClick={closeSidenav}
-          sx={{ cursor: "pointer" }}
+    <>
+      {/* Drawer on mobile */}
+      {isMobile ? (
+        <Drawer
+          anchor="left"
+          open={!miniSidenav}
+          onClose={() => setMiniSidenav(dispatch, true)}
+          PaperProps={{
+            sx: {
+              width: 260,
+              background: "#1a2035",
+              color: "#fff"
+            }
+          }}
         >
-          <MDTypography variant="h6" color="secondary">
-            <Icon sx={{ fontWeight: "bold" }}>close</Icon>
-          </MDTypography>
-        </MDBox>
-        <MDBox component={NavLink} to="/" display="flex" alignItems="center">
-          {brand && <MDBox component="img" src={brand} alt="Brand" width="2rem" />}
-          <MDBox
-            width={!brandName && "100%"}
-            sx={(theme) => sidenavLogoLabel(theme, { miniSidenav })}
-          >
-            <MDTypography component="h6" variant="button" fontWeight="medium" color={textColor}>
-              {brandName}
-            </MDTypography>
+          <MDBox pt={3} pb={1} px={4} textAlign="center">
+            <MDBox
+              position="absolute"
+              top={0}
+              right={0}
+              p={2}
+              onClick={() => setMiniSidenav(dispatch, true)}
+              sx={{ cursor: "pointer" }}
+            >
+              <Icon>close</Icon>
+            </MDBox>
+
+            {brand && (
+              <MDBox component={NavLink} to="/" display="flex" alignItems="center">
+                <MDBox component="img" src={brand} alt="Brand" width="2rem" />
+                <MDTypography ml={1} variant="h6" fontWeight="medium" color={textColor}>
+                  {brandName}
+                </MDTypography>
+              </MDBox>
+            )}
           </MDBox>
-        </MDBox>
-      </MDBox>
-      <Divider
-        light={
+          <Divider
+          light={
           (!darkMode && !whiteSidenav && !transparentSidenav) ||
           (darkMode && !transparentSidenav && whiteSidenav)
         }
-      />
-      <List>{renderRoutes}</List>
-    </SidenavRoot>
+          />
+          <List>{renderRoutes}</List>
+        </Drawer>
+      ) : (
+        /* Permanent sidebar on desktop */
+        <SidenavRoot
+          {...rest}
+          variant="permanent"
+          ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
+        >
+          <MDBox pt={3} pb={1} px={4} textAlign="center">
+            {brand && (
+              <MDBox component={NavLink} to="/" display="flex" alignItems="center">
+                <MDBox component="img" src={brand} alt="Brand" width="2rem" />
+                <MDTypography ml={1} variant="h6" fontWeight="medium" color={textColor}>
+                  {brandName}
+                </MDTypography>
+              </MDBox>
+            )}
+          </MDBox>
+          <Divider 
+           light={
+          (!darkMode && !whiteSidenav && !transparentSidenav) ||
+          (darkMode && !transparentSidenav && whiteSidenav)
+        }/>
+          <List>{renderRoutes}</List>
+        </SidenavRoot>
+      )}
+    </>
   );
 }
 

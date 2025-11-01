@@ -6,6 +6,7 @@ import Icon from "@mui/material/Icon";
 import MDBox from "components/MDBox";
 
 import Sidenav from "examples/Sidenav";
+import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import Configurator from "examples/Configurator";
 import theme from "assets/theme";
 import themeRTL from "assets/theme/theme-rtl";
@@ -177,8 +178,8 @@ export default function App() {
       shadow="sm"
       borderRadius="50%"
       position="fixed"
-      right="2rem"
-      bottom="2rem"
+      right={{ xs: "1rem", md: "2rem" }}
+      bottom={{ xs: "1rem", md: "2rem" }}
       zIndex={99}
       color="dark"
       sx={{ cursor: "pointer" }}
@@ -200,21 +201,19 @@ export default function App() {
               color={sidenavColor}
               brand={(transparentSidenav && !darkMode) || whiteSidenav ? brandDark : brandWhite}
               brandName="Fivlia Dashboard"
-              routes={routes}
-              onMouseEnter={handleOnMouseEnter}
-              onMouseLeave={handleOnMouseLeave}
-            />
-            <Sidenav
-              color={sidenavColor}
-              brand={(transparentSidenav && !darkMode) || whiteSidenav ? brandDark : brandWhite}
-              brandName="Fivlia Dashboard"
               routes={activeRoutes}
               onMouseEnter={handleOnMouseEnter}
               onMouseLeave={handleOnMouseLeave}
             />
-            <Configurator />
-            {configsButton}
-            <MDBox ml={miniSidenav ? "80px" : "250px"} p={2}>
+          <Configurator />
+          {configsButton}
+          <MDBox 
+            sx={{
+              ml: { xs: 0, lg: miniSidenav ? "80px" : "250px" },
+              p: { xs: 1, md: 2 }
+            }}
+          >
+            <DashboardLayout>
               <Routes>
                 <Route element={<PrivateRoute />}>
                   {getRoutes(routes)}
@@ -266,6 +265,7 @@ export default function App() {
               <Route path="/storeTransaction" element={<StoreTransaction />} />
                 </Route>
               </Routes>
+              </DashboardLayout>
             </MDBox>
           </>
         )}
@@ -301,6 +301,7 @@ export default function App() {
             />
           <Configurator />
           {configsButton}
+          <DashboardLayout>
           <Routes>
             <Route element={<PrivateRoute />}>
               {getRoutes(routes)}
@@ -358,6 +359,7 @@ export default function App() {
               <Route path="/storeTransaction" element={<StoreTransaction />} />
             </Route>
           </Routes>
+          </DashboardLayout>
         </>
       )}
       {pathname === "/login" && (

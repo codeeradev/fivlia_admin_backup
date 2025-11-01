@@ -1,31 +1,12 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
 import { useEffect } from "react";
-
-// react-router-dom components
 import { useLocation } from "react-router-dom";
-
-// prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
 
-// Material Dashboard 2 React components
-import MDBox from "components/MDBox";
+import IconButton from "@mui/material/IconButton";
+import Icon from "@mui/material/Icon";
 
-// Material Dashboard 2 React context
-import { useMaterialUIController, setLayout } from "context";
+import MDBox from "components/MDBox";
+import { useMaterialUIController, setLayout, setMiniSidenav } from "context";
 
 function DashboardLayout({ children }) {
   const [controller, dispatch] = useMaterialUIController();
@@ -36,27 +17,53 @@ function DashboardLayout({ children }) {
     setLayout(dispatch, "dashboard");
   }, [pathname]);
 
-  return (
-    <MDBox
-      sx={({ breakpoints, transitions, functions: { pxToRem } }) => ({
-        p: 3,
-        position: "relative",
+  const openMobileSidenav = () => setMiniSidenav(dispatch, false);
 
-        [breakpoints.up("xl")]: {
-          marginLeft: miniSidenav ? pxToRem(120) : pxToRem(274),
-          transition: transitions.create(["margin-left", "margin-right"], {
-            easing: transitions.easing.easeInOut,
-            duration: transitions.duration.standard,
-          }),
-        },
-      })}
-    >
-      {children}
-    </MDBox>
+  return (
+    <>
+      {/* Mobile/Tablet Menu Button */}
+      <MDBox
+        sx={{
+          display: { xs: "flex", lg: "none" },
+          position: "fixed",
+          top: "14px",
+          left: "14px",
+          zIndex: 2000,
+        }}
+      >
+        {miniSidenav && (
+          <IconButton
+            onClick={openMobileSidenav}
+            sx={({ palette, boxShadows }) => ({
+              backgroundColor: palette.white.main,
+              color: palette.dark.main,
+              border: `1px solid ${palette.grey[300]}`,
+              boxShadow: boxShadows.navbarBoxShadow,
+              width: 40,
+              height: 40,
+              "&:hover": {
+                backgroundColor: palette.grey[100],
+              },
+            })}
+          >
+            <Icon fontSize="small">menu</Icon>
+          </IconButton>
+        )}
+      </MDBox>
+
+      {/* Content Wrapper (No Pushing Content Left) */}
+      <MDBox
+        sx={{
+          p: { xs: "70px 12px 12px", sm: "60px 15px 15px", md: "20px" },
+          position: "relative",
+        }}
+      >
+        {children}
+      </MDBox>
+    </>
   );
 }
 
-// Typechecking props for the DashboardLayout
 DashboardLayout.propTypes = {
   children: PropTypes.node.isRequired,
 };

@@ -79,7 +79,12 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <MDBox ml="250px" p={2}>
+    <MDBox 
+      sx={{
+        ml: { xs: 0, lg: "250px" },
+        p: { xs: 1, sm: 1.5, md: 2 }
+      }}
+    >
       <div className="dashboard-container">
         {loading ? (
           <p>Loading dashboard...</p>
@@ -116,7 +121,13 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <div style={{ width: "101%", marginTop: "-30px"}}>
+            <div 
+              style={{ 
+                width: "100%", 
+                marginTop: "-30px",
+                overflowX: "auto"
+              }}
+            >
               <Orders isDashboard={true}/>
             </div>
               <div

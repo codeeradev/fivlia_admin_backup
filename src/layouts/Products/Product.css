@@ -1,12 +1,51 @@
 .container {
-    display: flex;      
+    display: flex;
+    flex-direction: column;
 }
 
 .inner-view {
     width: 77%;
     padding: 23px;
     border-radius: 8px;
-     
+}
+
+/* Responsive styles */
+@media (max-width: 1200px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .inner-view {
+        width: 100%;
+        padding: 15px;
+    }
+    
+    .sidebar-container,
+    .sidebar-nav {
+        position: static;
+        margin-top: 20px;
+        width: 100%;
+        right: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .inner-view {
+        padding: 12px;
+    }
+    
+    .row-section {
+        flex-direction: column;
+        padding-left: 10px;
+        padding-right: 10px;
+        gap: 15px;
+    }
+    
+    .sidebar-container,
+    .sidebar-nav {
+        padding: 15px;
+        gap: 15px;
+    }
 }
 
 .form-title {

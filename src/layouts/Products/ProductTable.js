@@ -313,9 +313,9 @@ useEffect(() => {
 
   return (
     <MDBox
-      p={2}
-      style={{
-        marginLeft: miniSidenav ? "80px" : "250px",
+      p={{ xs: 1, sm: 1.5, md: 2 }}
+      sx={{
+        ml: { xs: 0, lg: miniSidenav ? "80px" : "250px" },
         transition: "margin-left 0.3s ease",
       }}
     >

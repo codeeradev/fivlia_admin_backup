@@ -96,7 +96,48 @@
 
 
 @media (max-width: 768px) {
+  .store-container {
+    width: 95%;
+    margin: 15px auto;
+    padding: 15px;
+  }
+
+  .store-header {
+    font-size: 18px;
+  }
+
+  .store-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+
   .store-input {
     flex: 1 1 100%;
+  }
+
+  .store-form {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .store-container {
+    width: 98%;
+    margin: 10px auto;
+    padding: 12px;
+  }
+
+  .store-header {
+    font-size: 16px;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+
+  .store-row {
+    gap: 15px;
+  }
+
+  .store-input img {
+    max-height: 250px;
   }
 }

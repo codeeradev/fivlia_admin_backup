@@ -146,9 +146,24 @@ function DataTable({
   }
 
   return (
-    <TableContainer sx={{ boxShadow: "none" }}>
+    <TableContainer 
+      sx={{ 
+        boxShadow: "none",
+        overflowX: { xs: "auto", sm: "visible" },
+        "& .MuiTable-root": {
+          minWidth: { xs: "800px", sm: "auto" }
+        }
+      }}
+    >
       {entriesPerPage || canSearch ? (
-        <MDBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
+        <MDBox 
+          display="flex" 
+          flexDirection={{ xs: "column", sm: "row" }}
+          justifyContent="space-between" 
+          alignItems={{ xs: "stretch", sm: "center" }} 
+          gap={{ xs: 2, sm: 0 }}
+          p={{ xs: 2, sm: 3 }}
+        >
           {entriesPerPage && (
             <MDBox display="flex" alignItems="center">
               <Autocomplete
@@ -168,7 +183,7 @@ function DataTable({
             </MDBox>
           )}
           {canSearch && (
-            <MDBox width="12rem" ml="auto">
+            <MDBox width={{ xs: "100%", sm: "12rem" }} ml={{ xs: 0, sm: "auto" }}>
               <MDInput
                 placeholder="Search..."
                 value={search}
@@ -183,7 +198,7 @@ function DataTable({
           )}
         </MDBox>
       ) : null}
-      <Table {...getTableProps()}>
+      <Table {...getTableProps()} sx={{ minWidth: { xs: "800px", sm: "auto" } }}>
         <MDBox component="thead">
           {headerGroups.map((headerGroup, key) => (
             <TableRow key={key} {...headerGroup.getHeaderGroupProps()}>
