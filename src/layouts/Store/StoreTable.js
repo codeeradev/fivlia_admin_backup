@@ -64,7 +64,7 @@ const [cityOptions, setCityOptions] = useState([]);
 
   const getAllCities = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getCity");
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
     const data = await res.json();
     if (res.ok && data) {
       setCityOptions(data.map((c) => c.city));
@@ -91,7 +91,7 @@ const [filteredStores, setFilteredStores] = useState([]);
 
   const getAllStores = async () => {
     try {
-      const result = await fetch("https://api.fivlia.in/getStore");
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/getStore`);
       if (result.status === 200) {
         const res = await result.json();
         setStores(res.stores);
@@ -105,7 +105,7 @@ const [filteredStores, setFilteredStores] = useState([]);
 
   const getWalletBalances = async () => {
     try {
-      const result = await fetch("https://api.fivlia.in/walletAdmin");
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/walletAdmin`);
       if (result.status === 200) {
         const res = await result.json();
         setWalletBalances(res.storeTotals);
@@ -144,7 +144,7 @@ const [filteredStores, setFilteredStores] = useState([]);
 
   const handleStatusToggle = async (storeId, newStatus) => {
     try {
-      const response = await fetch(`https://api.fivlia.in/storeEdit/${storeId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

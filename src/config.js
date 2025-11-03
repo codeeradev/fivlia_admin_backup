@@ -1,6 +1,6 @@
 export const getEnvFromApi = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getSmsType");
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/getSmsType`);
     const data = await res.json();
 
     return {

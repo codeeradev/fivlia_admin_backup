@@ -43,7 +43,7 @@ function SubSubCat() {
 
     const GetSubSub=async()=>{
       try{
-          const res=await fetch(`https://api.fivlia.in/GetSubSubCategories/${subcategory._id}`)
+          const res=await fetch(`${process.env.REACT_APP_API_URL}/GetSubSubCategories/${subcategory._id}`)
           if(res.status===200){
             const result=await res.json();
             setData(result.subsubcategories)

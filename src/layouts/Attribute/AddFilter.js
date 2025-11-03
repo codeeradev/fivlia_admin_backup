@@ -25,7 +25,7 @@ function AddFilter() {
             }
             dispatch(startLoading());
             const formattedFilter = filterData.map(item => ({ name: item }));
-            const result = await fetch(`https://api.fivlia.in/addFilter`, {
+            const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
                 method: "POST",
                 body: JSON.stringify({
                     Filter_name: name,

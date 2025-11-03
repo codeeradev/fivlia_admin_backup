@@ -52,7 +52,7 @@ export default function SellerWithdrawal() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest?type=seller");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest?type=seller`);
         const data = await response.json();
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({

@@ -191,7 +191,7 @@ function EditCity() {
     };
 
     try {
-      const result = await fetch(`https://api.fivlia.in/updateCityStatus/${id}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateCityStatus/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSave),

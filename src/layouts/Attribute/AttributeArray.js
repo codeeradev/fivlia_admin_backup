@@ -30,7 +30,7 @@ function AttributeTable() {
   useEffect(() => {
     const fetchAttribute = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } catch (err) {
@@ -72,7 +72,7 @@ function AttributeTable() {
     const confirmDelete = window.confirm("Are you sure you want to delete this Attribute?");
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`https://api.fivlia.in/deleteAttribute/${attributeId}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/deleteAttribute/${attributeId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

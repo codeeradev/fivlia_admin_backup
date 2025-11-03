@@ -42,7 +42,7 @@ function EditFilter() {
             Filter_name: name,
             Filter: formattedFilter
         };
-            const result = await fetch(`https://api.fivlia.in/editFilter/${id}`, {
+            const result = await fetch(`${process.env.REACT_APP_API_URL}/editFilter/${id}`, {
                 method: "PATCH",
                 body: JSON.stringify(payload),
                 headers: {

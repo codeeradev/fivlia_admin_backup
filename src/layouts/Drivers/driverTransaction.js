@@ -22,7 +22,7 @@ export default function DriverTransaction() {
       }
 
       try {
-        const txnRes = await axios.get(`https://api.fivlia.in/transactionList/${driverId}`);
+        const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/transactionList/${driverId}`);
         const sortedTxns = txnRes.data.transactionList
           .filter((txn) => txn.createdAt)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

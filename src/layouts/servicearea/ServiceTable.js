@@ -34,7 +34,7 @@ function Table() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAllZone");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
         const data = await res.json();
 
         const allZones = (data || []).flatMap(cityObj => {
@@ -125,7 +125,7 @@ function Table() {
   // }
   const updateZone = async (id, updatedFields) => {
     try {
-      const res = await fetch(`https://api.fivlia.in/updateZoneStatus/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/updateZoneStatus/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

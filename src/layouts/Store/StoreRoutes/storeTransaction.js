@@ -16,7 +16,7 @@ export default function StoreTransaction() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const txnRes = await axios.get(`https://api.fivlia.in/getStoreTransaction/${id}`);
+        const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/getStoreTransaction/${id}`);
         const txns = txnRes.data.storeData || [];
 
         // sort by latest

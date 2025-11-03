@@ -76,7 +76,7 @@ function EditZone() {
   useEffect(() => {
     async function fetchZones() {
       try {
-        const res = await fetch("https://api.fivlia.in/getAviableCity");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAviableCity`);
         const data = await res.json();
         if (data && data.length > 0) {
           setZones(data);
@@ -177,7 +177,7 @@ function EditZone() {
     };
 
     try {
-      const res = await fetch(`https://api.fivlia.in/updateZoneStatus/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/updateZoneStatus/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

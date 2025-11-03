@@ -22,7 +22,7 @@ function AddUnit() {
                 return;
             }
             dispatch(startLoading());
-            const result=await fetch('https://api.fivlia.in/unit',{
+            const result=await fetch(`${process.env.REACT_APP_API_URL}/unit`,{
                 method:'POST',
                 body:JSON.stringify({
                     unitname:name

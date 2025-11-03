@@ -31,7 +31,7 @@ function AddPageForm() {
       pageContent : content,
     };
     try {
-      const url = location.state ? `https://api.fivlia.in/editPage/${location.state.id}` : `https://api.fivlia.in/addPage`;
+      const url = location.state ? `${process.env.REACT_APP_API_URL}/editPage/${location.state.id}` : `${process.env.REACT_APP_API_URL}/addPage`;
       const method = location.state ? "PUT" : "POST";
       const response = await fetch(url, {
         method: method,

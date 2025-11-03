@@ -33,7 +33,7 @@ export default function CityTable() {
   useEffect(() => {
     const getCity = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getCity");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
         const data = await result.json();
 
         if (Array.isArray(data)) {
@@ -98,7 +98,7 @@ export default function CityTable() {
 
     try {
       const response = await fetch(
-        `https://api.fivlia.in/updateCityStatus/${id}`,
+        `${process.env.REACT_APP_API_URL}/updateCityStatus/${id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

@@ -67,7 +67,7 @@ export default function Notifications() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await fetch("https://api.fivlia.in/getNotification"); // Corrected endpoint
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getNotification`); // Corrected endpoint
         const data = await response.json();
 
         if (Array.isArray(data.notifications)) {
@@ -155,7 +155,7 @@ export default function Notifications() {
     }
 
     try {
-      const response = await fetch("https://api.fivlia.in/notification", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/notification`, {
         method: "POST",
         body: formData,
       });
@@ -197,7 +197,7 @@ export default function Notifications() {
     }
 
     try {
-      const response = await fetch(`https://api.fivlia.in/editNotification/${selectedNotification.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/editNotification/${selectedNotification.id}`, {
         method: "PUT",
         body: formData,
       });
@@ -232,7 +232,7 @@ export default function Notifications() {
 
   const handleDeleteNotification = async (id) => {
     try {
-      const response = await fetch(`https://api.fivlia.in/deleteNotification/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/deleteNotification/${id}`, {
         method: "DELETE",
       });
 

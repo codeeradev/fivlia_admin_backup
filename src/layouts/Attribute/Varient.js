@@ -30,7 +30,7 @@ function VarientTabel() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getUnit");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
         const data = await res.json();
         setUnits(data.Result);
       } catch (err) {

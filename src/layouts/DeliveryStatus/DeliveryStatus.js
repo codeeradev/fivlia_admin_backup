@@ -50,7 +50,7 @@ export default function StatusManagement() {
   useEffect(() => {
     const fetchStatuses = async () => {
       try {
-        const response = await fetch("https://api.fivlia.in/getdeliveryStatus");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getdeliveryStatus`);
         const data = await response.json();
         if (response.ok && Array.isArray(data.Status)) {
           setStatuses(data.Status.map((s) => ({
@@ -78,7 +78,7 @@ export default function StatusManagement() {
     const newStatus = !statusToUpdate.isActive;
 
     try {
-      const response = await fetch(`https://api.fivlia.in/updatedeliveryStatus/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/updatedeliveryStatus/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -108,7 +108,7 @@ export default function StatusManagement() {
       formData.append("status", "true");
       if (newImage) formData.append("image", newImage);
 
-      const response = await fetch("https://api.fivlia.in/deliveryStatus", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/deliveryStatus`, {
         method: "POST",
         body: formData,
       });
@@ -158,7 +158,7 @@ export default function StatusManagement() {
       if (editImage) formData.append("image", editImage);
 
       const response = await fetch(
-        `https://api.fivlia.in/updatedeliveryStatus/${selectedStatus.id}`,
+        `${process.env.REACT_APP_API_URL}/updatedeliveryStatus/${selectedStatus.id}`,
         {
           method: "PUT",
           body: formData,

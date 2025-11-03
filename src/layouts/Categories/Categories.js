@@ -34,7 +34,7 @@ function Categories() {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch("https://api.fivlia.in/getMainCategory");
+        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         if (data.status === 200) {
           const result = await data.json();
           setMainCategories(result.result); // Assume each category has `status` field
@@ -106,7 +106,7 @@ function Categories() {
     setMainCategories(updated);
 
     try {
-      const res = await fetch(`https://api.fivlia.in/editCat/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/editCat/${id}`, {
         method: "PUT", 
         headers: {
           "Content-Type": "application/json",

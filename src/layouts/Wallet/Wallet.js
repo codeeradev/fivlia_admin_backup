@@ -13,10 +13,10 @@ export default function Wallet() {
     const fetchData = async () => {
       try {
         // Wallet summary
-        const walletRes = await axios.get("https://api.fivlia.in/walletAdmin");
+        const walletRes = await axios.get(`${process.env.REACT_APP_API_URL}/walletAdmin`);
         setWallet(walletRes.data);
         // Transactions
-        const txnRes = await axios.get("https://api.fivlia.in/adminTranaction");
+        const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/adminTranaction`);
         const sortedTxns = txnRes.data.Tranaction
           .filter((txn) => txn.createdAt) // ignore incomplete entries
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

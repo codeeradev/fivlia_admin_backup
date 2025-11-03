@@ -37,7 +37,7 @@ export default function DriversWithdrawal() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch("https://api.fivlia.in/getWithdrawalRequest");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest`);
         const data = await response.json();
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
@@ -68,7 +68,7 @@ export default function DriversWithdrawal() {
   const handleWithdrawalAction = async (requestId, action) => {
     try {
       dispatch(startLoading());
-      const response = await fetch(`https://api.fivlia.in/withdrawal/${requestId}/${action}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
       });

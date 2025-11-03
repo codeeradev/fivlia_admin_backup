@@ -41,7 +41,7 @@ function EditBrand() {
     formData.append("image", document.querySelector('input[type="file"]').files[0]);
     formData.append("featured", featured.toString()); // Added featured field
 
-    const result = await fetch(`https://api.fivlia.in/editBrand/${id}`, {
+    const result = await fetch(`${process.env.REACT_APP_API_URL}/editBrand/${id}`, {
       method: "PUT",
       body: formData,
     });

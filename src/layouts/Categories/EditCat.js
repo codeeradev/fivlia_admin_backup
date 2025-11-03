@@ -38,7 +38,7 @@ const EditCategory = () => {
   useEffect(() => {
     const getFilters = async () => {
       try {
-        const result = await fetch(`https://api.fivlia.in/getFilter`);
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         if (result.status === 200) {
           const res = await result.json();
           setAllFilters(res);
@@ -52,7 +52,7 @@ const EditCategory = () => {
 
     const getAttributes = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getAttributes");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         if (result.status === 200) {
           const res = await result.json();
           setAllAttributes(res);
@@ -68,7 +68,7 @@ const EditCategory = () => {
 useEffect(() => {
 const getBrands = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getBrand"); // Adjust if your route is different
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`); // Adjust if your route is different
     if (res.status === 200) {
       const data = await res.json();
       setAllBrands(data.allBrands);
@@ -155,7 +155,7 @@ useEffect(() => {
 
   const handleFilter = async () => {
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({ Filter_name: filterName }),
         headers: { "Content-type": "application/json" },
@@ -182,7 +182,7 @@ useEffect(() => {
     }
 
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({
           _id: selectedFilter,
@@ -259,7 +259,7 @@ useEffect(() => {
     formData.append("attribute", JSON.stringify(selectedAttributes));
 
     try {
-      const response = await fetch(`https://api.fivlia.in/editMainCategory`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/editMainCategory`, {
         method: "PUT",
         body: formData,
       });

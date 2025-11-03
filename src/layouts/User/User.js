@@ -33,7 +33,7 @@ function UserTable() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/users");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/users`);
         const data = await res.json();
         setUsers(data || []);
       } catch (err) {
@@ -62,7 +62,7 @@ function UserTable() {
       const confirmAction = window.confirm(`Are you sure you want to ${action} this user?`);
       if (!confirmAction) return;
 
-      const res = await fetch(`https://api.fivlia.in/users/${id}/${action}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/users/${id}/${action}`, {
         method: "PUT",
       });
 
@@ -84,7 +84,7 @@ function UserTable() {
       const confirmDelete = window.confirm("Are you sure you want to delete this user?");
       if (!confirmDelete) return;
 
-      const res = await fetch(`https://api.fivlia.in/users/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/users/${id}`, {
         method: "DELETE",
       });
 

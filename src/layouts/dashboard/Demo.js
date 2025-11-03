@@ -26,7 +26,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const res = await axios.get("https://api.fivlia.in/getDashboardStats");
+        const res = await axios.get(`${process.env.REACT_APP_API_URL}/getDashboardStats`);
         setStats(res.data);
       } catch (err) {
         console.error("Failed to fetch dashboard stats", err);

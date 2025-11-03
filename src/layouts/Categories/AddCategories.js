@@ -43,7 +43,7 @@ const AddCategories = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getFilter");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         const data = await res.json();
         setFilterTypes(data);
       } catch (err) {
@@ -101,7 +101,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
   // Add new filter
   const handleFilter = async () => {
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({ Filter_name: filterName }),
         headers: { "Content-Type": "application/json" },
@@ -111,7 +111,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         setFilterPopup(false);
         setFilterName("");
         // Refresh filter types
-        const res = await fetch("https://api.fivlia.in/getFilter");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         const data = await res.json();
         setFilterTypes(data);
       } else {
@@ -130,7 +130,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
     }
 
     try {
-      const result = await fetch(`https://api.fivlia.in/addFilter`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
         method: "POST",
         body: JSON.stringify({
           _id: selectedFilter,
@@ -143,7 +143,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         setShowFilterDropdown(false);
         setAddFilterValue("");
         // Refresh filter values
-        const res = await fetch("https://api.fivlia.in/getFilter");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
         const data = await res.json();
         setFilterTypes(data);
         const selectedFilterObj = data.find((f) => f._id === selectedFilter);
@@ -165,7 +165,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch("https://api.fivlia.in/getMainCategory");
+        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
         if (data.status === 200) {
           const result = await data.json();
           setMainCategories(result.result);
@@ -182,7 +182,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
 
     const fetchAttribute = async () => {
       try {
-        const res = await fetch("https://api.fivlia.in/getAttributes");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
         const data = await res.json();
         setAttribute(data);
       } catch (err) {
@@ -195,7 +195,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
 useEffect(()=>{
   const fetchBrands = async () => {
   try {
-    const res = await fetch("https://api.fivlia.in/getBrand");
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
     if (res.status === 200) {
       const data = await res.json();
     setBrands(data.allBrands);
@@ -271,7 +271,7 @@ fetchBrands();
     // Main Category Add
     if (type === "Main Category") {
       try {
-        const response = await fetch("https://api.fivlia.in/addMainCategory", {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/addMainCategory`, {
           method: "POST",
           body: formData,
         });

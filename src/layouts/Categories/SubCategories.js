@@ -40,7 +40,7 @@ function GetSubCategories() {
     const getSubCate = async () => {
       try {
         const res = await fetch(
-          `https://api.fivlia.in/GetSubCategories/${category._id}`
+          `${process.env.REACT_APP_API_URL}/GetSubCategories/${category._id}`
         );
         if (res.status === 200) {
           const result = await res.json();
@@ -71,7 +71,7 @@ function GetSubCategories() {
     }));
 
     try {
-      const res = await fetch(`https://api.fivlia.in/editSubCat/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/editSubCat/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

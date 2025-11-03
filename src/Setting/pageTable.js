@@ -33,7 +33,7 @@ export default function PagesTable() {
   useEffect(() => {
     const getPage = async () => {
       try {
-        const result = await fetch("https://api.fivlia.in/getPage ");
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/getPage`);
         const data = await result.json();
         if (Array.isArray(data.getPage)) {
           const pagesWithDetails = data.getPage.map((page) => ({
@@ -91,7 +91,7 @@ export default function PagesTable() {
 
     try {
       const response = await fetch(
-        `https://api.fivlia.in/updatePageStatus/${id}`,
+        `${process.env.REACT_APP_API_URL}/updatePageStatus/${id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
