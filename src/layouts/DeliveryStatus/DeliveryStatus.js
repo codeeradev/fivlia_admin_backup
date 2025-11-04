@@ -268,7 +268,8 @@ export default function StatusManagement() {
               ))}
             </select>
           </div>
-          <div style={{ marginLeft: "420px" }}>
+          <div style={{ width: "100%",marginTop:'-7%' }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
             <input
               type="text"
@@ -287,7 +288,7 @@ export default function StatusManagement() {
             />
           </div>
         </div>
-
+</div>
         <table style={{
           width: "100%",
           borderCollapse: "collapse",

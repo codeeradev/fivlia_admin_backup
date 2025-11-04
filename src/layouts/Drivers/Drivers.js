@@ -2,7 +2,21 @@ import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
-import { Button, Switch, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControlLabel, Checkbox, IconButton, Typography, Divider } from "@mui/material";
+import {
+  Button,
+  Switch,
+  Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  IconButton,
+  Typography,
+  Divider,
+} from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
@@ -22,7 +36,7 @@ export default function Drivers() {
   const [drivers, setDrivers] = useState([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [walletBalances, setWalletBalances] = useState({}); // New state for wallet balances
-  const [entriesToShow, setEntriesToShow] = useState(5);
+  const [entriesToShow, setEntriesToShow] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDriver, setSelectedDriver] = useState(null);
@@ -46,6 +60,10 @@ export default function Drivers() {
   const [driverLocation, setDriverLocation] = useState(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [referralStores, setReferralStores] = useState([]);
+  const [referralMessage, setReferralMessage] = useState("");
+  const [referralError, setReferralError] = useState("");
 
   const headerCell = {
     padding: "14px 12px",
@@ -116,11 +134,41 @@ export default function Drivers() {
     }
   };
 
+  const handleViewReferrals = async (driver) => {
+    try {
+      setSelectedDriver(driver);
+      setReferralError("");
+      setReferralMessage("");
+      setReferralStores([]);
+      dispatch(startLoading());
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/get-driver-referral-seller`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId: driver.driverId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to fetch referrals");
+      }
+      setReferralMessage(data?.message || "");
+      setReferralStores(Array.isArray(data?.stores) ? data.stores : []);
+      setReferralModalOpen(true);
+    } catch (e) {
+      console.error("Failed to fetch referrals:", e);
+      setReferralError(e.message || "Failed to fetch referrals");
+      setReferralModalOpen(true);
+    } finally {
+      dispatch(stopLoading());
+    }
+  };
+
   // Fetch wallet balances
   const fetchWalletBalances = async () => {
     try {
       const promises = drivers.map(async (driver) => {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/transactionList/${driver.id}`);
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/transactionList/${driver.id}`
+        );
         const data = await response.json();
         return { driverId: driver.id, totalAmount: data.totalAmount || 0 };
       });
@@ -158,10 +206,10 @@ export default function Drivers() {
             address: driver.address || { city: "", locality: "", mobileNo: "" },
           }));
           formattedDrivers.sort((a, b) => {
-    const aNum = Number(a.driverId.replace(/\D/g, "")) || 0;
-    const bNum = Number(b.driverId.replace(/\D/g, "")) || 0;
-    return bNum - aNum; // largest first
-  });
+            const aNum = Number(a.driverId.replace(/\D/g, "")) || 0;
+            const bNum = Number(b.driverId.replace(/\D/g, "")) || 0;
+            return bNum - aNum; // largest first
+          });
           setDrivers(formattedDrivers);
         } else {
           setError("Invalid driver data format");
@@ -260,9 +308,7 @@ export default function Drivers() {
         throw new Error(errorData.message || "Failed to update status");
       }
 
-      setDrivers((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d))
-      );
+      setDrivers((prev) => prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d)));
     } catch (error) {
       console.error("Error updating status:", error);
       setError(`Failed to update status: ${error.message}`);
@@ -276,7 +322,9 @@ export default function Drivers() {
     if (!driverToDelete) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete driver "${driverToDelete.name || id}"? This action cannot be undone.`
+      `Are you sure you want to delete driver "${
+        driverToDelete.name || id
+      }"? This action cannot be undone.`
     );
     if (!confirmed) return;
 
@@ -404,10 +452,13 @@ export default function Drivers() {
   const handleWithdrawalAction = async (requestId, action) => {
     try {
       dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -416,7 +467,9 @@ export default function Drivers() {
 
       setWithdrawalRequests((prev) =>
         prev.map((req) =>
-          req.id === requestId ? { ...req, status: action === "accept" ? "Approved" : "Declined" } : req
+          req.id === requestId
+            ? { ...req, status: action === "accept" ? "Approved" : "Declined" }
+            : req
         )
       );
     } catch (error) {
@@ -499,14 +552,15 @@ export default function Drivers() {
                 border: "1px solid #ccc",
               }}
             >
-              {[5, 10, 20, 30].map((num) => (
+              {[50, 100, 200, 400].map((num) => (
                 <option key={num} value={num}>
                   {num}
                 </option>
               ))}
             </select>
           </div>
-          <div style={{ marginLeft: "420px" }}>
+          <div style={{ width: "100%",marginTop:'-7%' }}>
+          <div style={{display: "flex", justifyContent: "flex-end"  }}>
             <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
             <input
               type="text"
@@ -524,8 +578,13 @@ export default function Drivers() {
               }}
             />
           </div>
+          </div>
         </div>
-
+<div
+  style={{
+    overflowX: "auto",          // <-- horizontal scroll
+  }}
+>
         {error && (
           <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
         )}
@@ -533,6 +592,7 @@ export default function Drivers() {
         <table
           style={{
             width: "100%",
+            minWidth: "1400px",
             borderCollapse: "collapse",
             fontFamily: '"Urbanist", sans-serif',
             fontSize: "17px",
@@ -548,6 +608,7 @@ export default function Drivers() {
               <th style={headerCell}>Email</th>
               <th style={headerCell}>Mobile No</th>
               <th style={headerCell}>Wallet</th>
+              <th style={headerCell}>Referrals</th>
               <th style={headerCell}>Details</th>
               <th style={headerCell}>Status</th>
               <th style={headerCell}>Action</th>
@@ -567,7 +628,11 @@ export default function Drivers() {
                   <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
                   <td style={bodyCell}>{driver.driverId}</td>
                   <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Avatar src={`${process.env.REACT_APP_IMAGE_LINK}${driver.image}`} alt={driver.name} sx={{ width: 40, height: 40 }} />
+                    <Avatar
+                      src={`${process.env.REACT_APP_IMAGE_LINK}${driver.image}`}
+                      alt={driver.name}
+                      sx={{ width: 40, height: 40 }}
+                    />
                     <span>{driver.name}</span>
                   </td>
                   <td style={bodyCell}>{driver.email || "-"}</td>
@@ -579,10 +644,28 @@ export default function Drivers() {
                         color: "#007bff",
                         textDecoration: "underline",
                       }}
-                      onClick={() => navigate("/driverTransaction", { state: { driverId: driver.id } })}
+                      onClick={() =>
+                        navigate("/driverTransaction", { state: { driverId: driver.id } })
+                      }
                     >
                       ₹{walletBalances[driver.id]?.toFixed(2) || "0.00"}
                     </div>
+                  </td>
+                  <td style={{ ...bodyCell, textAlign: "center" }}>
+                    <button
+                      onClick={() => handleViewReferrals(driver)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #007bff",
+                        backgroundColor: "white",
+                        color: "#007bff",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
+                    >
+                      View
+                    </button>
                   </td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
                     <button
@@ -674,7 +757,7 @@ export default function Drivers() {
             )}
           </tbody>
         </table>
-
+      </div>
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
           <div>
             Showing {startIndex + 1} to {Math.min(endIndex, filteredDrivers.length)} of{" "}
@@ -727,7 +810,7 @@ export default function Drivers() {
               >
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; OpenStreetMap contributors'
+                  attribution="&copy; OpenStreetMap contributors"
                 />
                 <Marker position={[driverLocation.lat, driverLocation.lng]} icon={bikeIcon}>
                   <Popup>{selectedDriver?.name}</Popup>
@@ -744,14 +827,23 @@ export default function Drivers() {
       </Dialog>
 
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Driver Details
         </DialogTitle>
         <DialogContent dividers sx={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
           {selectedDriver ? (
             <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 300px" }}>
-                <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "18px",
+                    marginBottom: "16px",
+                  }}
+                >
                   Personal Information
                 </Typography>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
@@ -763,25 +855,42 @@ export default function Drivers() {
                   <span style={{ ...modalValueStyle, marginLeft: "8px" }}>
                     {showPassword ? selectedDriver.password || "Not provided" : "••••••••"}
                   </span>
-                  <IconButton onClick={togglePasswordVisibility} size="small" sx={{ marginLeft: "8px" }}>
+                  <IconButton
+                    onClick={togglePasswordVisibility}
+                    size="small"
+                    sx={{ marginLeft: "8px" }}
+                  >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </div>
                 <Divider sx={{ margin: "16px 0" }} />
-                <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "18px",
+                    marginBottom: "16px",
+                  }}
+                >
                   Address
                 </Typography>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
                   <span style={modalLabelStyle}>📍 City:</span>
-                  <span style={modalValueStyle}>{selectedDriver.address?.city || "Not provided"}</span>
+                  <span style={modalValueStyle}>
+                    {selectedDriver.address?.city || "Not provided"}
+                  </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
                   <span style={modalLabelStyle}>🏠 Locality:</span>
-                  <span style={modalValueStyle}>{selectedDriver.address?.locality || "Not provided"}</span>
+                  <span style={modalValueStyle}>
+                    {selectedDriver.address?.locality || "Not provided"}
+                  </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
                   <span style={modalLabelStyle}>📞 Mobile:</span>
-                  <span style={modalValueStyle}>{selectedDriver.address?.mobileNo || "Not provided"}</span>
+                  <span style={modalValueStyle}>
+                    {selectedDriver.address?.mobileNo || "Not provided"}
+                  </span>
                 </div>
                 <TextField
                   label="Search Location"
@@ -794,7 +903,14 @@ export default function Drivers() {
               </div>
 
               <div style={{ flex: "1 1 400px" }}>
-                <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "18px",
+                    marginBottom: "16px",
+                  }}
+                >
                   Documents
                 </Typography>
                 <div style={{ marginBottom: "24px" }}>
@@ -823,7 +939,11 @@ export default function Drivers() {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.Police_Verification_Copy}`)}
+                        onClick={() =>
+                          handleOpenImageModal(
+                            `${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.Police_Verification_Copy}`
+                          )
+                        }
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -832,10 +952,24 @@ export default function Drivers() {
                     <span style={modalValueStyle}>Not provided</span>
                   )}
                 </div>
-                <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "18px",
+                    marginBottom: "16px",
+                  }}
+                >
                   Aadhar Card
                 </Typography>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "24px",
+                  }}
+                >
                   <div>
                     <span style={modalLabelStyle}>🆔 Front:</span>
                     {selectedDriver.aadharCard?.front ? (
@@ -852,7 +986,11 @@ export default function Drivers() {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.front}`)}
+                        onClick={() =>
+                          handleOpenImageModal(
+                            `${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.front}`
+                          )
+                        }
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -876,7 +1014,11 @@ export default function Drivers() {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.back}`)}
+                        onClick={() =>
+                          handleOpenImageModal(
+                            `${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.aadharCard.back}`
+                          )
+                        }
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -885,7 +1027,14 @@ export default function Drivers() {
                     )}
                   </div>
                 </div>
-                <Typography variant="h6" sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "18px", marginBottom: "16px" }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "18px",
+                    marginBottom: "16px",
+                  }}
+                >
                   Driving Licence
                 </Typography>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -905,7 +1054,11 @@ export default function Drivers() {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.front}`)}
+                        onClick={() =>
+                          handleOpenImageModal(
+                            `${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.front}`
+                          )
+                        }
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -929,7 +1082,11 @@ export default function Drivers() {
                           marginTop: "8px",
                           transition: "transform 0.2s",
                         }}
-                        onClick={() => handleOpenImageModal(`${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.back}`)}
+                        onClick={() =>
+                          handleOpenImageModal(
+                            `${process.env.REACT_APP_IMAGE_LINK}${selectedDriver.drivingLicence.back}`
+                          )
+                        }
                         onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
                         onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                       />
@@ -961,11 +1118,144 @@ export default function Drivers() {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={referralModalOpen}
+        onClose={() => setReferralModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
+          Referrals {selectedDriver ? `- ${selectedDriver.name}` : ""}
+        </DialogTitle>
+        <DialogContent dividers sx={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+          {referralError && (
+            <Typography
+              color="error"
+              sx={{ marginBottom: "12px", fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}
+            >
+              No referral records were found for this driver.
+            </Typography>
+          )}
+          {/* {referralMessage && (
+            <Typography sx={{ marginBottom: "12px", fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}>
+              {referralMessage}
+            </Typography>
+          )} */}
+          {referralStores && referralStores.length > 0 ? (
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontFamily: '"Urbanist", sans-serif',
+                fontSize: "16px",
+                borderBottom: "1px solid #f1f1f1",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      ...headerCell,
+                      backgroundColor: "#f4f4f4",
+                      color: "Black",
+                      fontSize: 16,
+                    }}
+                  >
+                    Store Name
+                  </th>
+                  <th
+                    style={{
+                      ...headerCell,
+                      backgroundColor: "#f4f4f4",
+                      color: "Black",
+                      fontSize: 16,
+                    }}
+                  >
+                    City
+                  </th>
+                  <th
+                    style={{
+                      ...headerCell,
+                      backgroundColor: "#f4f4f4",
+                      color: "Black",
+                      fontSize: 16,
+                    }}
+                  >
+                    Phone
+                  </th>
+                  <th
+                    style={{
+                      ...headerCell,
+                      backgroundColor: "#f4f4f4",
+                      color: "Black",
+                      fontSize: 16,
+                    }}
+                  >
+                    Email
+                  </th>
+                  {/* <th style={{ ...headerCell,backgroundColor: "#f4f4f4",color:'Black', fontSize: 16 }}>Status</th>
+                  <th style={{ ...headerCell,backgroundColor: "#f4f4f4",color:'Black', fontSize: 16 }}>Approve Status</th> */}
+                  <th
+                    style={{
+                      ...headerCell,
+                      backgroundColor: "#f4f4f4",
+                      color: "Black",
+                      fontSize: 16,
+                    }}
+                  >
+                    Commission
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {referralStores.map((s) => (
+                  <tr key={s._id}>
+                    <td style={{ ...bodyCell, color: "Black" }}>{s.storeName || "-"}</td>
+                    <td style={{ ...bodyCell, color: "Black" }}>{s.city || "-"}</td>
+                    <td style={{ ...bodyCell, color: "Black" }}>{s.PhoneNumber || "-"}</td>
+                    <td style={{ ...bodyCell, color: "Black" }}>{s.email || "-"}</td>
+                    {/* <td style={{...bodyCell,color:'Black'}}>{String(s.status)}</td>
+                    <td style={{...bodyCell,color:'Black'}}>{s.approveStatus || '-'}</td> */}
+                    <td style={{ ...bodyCell, color: "Black" }}>Rs.{Number(s.commission || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            !referralError && (
+              <Typography sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}>
+                No referrals found.
+              </Typography>
+            )
+          )}
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px" }}>
+          <Button
+            onClick={() => setReferralModalOpen(false)}
+            color="primary"
+            sx={{
+              fontFamily: '"Urbanist", sans-serif',
+              fontSize: "14px",
+              borderRadius: "6px",
+              padding: "8px 16px",
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Image Preview
         </DialogTitle>
-        <DialogContent sx={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "24px" }}>
+        <DialogContent
+          sx={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "24px" }}
+        >
           {selectedImage && (
             <img
               src={selectedImage}
@@ -997,12 +1287,17 @@ export default function Drivers() {
       </Dialog>
 
       <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Edit Driver
         </DialogTitle>
         <DialogContent dividers sx={{ padding: "24px" }}>
           {error && (
-            <Typography color="error" sx={{ marginBottom: "16px", fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}>
+            <Typography
+              color="error"
+              sx={{ marginBottom: "16px", fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}
+            >
               {error}
             </Typography>
           )}
@@ -1011,9 +1306,7 @@ export default function Drivers() {
             fullWidth
             margin="normal"
             value={editDriverData.driverName}
-            onChange={(e) =>
-              setEditDriverData((prev) => ({ ...prev, driverName: e.target.value }))
-            }
+            onChange={(e) => setEditDriverData((prev) => ({ ...prev, driverName: e.target.value }))}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <TextField
@@ -1021,9 +1314,7 @@ export default function Drivers() {
             fullWidth
             margin="normal"
             value={editDriverData.email}
-            onChange={(e) =>
-              setEditDriverData((prev) => ({ ...prev, email: e.target.value }))
-            }
+            onChange={(e) => setEditDriverData((prev) => ({ ...prev, email: e.target.value }))}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <TextField
@@ -1032,9 +1323,7 @@ export default function Drivers() {
             fullWidth
             margin="normal"
             value={editDriverData.password}
-            onChange={(e) =>
-              setEditDriverData((prev) => ({ ...prev, password: e.target.value }))
-            }
+            onChange={(e) => setEditDriverData((prev) => ({ ...prev, password: e.target.value }))}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <TextField
@@ -1074,11 +1363,11 @@ export default function Drivers() {
                 address: { ...prev.address, mobileNo: e.target.value },
               }))
             }
-              inputProps={{
-               maxLength: 10,
-               pattern: "[0-9]*", // Enforce numeric input
-               inputMode: "numeric", // Show numeric keyboard on mobile devices
-             }}
+            inputProps={{
+              maxLength: 10,
+              pattern: "[0-9]*", // Enforce numeric input
+              inputMode: "numeric", // Show numeric keyboard on mobile devices
+            }}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <FormControlLabel
@@ -1100,9 +1389,7 @@ export default function Drivers() {
             margin="normal"
             InputLabelProps={{ shrink: true }}
             inputProps={{ accept: "image/*" }}
-            onChange={(e) =>
-              setEditDriverData((prev) => ({ ...prev, image: e.target.files[0] }))
-            }
+            onChange={(e) => setEditDriverData((prev) => ({ ...prev, image: e.target.files[0] }))}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
           />
           <TextField
