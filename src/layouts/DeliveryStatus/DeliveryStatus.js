@@ -24,7 +24,7 @@ export default function StatusManagement() {
   const [newStatusCode, setNewStatusCode] = useState("");
   const [newStatusTitle, setNewStatusTitle] = useState("");
   const [newImage, setNewImage] = useState(null);
-  const [entriesToShow, setEntriesToShow] = useState(5);
+  const [entriesToShow, setEntriesToShow] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [editImage, setEditImage] = useState(null);
@@ -248,7 +248,7 @@ export default function StatusManagement() {
           </Button>
         </div>
 
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        <div style={{display: "flex", alignItems: "center", gap: "10px" }}>
           <div>
             <label style={{ fontSize: 17 }}>Show Entries </label>
             <select
@@ -261,14 +261,14 @@ export default function StatusManagement() {
                 border: "1px solid #ccc",
               }}
             >
-              {[5, 10, 20, 30].map((num) => (
+              {[50, 100, 200, 300].map((num) => (
                 <option key={num} value={num}>
                   {num}
                 </option>
               ))}
             </select>
           </div>
-          <div style={{ width: "100%",marginTop:'-7%' }}>
+          <div style={{ width: "100%" }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
             <input

@@ -539,7 +539,7 @@ export default function Drivers() {
           </Button>
         </div>
 
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div>
             <label style={{ fontSize: 17 }}>Show Entries </label>
             <select
@@ -559,7 +559,7 @@ export default function Drivers() {
               ))}
             </select>
           </div>
-          <div style={{ width: "100%",marginTop:'-7%' }}>
+          <div style={{ width: "100%" }}>
           <div style={{display: "flex", justifyContent: "flex-end"  }}>
             <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
             <input
