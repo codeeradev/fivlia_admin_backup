@@ -12,7 +12,7 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Typography
+  Typography,
 } from "@mui/material";
 import DataTable from "react-data-table-component";
 // import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -164,10 +164,13 @@ export default function Festival() {
     if (eventData.image) formData.append("image", eventData.image);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/editEvent/${selectedEvent._id}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/editEvent/${selectedEvent._id}`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
       const data = await response.json();
       alert(data.message || "Event Updated");
       setEditModalOpen(false);
@@ -215,8 +218,16 @@ export default function Festival() {
   const columns = [
     { name: "Title", selector: (row) => row.eventTitle, sortable: true },
     { name: "Type", selector: (row) => row.type, sortable: true },
-    { name: "Start Time", selector: (row) => row.startTime ? moment(row.startTime).format("lll") : "-", sortable: true },
-    { name: "End Time", selector: (row) => row.endTime ? moment(row.endTime).format("lll") : "-", sortable: true },
+    {
+      name: "Start Time",
+      selector: (row) => (row.startTime ? moment(row.startTime).format("lll") : "-"),
+      sortable: true,
+    },
+    {
+      name: "End Time",
+      selector: (row) => (row.endTime ? moment(row.endTime).format("lll") : "-"),
+      sortable: true,
+    },
     {
       name: "Image",
       cell: (row) =>
@@ -259,18 +270,51 @@ export default function Festival() {
   );
 
   return (
-      <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-        <div style={{ width: "100%", padding: "0 20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Event List</h2>
-              <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>View and manage events</p>
-            </div>
+    <MDBox
+      sx={{ ml: { xs: 0, sm: miniSidenav ? "80px" : "250px" }, mt: "30px", p: { xs: 1, sm: 2 } }}
+    >
+      <div style={{ width: "100%", padding: "0 20px", boxSizing: "border-box" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: "200px" }}>
+            <h2 style={{ margin: 0, fontSize: "26px", fontWeight: "bold" }}>Event List</h2>
+            <p style={{ margin: 0, fontSize: "16px", color: "#555" }}>View and manage events</p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: "10px",
+              flex: 1,
+              minWidth: "250px",
+            }}
+          >
+            <TextField
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{
+                width: { xs: "100%", sm: "200px" },
+                backgroundColor: "white",
+              }}
+            />
             <Button
               style={{
                 backgroundColor: "#00c853",
-                height: 45,
-                width: 150,
+                height: 40,
+                width: "fit-content",
                 fontSize: 12,
                 color: "white",
                 letterSpacing: "1px",
@@ -280,16 +324,9 @@ export default function Festival() {
               + Add Event
             </Button>
           </div>
+        </div>
 
-          <div style={{ marginBottom: 20, display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <TextField
-              placeholder="Search events..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              size="small"
-            />
-          </div>
-
+        <div style={{ overflowX: "auto" }}>
           <DataTable
             columns={columns}
             data={filteredEvents}
@@ -299,185 +336,211 @@ export default function Festival() {
             noDataComponent="No events found"
           />
         </div>
+      </div>
+      {/* Image Modal */}
+      <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Event Image</DialogTitle>
+        <DialogContent sx={{ display: "flex", justifyContent: "center", padding: "20px" }}>
+          {selectedEvent?.image && (
+            <img
+              src={`${process.env.REACT_APP_IMAGE_LINK}${selectedEvent.image}`}
+              alt="Event"
+              style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: "8px" }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImageModal} color="error">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* Image Modal */}
-        <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
-          <DialogTitle>Event Image</DialogTitle>
-          <DialogContent sx={{ display: "flex", justifyContent: "center", padding: "20px" }}>
-            {selectedEvent?.image && (
-              <img
-                src={`${process.env.REACT_APP_IMAGE_LINK}${selectedEvent.image}`}
-                alt="Event"
-                style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: "8px" }}
+      {/* Add/Edit Modals */}
+      {[
+        ["Add", addModalOpen, setAddModalOpen, handleAddEvent],
+        ["Edit", editModalOpen, setEditModalOpen, handleEditEvent],
+      ].map(([title, open, setOpen, submitHandler], idx) => (
+        <Dialog key={idx} open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>{title} Event</DialogTitle>
+          <DialogContent
+            sx={{
+              overflowX: "hidden",
+              maxHeight: "80vh",
+              paddingX: { xs: 1.5, sm: 3 },
+            }}
+          >
+            <TextField
+              label="Title"
+              fullWidth
+              margin="normal"
+              value={eventData.eventTitle}
+              onChange={(e) => setEventData({ ...eventData, eventTitle: e.target.value })}
+            />
+            <TextField
+              select
+              label="Type"
+              fullWidth
+              margin="normal"
+              value={eventData.type}
+              onChange={(e) => setEventData({ ...eventData, type: e.target.value })}
+              InputProps={{
+                sx: {
+                  height: 46, // Increases the overall height
+                  fontSize: "16px", // Font size of the selected value
+                },
+              }}
+              SelectProps={{
+                sx: {
+                  fontSize: "14px", // Font size of the dropdown options
+                },
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      fontSize: "14px",
+                    },
+                  },
+                },
+              }}
+              sx={{
+                "& .MuiInputBase-root": {
+                  height: 46,
+                  fontSize: "16px",
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: "12px",
+                },
+              }}
+            >
+              <MenuItem value="Festival">Festival</MenuItem>
+              <MenuItem value="Alert" disabled>
+                Alert
+              </MenuItem>
+            </TextField>
+            <TextField
+              label="Font Color"
+              type="color"
+              fullWidth
+              margin="normal"
+              value={eventData.fontColor}
+              onChange={(e) => setEventData({ ...eventData, fontColor: e.target.value })}
+            />
+            <Typography variant="subtitle2" sx={{ mt: 2 }}>
+              Start Time
+            </Typography>
+            <Datetime
+              value={eventData.startTime}
+              onChange={(date) => setEventData({ ...eventData, startTime: date })}
+              inputProps={{
+                placeholder: "Select start time",
+                style: { width: "100%", padding: 10 },
+              }}
+            />
+
+            <Typography variant="subtitle2" sx={{ mt: 2 }}>
+              End Time
+            </Typography>
+            <Datetime
+              value={eventData.endTime}
+              onChange={(date) => setEventData({ ...eventData, endTime: date })}
+              inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
+            />
+
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+              Upload Image
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{
+                textAlign: "left",
+                padding: "10px 14px",
+                justifyContent: "start",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                color: "#000",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {eventData.image?.name || "Choose File"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => setEventData({ ...eventData, image: e.target.files[0] })}
               />
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseImageModal} color="error">
-              Close
             </Button>
-          </DialogActions>
-        </Dialog>
 
-        {/* Add/Edit Modals */}
-        {[["Add", addModalOpen, setAddModalOpen, handleAddEvent], ["Edit", editModalOpen, setEditModalOpen, handleEditEvent]].map(
-          ([title, open, setOpen, submitHandler], idx) => (
-            <Dialog key={idx} open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-              <DialogTitle>{title} Event</DialogTitle>
-              <DialogContent>
-                <TextField
-                  label="Title"
-                  fullWidth
-                  margin="normal"
-                  value={eventData.eventTitle}
-                  onChange={(e) => setEventData({ ...eventData, eventTitle: e.target.value })}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={eventData.eventStatus}
+                  onChange={(e) => setEventData({ ...eventData, eventStatus: e.target.checked })}
+                  color="primary"
                 />
-                <TextField
-                  select
-                  label="Type"
-                  fullWidth
-                  margin="normal"
-                  value={eventData.type}
-                  onChange={(e) => setEventData({ ...eventData, type: e.target.value })}
-                    InputProps={{
-    sx: {
-      height: 46, // Increases the overall height
-      fontSize: "16px", // Font size of the selected value
-    },
-  }}
-  SelectProps={{
-    sx: {
-      fontSize: "14px", // Font size of the dropdown options
-    },
-    MenuProps: {
-      PaperProps: {
-        sx: {
-          fontSize: "14px",
-        },
-      },
-    },
-  }}
-  sx={{
-    "& .MuiInputBase-root": {
-      height: 46,
-      fontSize: "16px",
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: "12px",
-    },
-  }}
-
-                >
-                  <MenuItem value="Festival">Festival</MenuItem>
-                  <MenuItem value="Alert" disabled>
-                    Alert
-                  </MenuItem>
-                </TextField>
-                <TextField
-                  label="Font Color"
-                  type="color"
-                  fullWidth
-                  margin="normal"
-                  value={eventData.fontColor}
-                  onChange={(e) => setEventData({ ...eventData, fontColor: e.target.value })}
-                />
-               <Typography variant="subtitle2" sx={{ mt: 2 }}>Start Time</Typography>
-<Datetime
-  value={eventData.startTime}
-  onChange={(date) => setEventData({ ...eventData, startTime: date })}
-  inputProps={{ placeholder: "Select start time", style: { width: "100%", padding: 10 } }}
-/>
-
-<Typography variant="subtitle2" sx={{ mt: 2 }}>End Time</Typography>
-<Datetime
-  value={eventData.endTime}
-  onChange={(date) => setEventData({ ...eventData, endTime: date })}
-  inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
-/>
-
-              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-  Upload Image
-</Typography>
-<Button
-  variant="outlined"
-  component="label"
-  fullWidth
-  sx={{
-    textAlign: "left",
-    padding: "10px 14px",
-    justifyContent: "start",
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    color: "#000",
-    textOverflow: "ellipsis",
-  }}
->
-  {eventData.image?.name || "Choose File"}
-  <input
-    type="file"
-    accept="image/*"
-    hidden
-    onChange={(e) => setEventData({ ...eventData, image: e.target.files[0] })}
-  />
-</Button>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={eventData.eventStatus}
-                      onChange={(e) => setEventData({ ...eventData, eventStatus: e.target.checked })}
-                      color="primary"
-                    />
-                  }
-                  label="Active Status"
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpen(false)} color="error">
-                  Cancel
-                </Button>
-                <Button onClick={submitHandler} color="primary">
-                  {title === "Add" ? "Add" : "Save"}
-                </Button>
-              </DialogActions>
-            </Dialog>
-          )
-        )}
-
-        {/* Status Modal */}
-        <Dialog open={statusModalOpen} onClose={() => setStatusModalOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Set Event Time</DialogTitle>
-          <DialogContent>
-            <Typography>Please set Start and End time before activating event.</Typography>
-           <Typography variant="subtitle2" sx={{ mt: 2 }}>Start Time</Typography>
-<Datetime
-  value={eventData.startTime}
-  onChange={(date) => setEventData({ ...eventData, startTime: date })}
-  inputProps={{ placeholder: "Select start time", style: { width: "100%", padding: 10 } }}
-/>
-
-<Typography variant="subtitle2" sx={{ mt: 2 }}>End Time</Typography>
-<Datetime
-  value={eventData.endTime}
-  onChange={(date) => setEventData({ ...eventData, endTime: date })}
-  inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
-/>
-
+              }
+              label="Active Status"
+            />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setStatusModalOpen(false)} color="error">
+            <Button onClick={() => setOpen(false)} color="error">
               Cancel
             </Button>
-            <Button
-              onClick={() =>
-                toggleStatusApi(selectedEvent._id, eventData.eventStatus, eventData.startTime, eventData.endTime)
-              }
-              color="primary"
-            >
-              Save
+            <Button onClick={submitHandler} color="primary">
+              {title === "Add" ? "Add" : "Save"}
             </Button>
           </DialogActions>
         </Dialog>
-      </MDBox>
+      ))}
+
+      {/* Status Modal */}
+      <Dialog
+        open={statusModalOpen}
+        onClose={() => setStatusModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Set Event Time</DialogTitle>
+        <DialogContent>
+          <Typography>Please set Start and End time before activating event.</Typography>
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>
+            Start Time
+          </Typography>
+          <Datetime
+            value={eventData.startTime}
+            onChange={(date) => setEventData({ ...eventData, startTime: date })}
+            inputProps={{ placeholder: "Select start time", style: { width: "100%", padding: 10 } }}
+          />
+
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>
+            End Time
+          </Typography>
+          <Datetime
+            value={eventData.endTime}
+            onChange={(date) => setEventData({ ...eventData, endTime: date })}
+            inputProps={{ placeholder: "Select end time", style: { width: "100%", padding: 10 } }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatusModalOpen(false)} color="error">
+            Cancel
+          </Button>
+          <Button
+            onClick={() =>
+              toggleStatusApi(
+                selectedEvent._id,
+                eventData.eventStatus,
+                eventData.startTime,
+                eventData.endTime
+              )
+            }
+            color="primary"
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </MDBox>
   );
 }

@@ -343,16 +343,15 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
           .order-container {
             font-family: 'Urbanist', sans-serif;
             padding: 24px;
-            background: #f5f7fa;
-            min-height: 100vh;
-          }
-          .order-box {
             background: white;
+            min-height: 100vh;
             border-radius: 16px;
-            padding: 32px;
             box-shadow: 0 6px 16px rgba(0,0,0,0.1);
             max-width: 1400px;
             margin: 0 auto;
+          }
+          .order-box {
+            
           }
           .header {
             display: flex;

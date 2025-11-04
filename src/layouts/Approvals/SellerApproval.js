@@ -702,7 +702,7 @@ export default function ApprovalRequests() {
   };
 
   return (
-    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
+    <MDBox p={2} sx={{ marginTop: "30px", ml: { xs: "0px",  sm: "60px", md: miniSidenav ? "80px" : "250px", }, width: "100%", overflowX: "auto", }}>
       <MDBox width="100%" px={3}>
         <MDBox display="flex" justifyContent="space-between" mb={3} alignItems="center">
           <MDBox>

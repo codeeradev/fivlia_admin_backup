@@ -143,7 +143,7 @@ export default function CityTable() {
   // };
 
   return (
-    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
+    <MDBox p={2} sx={{ marginTop: "30px", ml: { xs: "0px",  sm: "60px", md: miniSidenav ? "80px" : "250px", }, width: "100%", overflowX: "auto", }}>
       <div style={{ width: "100%", padding: "0 20px" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
