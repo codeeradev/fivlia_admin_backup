@@ -24,11 +24,12 @@ export default function SellerWithdrawal() {
     setSelectedRequest(request);
     setIsModalOpen(true);
   };
-
+  
   const closeModal = () => {
     setSelectedRequest(null);
     setIsModalOpen(false);
   };
+
 
   const headerCell = {
     padding: "14px 12px",
@@ -51,9 +52,7 @@ export default function SellerWithdrawal() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/getWithdrawalRequest?type=seller`
-        );
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest?type=seller`);
         const data = await response.json();
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
@@ -65,7 +64,7 @@ export default function SellerWithdrawal() {
             status: request.status,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
-            sellerDetails: request.sellerDetails,
+            sellerDetails: request.sellerDetails
           }));
           setWithdrawalRequests(formattedRequests);
         } else {
@@ -82,45 +81,43 @@ export default function SellerWithdrawal() {
     fetchWithdrawalRequests();
   }, [dispatch]);
 
-  const handleWithdrawalAction = async (requestId, action) => {
-    try {
-      setLoadingAction(action);
 
-      const formData = new FormData();
-      if (note && note.trim() !== "") formData.append("note", note);
-      if (image) formData.append("image", image);
+const handleWithdrawalAction = async (requestId, action) => {
+  try {
+    setLoadingAction(action);
 
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}/seller`,
-        {
-          method: "PUT",
-          body: formData,
-        }
-      );
+    const formData = new FormData();
+    if (note && note.trim() !== "") formData.append("note", note);
+    if (image) formData.append("image", image);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
-      }
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}/seller`, {
+      method: "PUT",
+      body: formData,
+    });
 
-      const updatedRequest = await response.json();
-
-      setWithdrawalRequests((prev) =>
-        prev.map((req) =>
-          req.storeId === requestId ? { ...req, status: updatedRequest.request.status } : req
-        )
-      );
-
-      setNote("");
-      setImage(null);
-      closeModal();
-    } catch (error) {
-      console.error(`Error ${action}ing withdrawal request:`, error);
-      setError(`Failed to ${action} withdrawal request: ${error.message}`);
-    } finally {
-      setLoadingAction(null);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
     }
-  };
+
+    const updatedRequest = await response.json();
+
+    setWithdrawalRequests((prev) =>
+      prev.map((req) =>
+        req.storeId === requestId ? { ...req, status: updatedRequest.request.status } : req
+      )
+    );
+
+    setNote("");
+    setImage(null);
+    closeModal();
+  } catch (error) {
+    console.error(`Error ${action}ing withdrawal request:`, error);
+    setError(`Failed to ${action} withdrawal request: ${error.message}`);
+  } finally {
+   setLoadingAction(null); 
+  }
+};
 
   const filteredRequests = withdrawalRequests.filter((req) =>
     req.storeId?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -150,13 +147,11 @@ export default function SellerWithdrawal() {
   };
 
   return (
-    <MDBox p={2} sx={{ marginTop: "30px", ml: { xs: "0px",  sm: "60px", md: miniSidenav ? "80px" : "250px", }, width: "100%", overflowX: "auto", }}>
+      <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
       <div style={{ width: "100%", padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>
-              Seller Withdrawal Requests
-            </h2>
+            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Seller Withdrawal Requests</h2>
             <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
               View and manage all seller withdrawal requests
             </p>
@@ -306,7 +301,7 @@ export default function SellerWithdrawal() {
         </div>
       </div>
 
-      {isModalOpen && selectedRequest && (
+{isModalOpen && selectedRequest && (
         <div
           style={{
             position: "fixed",
@@ -339,67 +334,35 @@ export default function SellerWithdrawal() {
             <h2 style={{ marginBottom: 15, color: "#007BFF" }}>Seller Withdrawal Details</h2>
 
             {/* Seller Info */}
-            <div
-              style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}
-            >
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
               <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Seller Details</h3>
-              <p>
-                <strong>Name:</strong> {selectedRequest.sellerDetails?.ownerName}
-              </p>
-              <p>
-                <strong>Store:</strong> {selectedRequest.sellerDetails?.storeName}
-              </p>
-              <p>
-                <strong>Phone:</strong> {selectedRequest.sellerDetails?.phoneNumber}
-              </p>
-              <p>
-                <strong>Email:</strong> {selectedRequest.sellerDetails?.email}
-              </p>
-              <p>
-                <strong>City:</strong> {selectedRequest.sellerDetails?.city?.name}
-              </p>
-              <p>
-                <strong>Address:</strong> {selectedRequest.sellerDetails?.fullAddress}
-              </p>
+              <p><strong>Name:</strong> {selectedRequest.sellerDetails?.ownerName}</p>
+              <p><strong>Store:</strong> {selectedRequest.sellerDetails?.storeName}</p>
+              <p><strong>Phone:</strong> {selectedRequest.sellerDetails?.phoneNumber}</p>
+              <p><strong>Email:</strong> {selectedRequest.sellerDetails?.email}</p>
+              <p><strong>City:</strong> {selectedRequest.sellerDetails?.city?.name}</p>
+              <p><strong>Address:</strong> {selectedRequest.sellerDetails?.fullAddress}</p>
             </div>
 
             {/* GST & Wallet */}
-            <div
-              style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}
-            >
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
               <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Bank & Payment Details</h3>
-              <p>
-                <strong>Branch Name:</strong> {selectedRequest.sellerDetails?.bankDetails?.bankName}
-              </p>
-              <p>
-                <strong>Account Holder Name:</strong>{" "}
-                {selectedRequest.sellerDetails?.bankDetails.accountHolder}
-              </p>
-              <p>
-                <strong>Account Number:</strong>{" "}
-                {selectedRequest.sellerDetails?.bankDetails.accountNumber}
-              </p>
-              <p>
-                <strong>IFSC Code:</strong> {selectedRequest.sellerDetails?.bankDetails?.ifsc}
-              </p>
+              <p><strong>Branch Name:</strong> {selectedRequest.sellerDetails?.bankDetails?.bankName}</p>
+              <p><strong>Account Holder Name:</strong> {selectedRequest.sellerDetails?.bankDetails.accountHolder}</p>
+              <p><strong>Account Number:</strong> {selectedRequest.sellerDetails?.bankDetails.accountNumber}</p>
+              <p><strong>IFSC Code:</strong> {selectedRequest.sellerDetails?.bankDetails?.ifsc}</p>
             </div>
 
-            <div
-              style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}
-            >
-              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>
-                Withdrawal Request Details
-              </h3>
-              <p>
-                <strong>Current Wallet Balance:</strong> {selectedRequest.sellerDetails?.wallet}
-              </p>
-              <p>
-                <strong>Requested Amount:</strong> ₹{selectedRequest?.amount}
-              </p>
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Withdrawal Request Details</h3>
+              <p><strong>Current Wallet Balance:</strong> {selectedRequest.sellerDetails?.wallet}</p>
+              <p><strong>Requested Amount:</strong> ₹{selectedRequest?.amount}</p>
+            
             </div>
             {/* Accept / Decline */}
             {selectedRequest.status === "Pending" && (
               <div style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: "10px" }}>
+                
                 {/* Optional Note */}
                 <textarea
                   placeholder="Add a note (optional)"
@@ -414,7 +377,7 @@ export default function SellerWithdrawal() {
                     resize: "vertical",
                   }}
                 />
-
+            
                 {/* Optional Proof Document */}
                 <input
                   type="file"
@@ -422,7 +385,7 @@ export default function SellerWithdrawal() {
                   onChange={(e) => setImage(e.target.files[0])}
                   style={{ padding: 5 }}
                 />
-
+            
                 {/* Action Buttons */}
                 <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                   <button
@@ -460,23 +423,11 @@ export default function SellerWithdrawal() {
                 </div>
               </div>
             )}
-            <button
-              onClick={closeModal}
-              style={{
-                position: "absolute",
-                top: 10,
-                right: 10,
-                fontSize: 22,
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-              }}
-            >
-              &times;
-            </button>
+            <button onClick={closeModal} style={{ position: "absolute", top: 10, right: 10, fontSize: 22, border: "none", background: "transparent", cursor: "pointer" }}>&times;</button>
           </div>
         </div>
       )}
+
     </MDBox>
   );
 }
