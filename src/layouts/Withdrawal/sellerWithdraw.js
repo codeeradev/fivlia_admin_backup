@@ -3,6 +3,7 @@ import { useMaterialUIController } from "context";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 import MDBox from "components/MDBox";
+import { showAlert } from "components/commonFunction/alertsLoader"
 
 export default function SellerWithdrawal() {
   const [controller] = useMaterialUIController();
@@ -15,7 +16,6 @@ export default function SellerWithdrawal() {
   const [currentPage, setCurrentPage] = useState(1);
   const [note, setNote] = useState("");
   const [image, setImage] = useState(null);
-  const [error, setError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState(null); // "accept" | "decline" | null
@@ -52,6 +52,7 @@ export default function SellerWithdrawal() {
     const fetchWithdrawalRequests = async () => {
       try {
         dispatch(startLoading());
+        showAlert("loading", "Fetching seller withdrawal requests...");
         const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest?type=seller`);
         const data = await response.json();
         if (Array.isArray(data.requests)) {
@@ -67,12 +68,13 @@ export default function SellerWithdrawal() {
             sellerDetails: request.sellerDetails
           }));
           setWithdrawalRequests(formattedRequests);
+          showAlert("success", "Requests loaded successfully!", 1200);
         } else {
-          setError("Invalid withdrawal requests data format");
+          showAlert("error", "Invalid withdrawal requests data format.");
         }
       } catch (error) {
         console.error("Failed to fetch withdrawal requests:", error);
-        setError("Failed to fetch withdrawal requests. Please try again.");
+        showAlert("error", error.message || "Failed to fetch withdrawal requests.");
       } finally {
         dispatch(stopLoading());
       }
@@ -85,7 +87,7 @@ export default function SellerWithdrawal() {
 const handleWithdrawalAction = async (requestId, action) => {
   try {
     setLoadingAction(action);
-
+    showAlert("loading", `${action === "accept" ? "Approving" : "Declining"} request...`);
     const formData = new FormData();
     if (note && note.trim() !== "") formData.append("note", note);
     if (image) formData.append("image", image);
@@ -107,13 +109,17 @@ const handleWithdrawalAction = async (requestId, action) => {
         req.storeId === requestId ? { ...req, status: updatedRequest.request.status } : req
       )
     );
+    showAlert(
+        "success",
+        `Withdrawal request ${action === "accept" ? "approved" : "declined"} successfully!`
+      );
 
     setNote("");
     setImage(null);
     closeModal();
   } catch (error) {
     console.error(`Error ${action}ing withdrawal request:`, error);
-    setError(`Failed to ${action} withdrawal request: ${error.message}`);
+    showAlert("error", `Failed to ${action} withdrawal request: ${error.message}`);
   } finally {
    setLoadingAction(null); 
   }
@@ -197,10 +203,6 @@ const handleWithdrawalAction = async (requestId, action) => {
             />
           </div>
         </div>
-
-        {error && (
-          <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
-        )}
 
         <table
           style={{

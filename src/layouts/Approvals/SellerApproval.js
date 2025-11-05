@@ -26,7 +26,7 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import EditIcon from "@mui/icons-material/Edit";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import TextField from "@mui/material/TextField";
-
+import { showAlert } from "components/commonFunction/alertsLoader"
 export default function ApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -124,8 +124,8 @@ export default function ApprovalRequests() {
       setBrandRequests((data.brandRequest ||
          []).map((r) => ({ ...r, type: "brand" })));
     } catch (e) {
+      showAlert("error", "Failed to fetch requests.");
       console.error(e);
-      setError("Failed to fetch requests.");
     } finally {
       dispatch(stopLoading());
     }

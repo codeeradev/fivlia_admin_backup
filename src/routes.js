@@ -41,6 +41,7 @@ import UnitsTable from "layouts/Attribute/Units";
 import VarientTabel from "layouts/Attribute/Varient";
 import Setting from "Setting/Setting";
 import PagesTable from "Setting/pageTable";
+import OrderSetting from "Setting/OrderSetting";
 import LoginPage from "Login/Login";
 import button from "assets/theme/components/button";
 import StoreTabel from "layouts/Store/StoreTable";
@@ -378,6 +379,13 @@ const routes =
           key: "Pages",
           route: "/pages",
           component: <PagesTable />,
+          icon: <Icon fontSize="small">view_array</Icon>,
+        },
+          {
+          name: "Order Settings",
+          key: "order-settings",
+          route: "/order-settings",
+          component: <OrderSetting />,
           icon: <Icon fontSize="small">view_array</Icon>,
         },
       ],
