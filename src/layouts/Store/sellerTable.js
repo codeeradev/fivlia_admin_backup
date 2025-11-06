@@ -72,7 +72,7 @@ function SellerTable() {
 
   const getAllStores = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/getSeller`);
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/getSeller?includeBanned=true`);
       if (result.status === 200) {
         const res = await result.json();
         setStores(res.sellers || []);
@@ -131,6 +131,29 @@ function SellerTable() {
   const handleActionClose = () => {
     setActionAnchorEl(null);
     setActionStore(null);
+  };
+
+  const handleBanToggle = async (storeId, newStatus) => {
+    try {
+      const approveStatus = newStatus ? "banned" : "approved";
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approveStatus }),
+      });
+
+      if (response.ok) {
+        setStores((prevStores) =>
+          prevStores.map((s) => (s._id === storeId ? { ...s, approveStatus } : s))
+        );
+      } else {
+        alert("Failed to update ban status.");
+      }
+    } catch (err) {
+      console.error("Error updating ban status:", err);
+      alert("Error updating ban status");
+    }
   };
 
   const handleStatusToggle = async (storeId, newStatus) => {
@@ -222,7 +245,7 @@ function SellerTable() {
           >
             {/* ✅ Left — Entries + Filters */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
-              <FormControl style={{ width: "120px", marginTop:"-4px"}}>
+              <FormControl style={{ width: "120px", marginTop: "-4px" }}>
                 <span style={{ fontSize: "12px" }}>Show Entries</span>
                 <Select
                   value={entries}
@@ -240,7 +263,7 @@ function SellerTable() {
                 </Select>
               </FormControl>
 
-              <FormControl style={{ minWidth: "180px",  marginTop:"15px"}}>
+              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
                 <InputLabel>Filter by City</InputLabel>
                 <Select
                   value={selectedCity}
@@ -256,7 +279,7 @@ function SellerTable() {
                 </Select>
               </FormControl>
 
-              <FormControl style={{ minWidth: "180px", marginTop:"15px" }}>
+              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
                 <InputLabel>Filter by Status</InputLabel>
                 <Select
                   value={statusFilter}
@@ -300,6 +323,7 @@ function SellerTable() {
                   <th style={headerCell}>Zone(s)</th>
                   <th style={{ ...headerCell, width: "100px", textAlign: "center" }}>Products</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Status</th>
+                  <th style={{ ...headerCell, textAlign: "center" }}>Permanent Disable</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
@@ -416,6 +440,14 @@ function SellerTable() {
                         checked={store.status}
                         onChange={(e) => handleStatusToggle(store._id, e.target.checked)}
                         color="primary"
+                      />
+                    </td>
+
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <Switch
+                        checked={store.approveStatus === "banned"}
+                        onChange={(e) => handleBanToggle(store._id, e.target.checked)}
+                        color="error"
                       />
                     </td>
 

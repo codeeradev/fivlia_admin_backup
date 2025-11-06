@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Snackbar,
-  Alert,
-  CircularProgress,
-  Backdrop,
-  Fade,
-  Typography,
-  Box,
-} from "@mui/material";
+import { Snackbar, Alert, CircularProgress, Backdrop, Fade, Typography, Box } from "@mui/material";
 
 // This will hold the update function from the provider
 let setGlobalNotify;
@@ -81,9 +73,10 @@ export const AlertProvider = ({ children }) => {
       {/* Fullscreen Loading Overlay */}
       <Backdrop
         sx={{
-          color: "#fff",
+          color: "#333",
           zIndex: (theme) => theme.zIndex.drawer + 100,
-          backdropFilter: "blur(5px)",
+          backdropFilter: "blur(6px)",
+          background: "rgba(255, 255, 255, 0.6)",
         }}
         open={alert.open && alert.type === "loading"}
       >
@@ -93,18 +86,25 @@ export const AlertProvider = ({ children }) => {
           flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          p={3}
+          p={4}
           borderRadius="16px"
           sx={{
-            backgroundColor: "rgba(255,255,255,0.12)",
-            boxShadow: 4,
+            background: "linear-gradient(135deg, #ffffff 0%, #ffffff 100%)",
+            boxShadow: "0 8px 24px rgba(0, 123, 255, 0.25)",
+            border: "1px solid rgba(0, 123, 255, 0.2)",
+            animation: "fadePulse 1.8s ease-in-out infinite",
+            "@keyframes fadePulse": {
+              "0%": { boxShadow: "0 0 10px rgba(0,123,255,0.1)" },
+              "50%": { boxShadow: "0 0 25px rgba(0,123,255,0.35)" },
+              "100%": { boxShadow: "0 0 10px rgba(0,123,255,0.1)" },
+            },
           }}
         >
           <CircularProgress
             size={60}
             thickness={4.5}
             sx={{
-              color: (theme) => theme.palette.primary.main,
+              color: "#007bff",
               mb: 2,
             }}
           />
@@ -112,12 +112,11 @@ export const AlertProvider = ({ children }) => {
             variant="h6"
             sx={{
               fontWeight: 500,
-              letterSpacing: "0.5px",
-              color: "#fff",
-              textShadow: "0px 0px 6px rgba(0,0,0,0.4)",
+              letterSpacing: "0.4px",
+              color: "#007bff",
             }}
           >
-            {alert.message || "Processing..."}
+            {alert.message || "Processing... Please wait"}
           </Typography>
         </Box>
       </Backdrop>

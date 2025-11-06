@@ -1,15 +1,10 @@
 import React from "react";
+import { isSessionValid } from "components/commonFunction/session";
 import { Navigate, Outlet } from "react-router-dom";
 
 const PrivateRoute = () => {
-  const username = localStorage.getItem("username");
-  const password = localStorage.getItem("password");
-
-  
-  const isAuthenticated = username === "fivlia" && password === "fivlia@123";
-
- 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
+  const sessionValid = isSessionValid();
+  return sessionValid ? <Outlet /> : <Navigate to="/login" replace/>;
 };
 
 export default PrivateRoute;
