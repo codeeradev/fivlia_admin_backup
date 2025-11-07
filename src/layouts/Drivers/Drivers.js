@@ -64,6 +64,9 @@ export default function Drivers() {
   const [referralStores, setReferralStores] = useState([]);
   const [referralMessage, setReferralMessage] = useState("");
   const [referralError, setReferralError] = useState("");
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [driverRatings, setDriverRatings] = useState(null);
+  const [ratingError, setRatingError] = useState("");
 
   const headerCell = {
     padding: "14px 12px",
@@ -101,6 +104,31 @@ export default function Drivers() {
     iconAnchor: [20, 40],
     popupAnchor: [0, -40],
   });
+
+  const handleViewRating = async (driver) => {
+    try {
+      dispatch(startLoading());
+      setSelectedDriver(driver);
+      setRatingError("");
+      setDriverRatings(null);
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/getDriverRating/${driver.id}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to fetch driver rating");
+      }
+
+      setDriverRatings(data);
+      setRatingModalOpen(true);
+    } catch (err) {
+      console.error("Error fetching driver ratings:", err);
+      setRatingError(err.message || "Failed to load ratings");
+      setRatingModalOpen(true);
+    } finally {
+      dispatch(stopLoading());
+    }
+  };
 
   const fetchDriverLocation = async (driverId) => {
     try {
@@ -204,6 +232,7 @@ export default function Drivers() {
             aadharCard: driver.aadharCard || { front: "", back: "" },
             drivingLicence: driver.drivingLicence || { front: "", back: "" },
             address: driver.address || { city: "", locality: "", mobileNo: "" },
+            averageRating: driver.averageRating || 0,
           }));
           formattedDrivers.sort((a, b) => {
             const aNum = Number(a.driverId.replace(/\D/g, "")) || 0;
@@ -560,204 +589,219 @@ export default function Drivers() {
             </select>
           </div>
           <div style={{ width: "100%" }}>
-          <div style={{display: "flex", justifyContent: "flex-end"  }}>
-            <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search drivers..."
-              style={{
-                padding: "8px 34px",
-                borderRadius: "8px",
-                height: "42px",
-                width: "220px",
-                border: "1px solid #ccc",
-                fontSize: 16,
-                outline: "none",
-              }}
-            />
-          </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Search drivers..."
+                style={{
+                  padding: "8px 34px",
+                  borderRadius: "8px",
+                  height: "42px",
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
         </div>
-<div
-  style={{
-    overflowX: "auto",          // <-- horizontal scroll
-  }}
->
-        {error && (
-          <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
-        )}
-
-        <table
+        <div
           style={{
-            width: "100%",
-            minWidth: "1400px",
-            borderCollapse: "collapse",
-            fontFamily: '"Urbanist", sans-serif',
-            fontSize: "17px",
-            border: "1px solid #007BFF",
-            marginTop: "20px",
+            overflowX: "auto", // <-- horizontal scroll
           }}
         >
-          <thead>
-            <tr>
-              <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Driver ID </th>
-              <th style={headerCell}>Driver Name</th>
-              <th style={headerCell}>Email</th>
-              <th style={headerCell}>Mobile No</th>
-              <th style={headerCell}>Wallet</th>
-              <th style={headerCell}>Referrals</th>
-              <th style={headerCell}>Details</th>
-              <th style={headerCell}>Status</th>
-              <th style={headerCell}>Action</th>
-              <th style={headerCell}>Locate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentDrivers.length > 0 ? (
-              currentDrivers.map((driver, index) => (
-                <tr
-                  key={driver.id}
-                  style={{
-                    backgroundColor: selectedDriver?.id === driver.id ? "#f1f1f1" : "white",
-                    cursor: "pointer",
-                  }}
-                >
-                  <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
-                  <td style={bodyCell}>{driver.driverId}</td>
-                  <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Avatar
-                      src={`${process.env.REACT_APP_IMAGE_LINK}${driver.image}`}
-                      alt={driver.name}
-                      sx={{ width: 40, height: 40 }}
-                    />
-                    <span>{driver.name}</span>
-                  </td>
-                  <td style={bodyCell}>{driver.email || "-"}</td>
-                  <td style={bodyCell}>{driver.address?.mobileNo || "-"}</td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <div
-                      style={{
-                        cursor: "pointer",
-                        color: "#007bff",
-                        textDecoration: "underline",
-                      }}
-                      onClick={() =>
-                        navigate("/driverTransaction", { state: { driverId: driver.id } })
-                      }
-                    >
-                      ₹{walletBalances[driver.id]?.toFixed(2) || "0.00"}
-                    </div>
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <button
-                      onClick={() => handleViewReferrals(driver)}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "1px solid #007bff",
-                        backgroundColor: "white",
-                        color: "#007bff",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                      }}
-                    >
-                      View
-                    </button>
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <button
-                      onClick={() => {
-                        setSelectedDriver(driver);
-                        setSearchLocation(driver.address?.locality || driver.address?.city || "");
-                        setModalOpen(true);
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "1px solid #007bff",
-                        backgroundColor: "white",
-                        color: "#007bff",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                      }}
-                    >
-                      View Details
-                    </button>
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <Switch
-                      checked={driver.status}
-                      onChange={() => toggleStatus(driver.id)}
-                      sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                          backgroundColor: "green !important",
-                        },
-                        "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
-                      }}
-                    />
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                      <button
-                        onClick={() => handleOpenEditModal(driver)}
+          {error && (
+            <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
+          )}
+
+          <table
+            style={{
+              width: "100%",
+              minWidth: "1400px",
+              borderCollapse: "collapse",
+              fontFamily: '"Urbanist", sans-serif',
+              fontSize: "17px",
+              border: "1px solid #007BFF",
+              marginTop: "20px",
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={headerCell}>Sr No</th>
+                <th style={headerCell}>Driver ID </th>
+                <th style={headerCell}>Driver Name</th>
+                <th style={headerCell}>Email</th>
+                <th style={headerCell}>Mobile No</th>
+                <th style={headerCell}>Wallet</th>
+                <th style={headerCell}>Rating</th>
+                <th style={headerCell}>Referrals</th>
+                <th style={headerCell}>Details</th>
+                <th style={headerCell}>Status</th>
+                <th style={headerCell}>Action</th>
+                <th style={headerCell}>Locate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentDrivers.length > 0 ? (
+                currentDrivers.map((driver, index) => (
+                  <tr
+                    key={driver.id}
+                    style={{
+                      backgroundColor: selectedDriver?.id === driver.id ? "#f1f1f1" : "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
+                    <td style={bodyCell}>{driver.driverId}</td>
+                    <td style={{ ...bodyCell, display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Avatar
+                        src={`${process.env.REACT_APP_IMAGE_LINK}${driver.image}`}
+                        alt={driver.name}
+                        sx={{ width: 40, height: 40 }}
+                      />
+                      <span>{driver.name}</span>
+                    </td>
+                    <td style={bodyCell}>{driver.email || "-"}</td>
+                    <td style={bodyCell}>{driver.address?.mobileNo || "-"}</td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <div
                         style={{
-                          backgroundColor: "#007BFF",
-                          color: "white",
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          border: "none",
                           cursor: "pointer",
+                          color: "#007bff",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() =>
+                          navigate("/driverTransaction", { state: { driverId: driver.id } })
+                        }
+                      >
+                        ₹{walletBalances[driver.id]?.toFixed(2) || "0.00"}
+                      </div>
+                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <div
+                        onClick={() => handleViewRating(driver)}
+                        style={{
+                          cursor: "pointer",
+                          color: "#ff9800",
+                          fontWeight: "bold",
+                          textDecoration: "underline",
                         }}
                       >
-                        Edit
-                      </button>
+                        ⭐ {driver.averageRating?.toFixed(2) || "0.00"}
+                      </div>
+                    </td>
+
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
                       <button
-                        onClick={() => handleDeleteDriver(driver.id)}
+                        onClick={() => handleViewReferrals(driver)}
                         style={{
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          padding: "8px 16px",
+                          padding: "6px 12px",
                           borderRadius: "6px",
-                          border: "none",
+                          border: "1px solid #007bff",
+                          backgroundColor: "white",
+                          color: "#007bff",
                           cursor: "pointer",
+                          fontSize: "14px",
                         }}
                       >
-                        Delete
+                        View
                       </button>
-                    </div>
-                  </td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    <button
-                      onClick={() => handleTrackDriver(driver)}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "1px solid #007bff",
-                        backgroundColor: "white",
-                        color: "#007bff",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                      }}
-                    >
-                      Track
-                    </button>
+                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <button
+                        onClick={() => {
+                          setSelectedDriver(driver);
+                          setSearchLocation(driver.address?.locality || driver.address?.city || "");
+                          setModalOpen(true);
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid #007bff",
+                          backgroundColor: "white",
+                          color: "#007bff",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <Switch
+                        checked={driver.status}
+                        onChange={() => toggleStatus(driver.id)}
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: "green" },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                            backgroundColor: "green !important",
+                          },
+                          "& .MuiSwitch-track": { backgroundColor: "red", opacity: 1 },
+                        }}
+                      />
+                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                        <button
+                          onClick={() => handleOpenEditModal(driver)}
+                          style={{
+                            backgroundColor: "#007BFF",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDriver(driver.id)}
+                          style={{
+                            backgroundColor: "#dc3545",
+                            color: "white",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
+                      <button
+                        onClick={() => handleTrackDriver(driver)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid #007bff",
+                          backgroundColor: "white",
+                          color: "#007bff",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Track
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="10" style={{ textAlign: "center", padding: "20px" }}>
+                    No drivers found.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="10" style={{ textAlign: "center", padding: "20px" }}>
-                  No drivers found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
           <div>
             Showing {startIndex + 1} to {Math.min(endIndex, filteredDrivers.length)} of{" "}
@@ -1492,6 +1536,126 @@ export default function Drivers() {
             }}
           >
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={ratingModalOpen}
+        onClose={() => setRatingModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
+          Driver Ratings {selectedDriver ? `- ${selectedDriver.name}` : ""}
+        </DialogTitle>
+        <DialogContent dividers sx={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+          {ratingError && (
+            <Typography
+              color="error"
+              sx={{ marginBottom: "12px", fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}
+            >
+              {ratingError}
+            </Typography>
+          )}
+
+          {driverRatings ? (
+            <>
+              <Typography
+                sx={{
+                  fontFamily: '"Urbanist", sans-serif',
+                  fontSize: "18px",
+                  marginBottom: "16px",
+                  fontWeight: "bold",
+                }}
+              >
+                ⭐ Average Rating: {driverRatings.averageRating} ({driverRatings.totalRatings}{" "}
+                Reviews)
+              </Typography>
+
+              {driverRatings.reviews.length > 0 ? (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontFamily: '"Urbanist", sans-serif',
+                    fontSize: "16px",
+                    border: "1px solid #eee",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ backgroundColor: "#f5f5f5" }}>
+                      <th style={{ ...headerCell, backgroundColor: "#f5f5f5", color: "black" }}>
+                        User
+                      </th>
+                      <th style={{ ...headerCell, backgroundColor: "#f5f5f5", color: "black" }}>
+                        Order
+                      </th>
+                      {/* <th style={{ ...headerCell, backgroundColor: "#f5f5f5", color: "black" }}>
+                        Product
+                      </th> */}
+                      <th style={{ ...headerCell, backgroundColor: "#f5f5f5", color: "black" }}>
+                        Rating
+                      </th>
+                      <th style={{ ...headerCell, backgroundColor: "#f5f5f5", color: "black" }}>
+                        Message
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {driverRatings.reviews.map((r) => (
+                      <tr key={r._id}>
+                        <td style={bodyCell}>
+                          {r.user ? (
+                            <>
+                              <div style={{ fontWeight: "bold" }}>{r.user.name}</div>
+                              <div style={{ fontSize: "14px", color: "#777" }}>
+                                {r.user.mobileNumber || r.user.email}
+                              </div>
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td style={bodyCell}>{r.order?.orderId || "-"}</td>
+                        {/* <td style={bodyCell}>
+                          {r.order?.items?.length > 0
+                            ? r.order.items[0].product?.name || r.order.items[0].name
+                            : "-"}
+                        </td> */}
+                        <td style={{ ...bodyCell, textAlign: "center" }}>⭐ {r.rating}</td>
+                        <td style={bodyCell}>{r.message || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <Typography sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}>
+                  No reviews available for this driver.
+                </Typography>
+              )}
+            </>
+          ) : (
+            !ratingError && (
+              <Typography sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "16px" }}>
+                Loading ratings...
+              </Typography>
+            )
+          )}
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px" }}>
+          <Button
+            onClick={() => setRatingModalOpen(false)}
+            color="error"
+            sx={{
+              fontFamily: '"Urbanist", sans-serif',
+              fontSize: "14px",
+              borderRadius: "6px",
+              padding: "8px 16px",
+            }}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>

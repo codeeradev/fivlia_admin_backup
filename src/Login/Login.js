@@ -42,7 +42,7 @@ function LoginPage() {
         localStorage.setItem("adminAuth", "true");
         localStorage.setItem("sessionExpiry", expiryTime);
         showAlert("success", "Login successful! Redirecting...");
-        navigate("/dashboard");
+        navigate("/dashboard",{ replace: true });
         } else {
           showAlert("error", data.message || "Invalid OTP");
         }
