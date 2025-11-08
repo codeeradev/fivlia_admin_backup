@@ -3,7 +3,7 @@ import "./Wallet.css";
 import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
 import axios from "axios";
-import { showAlert } from "components/commonFunction/alertsLoader"
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
@@ -18,7 +18,7 @@ export default function Wallet() {
         setWallet(walletRes.data);
         // Transactions
         const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/adminTranaction`);
-        const sortedTxns = txnRes.data.Tranaction
+        const sortedTxns = txnRes.data.transactions
           .filter((txn) => txn.createdAt) // ignore incomplete entries
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setTransactions(sortedTxns);
@@ -50,7 +50,9 @@ export default function Wallet() {
         <div className="card-grid">
           <div className="card green">
             <div className="card-header">
-              <div className="icon"><FaWallet /></div>
+              <div className="icon">
+                <FaWallet />
+              </div>
               <div>
                 <div className="card-title">Wallet Balance</div>
                 <div className="card-value">₹{wallet?.totalCash.toFixed(2)}</div>
@@ -59,7 +61,9 @@ export default function Wallet() {
           </div>
           <div className="card blue">
             <div className="card-header">
-              <div className="icon"><FaArrowDown /></div>
+              <div className="icon">
+                <FaArrowDown />
+              </div>
               <div>
                 <div className="card-title">Total Credits</div>
                 <div className="card-value">₹{totalCredits.toFixed(2)}</div>
@@ -68,7 +72,9 @@ export default function Wallet() {
           </div>
           <div className="card red">
             <div className="card-header">
-              <div className="icon"><FaArrowUp /></div>
+              <div className="icon">
+                <FaArrowUp />
+              </div>
               <div>
                 <div className="card-title">Total Debits</div>
                 <div className="card-value">₹{totalDebits.toFixed(2)}</div>
@@ -84,14 +90,27 @@ export default function Wallet() {
               {transactions.map((txn, idx) => (
                 <li key={idx} className={`txn ${txn.type.toLowerCase()}`}>
                   <span className="txn-icon">
-                    {txn.type === "Credit" ? <FaArrowDown color="#22c55e" /> : <FaArrowUp color="#ef4444" />}
+                    {txn.type === "Credit" ? (
+                      <FaArrowDown color="#22c55e" />
+                    ) : (
+                      <FaArrowUp color="#ef4444" />
+                    )}
                   </span>
                   <span className="txn-details">
                     <strong>{txn.description || "No description"}</strong>
                     <br />
                     <small>Order ID: {txn.orderId || "-"}</small>
                     <br />
-                    <small>{new Date(txn.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</small>
+                    <small>Seller: {txn.storeName || "-"}</small>
+                    <br />
+                    <small>City: {txn.city || "-"}</small>
+                    <br />
+                    <small>
+                      {new Date(txn.createdAt).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </small>
                   </span>
                   <span className={`txn-amount ${txn.type.toLowerCase()}`}>
                     {txn.type === "Credit" ? "+" : "-"}₹{(txn.amount || 0).toFixed(2)}

@@ -19,6 +19,11 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
 } from "@mui/material";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -53,10 +58,11 @@ function SellerTable() {
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
   const [actionStore, setActionStore] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ Pagination States
+  // ✅ Pagination
   const [entries, setEntries] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -178,7 +184,7 @@ function SellerTable() {
 
   const cityOptions = [...new Set(stores.map((s) => s.city?.name).filter(Boolean))];
 
-  // ✅ Pagination Calculations
+  // ✅ Pagination
   const indexOfLast = currentPage * entries;
   const indexOfFirst = indexOfLast - entries;
   const paginatedStores = filteredStores.slice(indexOfFirst, indexOfLast);
@@ -232,85 +238,14 @@ function SellerTable() {
               + Create Seller
             </Button>
           </div>
-          {/* ✅ Filters + Show Entries */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              gap: "10px",
-            }}
-          >
-            {/* ✅ Left — Entries + Filters */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
-              <FormControl style={{ width: "120px", marginTop: "-4px" }}>
-                <span style={{ fontSize: "12px" }}>Show Entries</span>
-                <Select
-                  value={entries}
-                  onChange={(e) => {
-                    setEntries(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  style={{ height: "45px" }}
-                >
-                  {[50, 100, 200, 400].map((num) => (
-                    <MenuItem key={num} value={num}>
-                      {num}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
 
-              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
-                <InputLabel>Filter by City</InputLabel>
-                <Select
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  style={{ height: "45px" }}
-                >
-                  <MenuItem value="">All Cities</MenuItem>
-                  {cityOptions.map((city) => (
-                    <MenuItem key={city} value={city}>
-                      {city}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
-                <InputLabel>Filter by Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  style={{ height: "45px" }}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="online">Online</MenuItem>
-                  <MenuItem value="offline">Offline</MenuItem>
-                </Select>
-              </FormControl>
-            </div>
-
-            {/* ✅ Right — Search */}
-            <TextField
-              label="Search by Store/Owner"
-              variant="outlined"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ minWidth: "250px" }}
-            />
-          </div>
-
-          {/* ✅ Table */}
-          <div style={{ width: "100%", overflowX: "auto", maxWidth: "100%" }}>
+          {/* ✅ Filters + Table */}
+          <div style={{ width: "100%", overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
                 borderCollapse: "separate",
                 borderSpacing: 0,
-                overflow: "hidden",
                 boxShadow: "0 0 10px rgba(0,0,0,0.1)",
               }}
             >
@@ -319,12 +254,13 @@ function SellerTable() {
                   <th style={headerCell}>Sr. No</th>
                   <th style={headerCell}>Seller Name</th>
                   <th style={headerCell}>Owner Info</th>
+                  <th style={headerCell}>Wallet</th>
                   <th style={headerCell}>City</th>
                   <th style={headerCell}>Zone(s)</th>
-                  <th style={{ ...headerCell, width: "100px", textAlign: "center" }}>Products</th>
-                  <th style={{ ...headerCell, textAlign: "center" }}>Status</th>
-                  <th style={{ ...headerCell, textAlign: "center" }}>Permanent Disable</th>
-                  <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
+                  <th style={headerCell}>Products</th>
+                  <th style={headerCell}>Status</th>
+                  <th style={headerCell}>Permanent Disable</th>
+                  <th style={headerCell}>Action</th>
                 </tr>
               </thead>
 
@@ -359,7 +295,6 @@ function SellerTable() {
                               alignItems: "center",
                               justifyContent: "center",
                               color: "#555",
-                              fontSize: 12,
                             }}
                           >
                             No Image
@@ -369,6 +304,7 @@ function SellerTable() {
                       </div>
                     </td>
 
+                    {/* Owner Info */}
                     <td
                       style={bodyCell}
                       onClick={() => {
@@ -382,59 +318,29 @@ function SellerTable() {
                       </strong>
                     </td>
 
-                    <td style={bodyCell}>{store.city?.name || "N/A"}</td>
-
-                    <td style={{ ...bodyCell, width: 140 }}>
-                      {store.zone && store.zone.length > 0 ? (
-                        <>
-                          {store.zone.slice(0, 2).map((z) => (
-                            <Chip
-                              key={z._id}
-                              label={z.title || z.name}
-                              size="small"
-                              style={{ marginRight: 4, marginBottom: 4 }}
-                            />
-                          ))}
-                          {store.zone.length > 2 && (
-                            <Button
-                              size="small"
-                              style={{
-                                minWidth: 30,
-                                padding: "0 8px",
-                                textTransform: "none",
-                              }}
-                              onClick={(e) => handleZonesClick(e, store.zone)}
-                            >
-                              +{store.zone.length - 2} more
-                            </Button>
-                          )}
-                          <Popper
-                            open={Boolean(anchorEl) && selectedZones === store.zone}
-                            anchorEl={anchorEl}
-                            placement="bottom-start"
-                            style={{ zIndex: 1500 }}
-                          >
-                            <ClickAwayListener onClickAway={handleClose}>
-                              <Paper style={{ padding: 10, maxWidth: 250 }}>
-                                {selectedZones.map((z) => (
-                                  <Chip
-                                    key={z._id}
-                                    label={z.title}
-                                    size="small"
-                                    style={{ margin: 2 }}
-                                  />
-                                ))}
-                              </Paper>
-                            </ClickAwayListener>
-                          </Popper>
-                        </>
-                      ) : (
-                        "N/A"
-                      )}
+                    {/* Wallet Column — opens wallet modal */}
+                    <td
+                      style={{ ...bodyCell, textAlign: "left" }}
+                      onClick={() => {
+                        setSelectedStore(store);
+                        setWalletModalOpen(true);
+                      }}
+                    >
+                      <span
+                        style={{
+                          marginLeft: "30px",
+                          color: "#007bff",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {(store.wallet ?? 0).toFixed(2)}
+                      </span>
                     </td>
 
+                    <td style={bodyCell}>{store.city?.name || "N/A"}</td>
+                    <td style={bodyCell}>{store.zone?.length || 0}</td>
                     <td style={bodyCell}>{store.Category?.length || 0}</td>
-
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <Switch
                         checked={store.status}
@@ -442,7 +348,6 @@ function SellerTable() {
                         color="primary"
                       />
                     </td>
-
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <Switch
                         checked={store.approveStatus === "banned"}
@@ -450,12 +355,10 @@ function SellerTable() {
                         color="error"
                       />
                     </td>
-
-                    <td style={{ ...bodyCell, width: 150, textAlign: "center" }}>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>
                       <IconButton onClick={(e) => handleActionClick(e, store)} size="small">
                         <MoreVertIcon />
                       </IconButton>
-
                       <Menu
                         anchorEl={actionAnchorEl}
                         open={Boolean(actionAnchorEl) && actionStore?._id === store._id}
@@ -469,17 +372,6 @@ function SellerTable() {
                         >
                           Edit
                         </MenuItem>
-
-                        <MenuItem
-                          onClick={() => {
-                            handleActionClose();
-                            localStorage.setItem("userType", "store");
-                            localStorage.setItem("storeId", store._id);
-                            window.location.href = "/dashboard1";
-                          }}
-                        >
-                          Login
-                        </MenuItem>
                       </Menu>
                     </td>
                   </tr>
@@ -487,42 +379,172 @@ function SellerTable() {
               </tbody>
             </table>
           </div>
-
-          {/* ✅ Pagination */}
-          {filteredStores.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 15,
-                gap: 10,
-                alignItems: "center",
-              }}
-            >
-              <Button
-                variant="outlined"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-              >
-                Previous
-              </Button>
-
-              <span style={{ fontSize: 16 }}>
-                Page <strong>{currentPage}</strong> / {totalPages}
-              </span>
-
-              <Button
-                variant="outlined"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
         </div>
 
-        {/* ✅ Modal */}
+        {/* ✅ Wallet Modal */}
+        <Dialog
+          open={walletModalOpen}
+          onClose={() => setWalletModalOpen(false)}
+          maxWidth={false}
+          fullWidth
+          PaperProps={{
+            sx: {
+              width: "95vw",
+              maxWidth: "1200px",
+              borderRadius: 3,
+              padding: "10px 20px",
+              overflow: "hidden",
+            },
+          }}
+        >
+          {/* ---- Header ---- */}
+          <DialogTitle
+            sx={{
+              fontSize: 22,
+              fontWeight: 700,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderBottom: "1px solid #ddd",
+              paddingBottom: 1,
+            }}
+          >
+            Wallet Transactions — {selectedStore?.storeName || ""}
+            <Button
+              onClick={() => setWalletModalOpen(false)}
+              variant="contained"
+              size="small"
+              sx={{
+                backgroundColor: "#000",
+                color: "#fff",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": {
+                  backgroundColor: "#333",
+                },
+              }}
+            >
+              Close
+            </Button>
+          </DialogTitle>
+
+          {/* ---- Body ---- */}
+          <DialogContent
+            dividers
+            sx={{
+              padding: 0,
+              maxHeight: "75vh",
+              overflowY: "auto",
+              mt: 1,
+            }}
+          >
+            {selectedStore?.sellerWalletData?.length > 0 ? (
+              <div style={{ width: "100%" }}>
+                {/* ---- Header Row ---- */}
+                <div
+                  style={{
+                    display: "flex",
+                    fontWeight: 700,
+                    backgroundColor: "#007bff",
+                    color: "#fff",
+                    padding: "12px 16px",
+                    borderRadius: "6px 6px 0 0",
+                    fontSize: 15,
+                  }}
+                >
+                  <div style={{ flex: "1.4" }}>Date</div>
+                  <div style={{ flex: "1" }}>Order ID</div>
+                  <div style={{ flex: "0.8", textAlign: "center" }}>Type</div>
+                  <div style={{ flex: "1", textAlign: "center" }}>Amount (₹)</div>
+                  <div style={{ flex: "2", marginLeft: "20px" }}>Description</div>
+                </div>
+
+                {/* ---- Rows ---- */}
+                {selectedStore.sellerWalletData.map((txn, index) => (
+                  <div
+                    key={txn._id || index}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "12px 16px",
+                      backgroundColor: index % 2 === 0 ? "#fafafa" : "#fff",
+                      borderBottom: "1px solid #eee",
+                      fontSize: 15,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {/* Date */}
+                    <div style={{ flex: "1.4" }}>
+                      {new Date(txn.createdAt).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+
+                    {/* Order ID */}
+                    <div style={{ flex: "1" }}>{txn.orderId || "—"}</div>
+
+                    {/* Type */}
+                    <div style={{ flex: "0.8", textAlign: "center" }}>
+                      <Chip
+                        label={txn.type}
+                        color={txn.type === "Credit" ? "success" : "error"}
+                        size="small"
+                        sx={{
+                          fontWeight: "bold",
+                          minWidth: 70,
+                          justifyContent: "center",
+                        }}
+                      />
+                    </div>
+
+                    {/* Amount */}
+                    <div
+                      style={{
+                        flex: "1",
+                        textAlign: "center",
+                        color: txn.type === "Credit" ? "#2e7d32" : "#c62828",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ₹{txn.amount.toFixed(2)}
+                    </div>
+
+                    {/* Description */}
+                    <div
+                      style={{
+                        flex: "2",
+                        textAlign: "left",
+                        wordWrap: "break-word",
+                        overflowWrap: "break-word",
+                        whiteSpace: "normal",
+                        paddingRight: "10px",
+                      }}
+                    >
+                      {txn.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "#777",
+                  padding: "20px 0",
+                  fontSize: 16,
+                }}
+              >
+                No wallet transactions found.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* ✅ Owner Info Modal */}
         <Dialog
           open={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
@@ -573,7 +595,6 @@ function SellerTable() {
               </div>
             )}
           </DialogContent>
-
           <DialogActions>
             <Button onClick={() => setViewModalOpen(false)} color="primary">
               Close
