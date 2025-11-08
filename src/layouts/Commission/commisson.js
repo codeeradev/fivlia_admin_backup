@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { showAlert } from "components/commonFunction/alertsLoader"; 
 
 export default function SetCommission() {
   const [controller] = useMaterialUIController();
@@ -33,12 +34,15 @@ export default function SetCommission() {
   useEffect(() => {
     (async () => {
       try {
+        showAlert("loading", "Fetching categories...");
         const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory?page=1`);
         if (res.ok) {
           const result = await res.json();
           setMainCategories(result.result || []);
+          showAlert("info", "", 1);
         }
       } catch (e) {
+        showAlert("error", "Error fetching categories.");
         console.error(e);
       }
     })();
@@ -47,8 +51,9 @@ export default function SetCommission() {
   // Fetch subcategories when a main category is selected
   const fetchSubCategories = async (mainCatId) => {
     try {
+      showAlert("loading", "Loading subcategories...");
       const res = await fetch(`${process.env.REACT_APP_API_URL}/categories?id=${mainCatId}`);
-      if (!res.ok) return;
+      if (!res.ok) return showAlert("error", "Failed to fetch subcategories.");
       const result = await res.json();
 
       const subs = (result.category?.subCategories || []).map((sub) => {
@@ -74,8 +79,10 @@ export default function SetCommission() {
 
       setSubCategories(subs);
       setOpenRows({});
+      showAlert("info", "", 1);
     } catch (e) {
       console.error(e);
+      showAlert("error", "Failed to load subcategories.");
     }
   };
 
@@ -97,15 +104,15 @@ export default function SetCommission() {
           if (res.ok) {
             const result = await res.json();
             console.log('Status updated successfully:', result);
-            showSnack("Status updated");
+            showAlert("success", "Status updated successfully!");
           } else {
             const error = await res.json();
             console.error('Failed to update status:', error);
-            showSnack("Failed to update status", "error");
+            showAlert("error", "Failed to update status.");
           }
         } catch (e) {
           console.error('Error updating status:', e);
-          showSnack("Failed to update status", "error");
+          showAlert("error", "Error updating status.");
         }
       })();
 
@@ -151,16 +158,16 @@ export default function SetCommission() {
       if (res.ok) {
         const result = await res.json();
         console.log('Commission saved successfully:', result);
-        showSnack("Commission updated");
+        showAlert("success", "Commission updated successfully!");
       } else {
         const error = await res.json();
         console.error('Failed to save commission:', error);
         console.error('Response headers:', res.headers);
-        showSnack("Failed to update commission", "error");
+        showAlert("error", "Failed to update commission.");
       }
     } catch (e) {
       console.error('Error saving commission:', e);
-      showSnack("Error updating commission", "error");
+      showAlert("error", "Error while saving commission.");
     }
   };
 
@@ -436,18 +443,6 @@ export default function SetCommission() {
             ))}
           </Paper>
         )}
-
-        {/* Snackbar */}
-        <Snackbar
-          open={snack.open}
-          autoHideDuration={2500}
-          onClose={closeSnack}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        >
-          <Alert onClose={closeSnack} severity={snack.severity} variant="filled">
-            {snack.message}
-          </Alert>
-        </Snackbar>
       </div>
     </MDBox>
   );

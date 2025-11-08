@@ -21,6 +21,7 @@ import DataTable from "react-data-table-component";
 import Datetime from "react-datetime";
 import "react-datetime/css/react-datetime.css";
 import moment from "moment";
+import { showAlert } from "components/commonFunction/alertsLoader"
 
 export default function Festival() {
   const [controller] = useMaterialUIController();
@@ -48,6 +49,7 @@ export default function Festival() {
   // Fetch events
   const fetchEvents = async () => {
     try {
+      showAlert("loading", "Fetching events...");
       const response = await fetch(`${process.env.REACT_APP_API_URL}/getEvent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,6 +70,7 @@ export default function Festival() {
             _id: item._id,
           }))
         );
+        showAlert("info", "", 1);
       } else if (data.eventStatus) {
         setEvents([
           {
@@ -77,10 +80,13 @@ export default function Festival() {
             endTime: data.endTime ? new Date(data.endTime) : null,
           },
         ]);
+        showAlert("info", "", 1);
       } else {
         setEvents([]);
+        showAlert("info", "", 1);
       }
     } catch (error) {
+      showAlert("error", "Failed to fetch events.");
       console.error("Error fetching events:", error);
     }
   };
@@ -138,17 +144,18 @@ export default function Festival() {
     if (eventData.image) formData.append("image", eventData.image);
 
     try {
+      showAlert("loading", "Adding event...");
       const response = await fetch(`${process.env.REACT_APP_API_URL}/addEvent`, {
         method: "POST",
         body: formData,
       });
       const data = await response.json();
-      alert(data.message || "Event Added");
+      showAlert("success", data.message || "Event added successfully!");
       setAddModalOpen(false);
       fetchEvents();
     } catch (error) {
       console.error(error);
-      alert("Failed to add event");
+      showAlert("error", "Something went wrong while adding event.");
     }
   };
 
@@ -164,6 +171,7 @@ export default function Festival() {
     if (eventData.image) formData.append("image", eventData.image);
 
     try {
+      showAlert("loading", "Updating event...");
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/editEvent/${selectedEvent._id}`,
         {
@@ -172,12 +180,12 @@ export default function Festival() {
         }
       );
       const data = await response.json();
-      alert(data.message || "Event Updated");
+      showAlert("success", data.message || "Event updated successfully!");
       setEditModalOpen(false);
       fetchEvents();
     } catch (error) {
       console.error(error);
-      alert("Failed to update event");
+      showAlert("error", "Something went wrong while updating event.");
     }
   };
 
@@ -211,7 +219,7 @@ export default function Festival() {
       setStatusModalOpen(false);
     } catch (error) {
       console.error(error);
-      alert("Failed to update status");
+      showAlert("error", "Failed to update status.");
     }
   };
 

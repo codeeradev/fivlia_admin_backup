@@ -24,10 +24,10 @@ function Setting() {
     Description: "",
     Delivery_Charges: 0,
     Delivery_Charges_Gst: 0,
-    codLimit: 0,
-    minPrice: 0,
-    maxPrice: 0,
-    minWithdrawal: 0,
+    // codLimit: 0,
+    // minPrice: 0,
+    // maxPrice: 0,
+    // minWithdrawal: 0,
     PaymentGatewayStatus: false,
     activeGateway: "None",
     activeMode: "",
@@ -50,7 +50,7 @@ function Setting() {
       }
     ],
     imageLink: "",
-    freeDeliveryLimit: 0,
+    // freeDeliveryLimit: 0,
     adminSignature: ""
   });
   const [taxOptions, setTaxOptions] = useState([]);
@@ -122,10 +122,10 @@ function Setting() {
             Description: result.settings.Description || "",
             Delivery_Charges: result.settings.Delivery_Charges || 0,
             Delivery_Charges_Gst: result.settings.Delivery_Charges_Gst || 0,
-            codLimit: result.settings.codLimit || 0,
-            minPrice: result.settings.minPrice || 0,
-            maxPrice: result.settings.maxPrice || 0,
-            minWithdrawal: result.settings.minWithdrawal || 0,
+            // codLimit: result.settings.codLimit || 0,
+            // minPrice: result.settings.minPrice || 0,
+            // maxPrice: result.settings.maxPrice || 0,
+            // minWithdrawal: result.settings.minWithdrawal || 0,
             PaymentGatewayStatus: result.settings.PaymentGatewayStatus || false,
             activeGateway,
             activeMode,
@@ -178,7 +178,7 @@ function Setting() {
                   bulksms: { api_id: "", api_password: "", status: false }
                 }],
             imageLink: result.settings.imageLink || "",
-            freeDeliveryLimit: result.settings.freeDeliveryLimit || 0,
+            // freeDeliveryLimit: result.settings.freeDeliveryLimit || 0,
             adminSignature: result.settings.adminSignature || ""
           });
         } else {
@@ -201,11 +201,11 @@ function Setting() {
         "Delivery_Charges",
         "Delivery_Charges_Gst",
         "Platform_Fee",
-        "codLimit",
-        "minPrice",
-        "maxPrice",
-        "minWithdrawal",
-        "freeDeliveryLimit"
+        // "codLimit",
+        // "minPrice",
+        // "maxPrice",
+        // "minWithdrawal",
+        // "freeDeliveryLimit"
       ].includes(field)
         ? parseFloat(value) || 0
         : value
@@ -542,16 +542,16 @@ function Setting() {
                 ))}
               </Select>
             </div>
-            <div className="store-input" style={{ flex: "1 1 33%" }}>
+            {/* <div className="store-input" style={{ flex: "1 1 33%" }}>
               <label>COD Limit</label>
               <input
                 type="number"
                 value={formData.codLimit}
                 onChange={(e) => handleInputChange("codLimit", e.target.value)}
               />
-            </div>
+            </div> */}
           </div>
-          <div className="store-row">
+          {/* <div className="store-row">
             <div className="store-input">
               <label>Minimum Item Price</label>
               <input
@@ -586,7 +586,7 @@ function Setting() {
                 onChange={(e) => handleInputChange("freeDeliveryLimit", e.target.value)}
               />
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

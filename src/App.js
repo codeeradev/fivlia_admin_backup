@@ -4,7 +4,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Icon from "@mui/material/Icon";
 import MDBox from "components/MDBox";
-
+import { AlertProvider } from "components/commonFunction/alertsLoader";
 import Sidenav from "examples/Sidenav";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import Configurator from "examples/Configurator";
@@ -192,7 +192,7 @@ export default function App() {
     </MDBox>
   );
 
-  return direction === "rtl" ? (
+  return (<AlertProvider>{direction === "rtl" ? (
     <CacheProvider value={rtlCache}>
       <ThemeProvider theme={darkMode ? themeDarkRTL : themeRTL}>
         <CssBaseline />
@@ -373,5 +373,7 @@ export default function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       <GlobalLoader />
     </ThemeProvider>
+  )}
+    </AlertProvider>
   );
 }

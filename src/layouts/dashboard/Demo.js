@@ -25,6 +25,7 @@ import {
   FaClipboardList,
 } from "react-icons/fa";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { showAlert } from "components/commonFunction/alertsLoader"
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -36,11 +37,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
+      showAlert("loading", "Fetching dashboard data...");
       try {
         const res = await axios.get(`${process.env.REACT_APP_API_URL}/getDashboardStats`);
         setStats(res.data);
+        showAlert("info", "", 1);
       } catch (err) {
         console.error("Failed to fetch dashboard stats", err);
+        showAlert("error", "Failed to load dashboard stats.");
       } finally {
         setLoading(false);
       }

@@ -41,6 +41,7 @@ import UnitsTable from "layouts/Attribute/Units";
 import VarientTabel from "layouts/Attribute/Varient";
 import Setting from "Setting/Setting";
 import PagesTable from "Setting/pageTable";
+import OrderSetting from "Setting/OrderSetting";
 import LoginPage from "Login/Login";
 import button from "assets/theme/components/button";
 import StoreTabel from "layouts/Store/StoreTable";
@@ -363,6 +364,21 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "Reports",
+    key: "Reports",
+    icon: <Icon fontSize="small">store</Icon>,
+    collapse: [
+      {
+        name: "Sales Report",
+        key: "sales-report",
+        icon: <Icon fontSize="small">track_changes</Icon>,
+        route: "sales-report",
+        component: <SalesReport />,
+      },
+    ],
+  },
+  {
+    type: "collapse",
     name: "Setting",
     key: "Setting",
     icon: <Icon fontSize="small">store</Icon>,
@@ -381,20 +397,12 @@ const routes = [
         component: <PagesTable />,
         icon: <Icon fontSize="small">view_array</Icon>,
       },
-    ],
-  },
-  {
-    type: "collapse",
-    name: "Reports",
-    key: "Reports",
-    icon: <Icon fontSize="small">store</Icon>,
-    collapse: [
       {
-        name: "Sales Report",
-        key: "sales-report",
-        icon: <Icon fontSize="small">track_changes</Icon>,
-        route: "sales-report",
-        component: <SalesReport />,
+        name: "Order Settings",
+        key: "order-settings",
+        route: "/order-settings",
+        component: <OrderSetting />,
+        icon: <Icon fontSize="small">view_array</Icon>,
       },
     ],
   },
@@ -405,6 +413,7 @@ const routes = [
     icon: <Icon fontSize="small">logout</Icon>,
     route: "#",
   },
+
   // {
   //   type: "collapse",
   //   name: "UserData",

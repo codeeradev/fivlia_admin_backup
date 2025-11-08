@@ -3,6 +3,7 @@ import "./Wallet.css";
 import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
 import axios from "axios";
+import { showAlert } from "components/commonFunction/alertsLoader"
 
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
@@ -12,7 +13,7 @@ export default function Wallet() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Wallet summary
+        showAlert("loading", "Fetching Wallet data...");
         const walletRes = await axios.get(`${process.env.REACT_APP_API_URL}/walletAdmin`);
         setWallet(walletRes.data);
         // Transactions
@@ -21,8 +22,10 @@ export default function Wallet() {
           .filter((txn) => txn.createdAt) // ignore incomplete entries
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setTransactions(sortedTxns);
+        showAlert("info", "", 1);
       } catch (err) {
         console.error("Failed to fetch wallet data", err);
+        showAlert("error", "Failed to fetch wallet stats.");
       } finally {
         setLoading(false);
       }
