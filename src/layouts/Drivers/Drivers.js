@@ -634,6 +634,7 @@ export default function Drivers() {
                 <th style={headerCell}>Sr No</th>
                 <th style={headerCell}>Driver ID </th>
                 <th style={headerCell}>Driver Name</th>
+                <th style={headerCell}>City</th>
                 <th style={headerCell}>Email</th>
                 <th style={headerCell}>Mobile No</th>
                 <th style={headerCell}>Wallet</th>
@@ -665,6 +666,7 @@ export default function Drivers() {
                       />
                       <span>{driver.name}</span>
                     </td>
+                    <td style={bodyCell}>{driver.address.city || "-"}</td>
                     <td style={bodyCell}>{driver.email || "-"}</td>
                     <td style={bodyCell}>{driver.address?.mobileNo || "-"}</td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
