@@ -28,6 +28,7 @@ import {
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -75,6 +76,44 @@ function SellerTable() {
   useEffect(() => {
     handleFilter();
   }, [searchTerm, selectedCity, statusFilter, stores]);
+
+  const handleAdminLogin = async (store) => {
+    try {
+      // 1️⃣ Call your backend API to generate the access key
+      showAlert("loading", "Generating access key...");
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/generateKey`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-key": process.env.REACT_APP_INTERNAL_API_KEY,
+        },
+        body: JSON.stringify({
+          storeId: store._id,
+          type: "admin",
+        }),
+      });
+
+      // 2️⃣ Handle response
+      if (response.ok) {
+        const data = await response.json();
+        const generatedKey = data.accessKey;
+
+        showAlert("success", "Access key generated successfully");
+        // 3️⃣ Construct redirect URL
+        const redirectUrl = `https://seller.fivlia.in/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
+
+        // 4️⃣ Redirect to seller panel
+        window.open(redirectUrl, "_blank"); // open in new tab
+      } else if (response.status === 403) {
+        showAlert("error", "Access denied.");
+      } else {
+        showAlert("error", "Failed to generate access key.");
+      }
+    } catch (error) {
+      console.error("Error generating access key:", error);
+      showAlert("error", "Server error while generating key.");
+    }
+  };
 
   const getAllStores = async () => {
     try {
@@ -365,12 +404,20 @@ function SellerTable() {
                         onClose={handleActionClose}
                       >
                         <MenuItem
-                          onClick={() => {
+                          onClick={async () => {
                             handleActionClose();
                             navigate("/edit-store", { state: { store } });
                           }}
                         >
                           Edit
+                        </MenuItem>
+                        <MenuItem
+                          onClick={async () => {
+                            handleActionClose();
+                            await handleAdminLogin(store);
+                          }}
+                        >
+                          Login
                         </MenuItem>
                       </Menu>
                     </td>
