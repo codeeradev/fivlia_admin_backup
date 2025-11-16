@@ -58,7 +58,7 @@ function BannerManagement() {
     const newStatus = !banner.public;
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/${banner._id}/status`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/admin/banner/${banner._id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
