@@ -4,12 +4,14 @@ import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
 import axios from "axios";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { useMaterialUIController } from "context";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [controller] = useMaterialUIController();
+ const { miniSidenav } = controller;
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -44,7 +46,7 @@ export default function Wallet() {
     .reduce((sum, txn) => sum + (txn.amount || 0), 0);
 
   return (
-    <MDBox ml={{ xs: "0", md: "250px" }} p={3} className="wallet-container">
+    <MDBox ml={{ xs: "0", md: miniSidenav ? "80px" : "250px" }} p={3} className="wallet-container">
       <div className="wallet-dashboard-container">
         <h2 className="dashboard-title">Wallet Overview</h2>
         <div className="card-grid">

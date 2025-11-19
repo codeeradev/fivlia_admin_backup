@@ -130,8 +130,9 @@ export default function Dashboard() {
   return (
     <MDBox
       sx={{
-        ml: { xs: 0, lg: "250px" },
+        ml: { xs: 0, lg: miniSidenav ? "80px" : "250px"  },
         p: { xs: 1, sm: 1.5, md: 2 },
+        transition: "margin-left 0.3s ease",
       }}
     >
       <div className="dashboard-container">

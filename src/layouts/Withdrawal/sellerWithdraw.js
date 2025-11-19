@@ -153,7 +153,7 @@ const handleWithdrawalAction = async (requestId, action) => {
   };
 
   return (
-      <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
+    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
       <div style={{ width: "100%", padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>

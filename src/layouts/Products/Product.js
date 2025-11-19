@@ -682,7 +682,7 @@ const handleRemoveReturnImage = () => {
     }
 
     try {
-      const result = await fetch(`https://node-m8jb.onrender.com/addvarient/${attributedata}`, {
+      const result = await fetch(`${process.env.REACT_APP_API_URL}/addvarient/${attributedata}`, {
         method: "PUT",
         body: JSON.stringify({
           name: addVarient,

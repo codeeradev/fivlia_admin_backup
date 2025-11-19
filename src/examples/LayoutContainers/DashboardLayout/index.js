@@ -6,6 +6,8 @@ import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
 
 import MDBox from "components/MDBox";
+import Header from "examples/Header/Header";
+
 import { useMaterialUIController, setLayout, setMiniSidenav } from "context";
 
 function DashboardLayout({ children }) {
@@ -50,11 +52,24 @@ function DashboardLayout({ children }) {
           </IconButton>
         )}
       </MDBox>
+      <MDBox
+        sx={{
+          // same left offset your pages use
+          ml: { xs: 0, lg: miniSidenav ? "80px" : "250px" },
+          // keep header visible at the top of the page flow
+          // optionally keep it sticky within the content column:
+          position: "sticky",
+          top: 0,
+          zIndex: (theme) => theme.zIndex.appBar,
+        }}
+      >
+        <Header />
+      </MDBox>
 
       {/* Content Wrapper (No Pushing Content Left) */}
       <MDBox
         sx={{
-          p: { xs: "70px 12px 12px", sm: "60px 15px 15px", md: "20px" },
+          p: { xs: "70px 12px 12px", sm: "60px 15px 15px", md: "10px" },
           position: "relative",
         }}
       >

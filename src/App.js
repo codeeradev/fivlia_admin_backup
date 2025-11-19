@@ -83,6 +83,8 @@ import DriverTransaction from "layouts/Drivers/driverTransaction"
 import Sitemap from "layouts/SEO/Sitemap";
 import Schema from "layouts/SEO/Schema";
 import Etc from "layouts/SEO/Etc";
+// import Charities from "layouts/Charity/Charities";
+// import Humanity from "layouts/Charity/Humanity"; 
 
 export default function App() {
   const [controller, dispatch] = useMaterialUIController();

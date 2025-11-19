@@ -36,6 +36,15 @@ const EditCategory = () => {
   const category = location.state;
 
   useEffect(() => {
+    if (category) {
+      setId(category._id);
+      setCategoryName(category.name);
+      setDescription(category.description || "");
+      setImagePreview(`${process.env.REACT_APP_IMAGE_LINK}${category.image}` || null);
+    }
+  }, [category]);
+
+  useEffect(() => {
     const getFilters = async () => {
       try {
         const result = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
@@ -65,61 +74,62 @@ const EditCategory = () => {
     getAttributes();
   }, []);
 
-useEffect(() => {
-const getBrands = async () => {
-  try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`); // Adjust if your route is different
-    if (res.status === 200) {
-      const data = await res.json();
-      setAllBrands(data.allBrands);
-      setAllFilters((prev) => [
-  ...prev,
-  {
-    _id: "brand-filter",
-    Filter_name: "Brand",
-    Filter: data.allBrands.map((b) => ({
-      _id: b._id,
-      name: b.brandName
-    }))
-  }
-]);
-
-    }
-  } catch (err) {
-    console.log(err);
-    toast.error("Error fetching brands");
-  }
-};
-getBrands();
-}, []);
-
-useEffect(() => {
-  if (!category || allFilters.length === 0) return;
-
-  // Map attribute names to their _id values
-  const initialAttributes = Array.isArray(category.attribute)
-    ? category.attribute.map((attrName) => {
-        const attr = allAttributes.find((a) => a.Attribute_name === attrName);
-        return attr ? attr._id : null;
-      }).filter(Boolean)
-    : [];
-  setSelectedAttributes(initialAttributes);
-
-  // Initialize selected filter values from category
-  const initialSelectedFilters = Array.isArray(category.filter)
-    ? category.filter.reduce((acc, f) => {
-        const matchedFilter = allFilters.find(
-          (af) => af._id === f._id || af.Filter_name === f.Filter_name
-        );
-        if (matchedFilter) {
-          acc.push(...(f.selected || []).map((val) => val._id.toString()));
+  useEffect(() => {
+    const getBrands = async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`); // Adjust if your route is different
+        if (res.status === 200) {
+          const data = await res.json();
+          setAllBrands(data.allBrands);
+          setAllFilters((prev) => [
+            ...prev,
+            {
+              _id: "brand-filter",
+              Filter_name: "Brand",
+              Filter: data.allBrands.map((b) => ({
+                _id: b._id,
+                name: b.brandName,
+              })),
+            },
+          ]);
         }
-        return acc;
-      }, [])
-    : [];
+      } catch (err) {
+        console.log(err);
+        toast.error("Error fetching brands");
+      }
+    };
+    getBrands();
+  }, []);
 
-  setSelectedFilterArray(initialSelectedFilters);
-}, [category, allFilters, allAttributes]);
+  useEffect(() => {
+    if (!category || allFilters.length === 0) return;
+
+    // Map attribute names to their _id values
+    const initialAttributes = Array.isArray(category.attribute)
+      ? category.attribute
+          .map((attrName) => {
+            const attr = allAttributes.find((a) => a.Attribute_name === attrName);
+            return attr ? attr._id : null;
+          })
+          .filter(Boolean)
+      : [];
+    setSelectedAttributes(initialAttributes);
+
+    // Initialize selected filter values from category
+    const initialSelectedFilters = Array.isArray(category.filter)
+      ? category.filter.reduce((acc, f) => {
+          const matchedFilter = allFilters.find(
+            (af) => af._id === f._id || af.Filter_name === f.Filter_name
+          );
+          if (matchedFilter) {
+            acc.push(...(f.selected || []).map((val) => val._id.toString()));
+          }
+          return acc;
+        }, [])
+      : [];
+
+    setSelectedFilterArray(initialSelectedFilters);
+  }, [category, allFilters, allAttributes]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -133,23 +143,17 @@ useEffect(() => {
     }
   };
 
- const handleFilterChange = (filterId) => {
-  setSelectedFilter(filterId);
+  const handleFilterChange = (filterId) => {
+    setSelectedFilter(filterId);
 
-  const selectedFilterObj = allFilters.find(
-    (f) => f._id === filterId
-  );
+    const selectedFilterObj = allFilters.find((f) => f._id === filterId);
 
-  setFilterValues(selectedFilterObj?.Filter || []);
-};
-
-
+    setFilterValues(selectedFilterObj?.Filter || []);
+  };
 
   const handleFilterValueToggle = (valueId) => {
     setSelectedFilterArray((prev) =>
-      prev.includes(valueId)
-        ? prev.filter((id) => id !== valueId)
-        : [...prev, valueId]
+      prev.includes(valueId) ? prev.filter((id) => id !== valueId) : [...prev, valueId]
     );
   };
 
@@ -196,9 +200,7 @@ useEffect(() => {
         setAddFilterValue("");
         const updatedFilter = await result.json();
         setAllFilters((prev) =>
-          prev.map((f) =>
-            f._id === selectedFilter ? { ...f, Filter: updatedFilter.Filter } : f
-          )
+          prev.map((f) => (f._id === selectedFilter ? { ...f, Filter: updatedFilter.Filter } : f))
         );
         setFilterValues(updatedFilter.Filter);
       } else {
@@ -240,20 +242,22 @@ useEffect(() => {
       formData.append("image", image);
     }
 
-      const filterData = allFilters.map((f) => {
-      const isBrand = f.Filter_name === "Brand";
-      
-      const matchedIds = isBrand
-        ? selectedFilterArray.filter((valId) => allBrands.some((b) => b._id === valId))
-        : selectedFilterArray.filter((valId) => f.Filter.some((val) => val._id === valId));
-        
-      if (matchedIds.length === 0) return null;
-      
-      return {
-        _id: f._id,
-        selected: matchedIds
-      };
-    }).filter(Boolean);
+    const filterData = allFilters
+      .map((f) => {
+        const isBrand = f.Filter_name === "Brand";
+
+        const matchedIds = isBrand
+          ? selectedFilterArray.filter((valId) => allBrands.some((b) => b._id === valId))
+          : selectedFilterArray.filter((valId) => f.Filter.some((val) => val._id === valId));
+
+        if (matchedIds.length === 0) return null;
+
+        return {
+          _id: f._id,
+          selected: matchedIds,
+        };
+      })
+      .filter(Boolean);
 
     formData.append("filter", JSON.stringify(filterData));
     formData.append("attribute", JSON.stringify(selectedAttributes));
@@ -282,66 +286,128 @@ useEffect(() => {
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "20px" }}>
-      <div style={{ width: "85%", margin: "0 auto", padding: "10px", border: "1px solid gray", borderRadius: "10px" }}>
+      <div
+        style={{
+          width: "85%",
+          margin: "0 auto",
+          padding: "10px",
+          border: "1px solid gray",
+          borderRadius: "10px",
+        }}
+      >
         <h2 style={{ textAlign: "center", color: "green", marginBottom: "30px" }}>EDIT CATEGORY</h2>
 
         {/* Category Name */}
         <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
-          <div><label style={{ fontWeight: '500' }}>Category Name</label></div>
+          <div>
+            <label style={{ fontWeight: "500" }}>Category Name</label>
+          </div>
           <div style={{ width: "59.5%" }}>
             <input
               type="text"
               placeholder="Enter Category Name"
               value={name}
               onChange={(e) => setCategoryName(e.target.value)}
-              style={{ border: '1px solid black', backgroundColor: 'white', width: "100%", padding: "8px", borderRadius: "5px" }}
+              style={{
+                border: "1px solid black",
+                backgroundColor: "white",
+                width: "100%",
+                padding: "8px",
+                borderRadius: "5px",
+              }}
             />
           </div>
         </div>
 
         {/* Image Upload */}
-        <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: "20px" }}>
-          <div><label style={{ fontWeight: '500' }}>Category Image</label></div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <div>
+            <label style={{ fontWeight: "500" }}>Category Image</label>
+          </div>
           <div style={{ width: "36%" }}>
-            <input type="file" accept="image/*" onChange={handleImageChange} style={{ border: '1px solid black', backgroundColor: 'white' }} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ border: "1px solid black", backgroundColor: "white" }}
+            />
           </div>
           <div>
             {imagePreview ? (
-              <img src={imagePreview} alt="Preview" style={{ width: "100px", height: "100px", objectFit: "cover" }} />
+              <img
+                src={imagePreview}
+                alt="Preview"
+                style={{ width: "100px", height: "100px", objectFit: "cover" }}
+              />
             ) : (
-              <div style={{ width: "100px", height: "100px", backgroundColor: "#ccc", display: "flex", alignItems: "center", justifyContent: "center" }}>No Image</div>
+              <div
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  backgroundColor: "#ccc",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                No Image
+              </div>
             )}
           </div>
         </div>
 
         {/* Description */}
         <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
-          <div><label style={{ fontWeight: '500' }}>Description</label></div>
+          <div>
+            <label style={{ fontWeight: "500" }}>Description</label>
+          </div>
           <div style={{ width: "59%", marginLeft: "45px" }}>
             <textarea
               placeholder="Enter Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%", height: "100px", borderRadius: "10px", padding: '5px', border: '1px solid black' }}
+              style={{
+                width: "100%",
+                height: "100px",
+                borderRadius: "10px",
+                padding: "5px",
+                border: "1px solid black",
+              }}
             />
           </div>
         </div>
 
         {/* Filter System */}
-        <div className="filter-type" id="filter-type" style={{margin:'0 38px'}}>
+        <div className="filter-type" id="filter-type" style={{ margin: "0 38px" }}>
           <span style={{ marginLeft: "20px", fontWeight: "bold", marginBottom: "10px" }}>
             Filters & Types
           </span>
-          <div className="row-section" style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
+          <div
+            className="row-section"
+            style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}
+          >
             <div className="input-container" style={{ width: "45%" }}>
-              <label style={{ fontWeight: '500' }}>
+              <label style={{ fontWeight: "500" }}>
                 Select Filter (Type) <span style={{ marginLeft: "5px", marginTop: "10px" }}>*</span>
               </label>
               <select
                 className="input-field"
                 value={selectedFilter}
                 onChange={(e) => handleFilterChange(e.target.value)}
-                style={{ width: "100%", padding: "8px", borderRadius: "5px", border: '1px solid black', backgroundColor: 'white' }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "5px",
+                  border: "1px solid black",
+                  backgroundColor: "white",
+                }}
               >
                 <option value="">--Select Filter--</option>
                 {allFilters.map((filter) => (
@@ -390,18 +456,33 @@ useEffect(() => {
                       placeholder="Enter Filter Name"
                       value={filterName}
                       onChange={(e) => setFilterName(e.target.value)}
-                      style={{ width: "100%", padding: "8px", marginBottom: "10px", border: '1px solid black' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        marginBottom: "10px",
+                        border: "1px solid black",
+                      }}
                     />
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                      <Button onClick={handleFilter} style={{ backgroundColor: "#00c853", color: "white" }}>Save</Button>
-                      <Button onClick={() => setFilterPopup(false)} style={{ backgroundColor: "#ccc", color: "black" }}>Cancel</Button>
+                      <Button
+                        onClick={handleFilter}
+                        style={{ backgroundColor: "#00c853", color: "white" }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        onClick={() => setFilterPopup(false)}
+                        style={{ backgroundColor: "#ccc", color: "black" }}
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </div>
                 </div>
               )}
             </div>
             <div className="input-container" style={{ width: "45%" }}>
-              <label style={{ fontWeight: '500' }}>
+              <label style={{ fontWeight: "500" }}>
                 Select Filter Value <span style={{ marginLeft: "5px", marginTop: "10px" }}>*</span>
               </label>
               <div style={{ position: "relative" }}>
@@ -499,11 +580,26 @@ useEffect(() => {
                       placeholder="Enter filter value"
                       value={addFilterValue}
                       onChange={(e) => setAddFilterValue(e.target.value)}
-                      style={{ width: "100%", padding: "8px", marginBottom: "10px", border: '1px solid black' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        marginBottom: "10px",
+                        border: "1px solid black",
+                      }}
                     />
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                      <Button onClick={handleFilterType} style={{ backgroundColor: "#00c853", color: "white" }}>Save</Button>
-                      <Button onClick={() => setShowFilterDropdown(false)} style={{ backgroundColor: "#ccc", color: "black" }}>Cancel</Button>
+                      <Button
+                        onClick={handleFilterType}
+                        style={{ backgroundColor: "#00c853", color: "white" }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        onClick={() => setShowFilterDropdown(false)}
+                        style={{ backgroundColor: "#ccc", color: "black" }}
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -526,10 +622,7 @@ useEffect(() => {
             }}
           >
             {selectedFilterArray.map((valueId, index) => {
-             const value = allFilters
-  .flatMap((f) => f.Filter)
-  .find((v) => v._id === valueId);
-
+              const value = allFilters.flatMap((f) => f.Filter).find((v) => v._id === valueId);
 
               return value ? (
                 <div
@@ -547,7 +640,12 @@ useEffect(() => {
                 >
                   <span>{value?.name}</span>
                   <span
-                    style={{ marginLeft: "5px", cursor: "pointer", color: "red", fontWeight: "bold" }}
+                    style={{
+                      marginLeft: "5px",
+                      cursor: "pointer",
+                      color: "red",
+                      fontWeight: "bold",
+                    }}
                     onClick={() => handleRemoveFilterValue(valueId)}
                   >
                     ×
@@ -560,12 +658,20 @@ useEffect(() => {
 
         {/* Attribute Dropdown */}
         <div style={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
-          <div><label style={{ fontWeight: '500' }}>Select Attribute</label></div>
+          <div>
+            <label style={{ fontWeight: "500" }}>Select Attribute</label>
+          </div>
           <div style={{ width: "59.5%" }}>
             <select
               value=""
               onChange={handleAttributeSelect}
-              style={{ width: "100%", padding: "8px", borderRadius: "5px", border: '1px solid black', backgroundColor: 'white' }}
+              style={{
+                width: "100%",
+                padding: "8px",
+                borderRadius: "5px",
+                border: "1px solid black",
+                backgroundColor: "white",
+              }}
             >
               <option value="">-- Select Attribute --</option>
               {allAttributes.map((attr) => (
@@ -579,12 +685,25 @@ useEffect(() => {
 
         {/* Selected Attributes */}
         {selectedAttributes.length > 0 && (
-          <div style={{ marginTop: "30px", marginLeft: "60px", marginRight: "60px", borderRadius: "10px" }}>
-            <h4 style={{ fontWeight: '500' }}>Selected Attributes</h4>
-            <div style={{
-              display: "flex", flexWrap: "wrap", gap: "10px",
-              border: "1px solid black", padding: "10px", borderRadius: "8px"
-            }}>
+          <div
+            style={{
+              marginTop: "30px",
+              marginLeft: "60px",
+              marginRight: "60px",
+              borderRadius: "10px",
+            }}
+          >
+            <h4 style={{ fontWeight: "500" }}>Selected Attributes</h4>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px",
+                border: "1px solid black",
+                padding: "10px",
+                borderRadius: "8px",
+              }}
+            >
               {selectedAttributes.map((attrId) => {
                 const attr = allAttributes.find((a) => a._id === attrId);
                 return (
@@ -598,7 +717,7 @@ useEffect(() => {
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
-                      fontSize: "14px"
+                      fontSize: "14px",
                     }}
                   >
                     <span>{attr?.Attribute_name || "Unknown Attribute"}</span>
@@ -610,7 +729,7 @@ useEffect(() => {
                         cursor: "pointer",
                         color: "red",
                         fontWeight: "bold",
-                        fontSize: "14px"
+                        fontSize: "14px",
                       }}
                     >
                       ×
@@ -626,13 +745,26 @@ useEffect(() => {
         <div style={{ textAlign: "center", marginTop: "30px", marginBottom: "20px" }}>
           <Button
             onClick={handleSubmit}
-            style={{ backgroundColor: "#00c853", color: "white", marginRight: "20px", borderRadius: "15px", width: "80px", height: "40px" }}
+            style={{
+              backgroundColor: "#00c853",
+              color: "white",
+              marginRight: "20px",
+              borderRadius: "15px",
+              width: "80px",
+              height: "40px",
+            }}
           >
             EDIT
           </Button>
           <Button
             onClick={() => navigate(-1)}
-            style={{ backgroundColor: "#00c853", color: "white", borderRadius: "15px", width: "80px", height: "40px" }}
+            style={{
+              backgroundColor: "#00c853",
+              color: "white",
+              borderRadius: "15px",
+              width: "80px",
+              height: "40px",
+            }}
           >
             BACK
           </Button>

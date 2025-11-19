@@ -64,12 +64,15 @@ import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 import SetCommisson from "layouts/Commission/commisson";
 import Festival from "layouts/Festival/Festival";
 import Blog from "layouts/Blogs/Blog";
+import DownloadAppPages from "layouts/DownloadAppPages/DownloadAppPages";
 import DriversRequest from "layouts/Approvals/DriverApproval";
 import SellerRequest from "layouts/Approvals/SellerApproval";
 import Sitemap from "layouts/SEO/Sitemap";
 import Schema from "layouts/SEO/Schema";
 import Etc from "layouts/SEO/Etc";
 import SalesReport from "layouts/Reports/SalesReport";
+import Charities from "layouts/Charity/Charities";
+import Humanity from "layouts/Charity/Humanity"; 
 
 const isLoggedIn = () => {
   const username = localStorage.getItem("username");
@@ -325,6 +328,37 @@ const routes = [
     route: "/notification",
     component: <Notification />,
   },
+  {
+    type: "collapse",
+    name: "Mobile App Downloads",
+    key: "download-app-pages",
+    icon: <Icon fontSize="small">download</Icon>,
+    route: "/download-app-pages",
+    component: <DownloadAppPages />,
+  },
+  {
+    type: "collapse",
+    name: "Charities",
+    key: "charities",
+    icon: <Icon fontSize="small">volunteer_activism</Icon>,
+    collapse: [
+      {
+        name: "Charity Categories",
+        key: "charity-categories",
+        route: "/charity-categories",
+        component: <Charities />,
+        icon: <Icon fontSize="small">category</Icon>,
+      },
+      {
+        name: "Charity Projects",
+        key: "charity-projects",
+        route: "/charity-projects",
+        component: <Humanity />,
+        icon: <Icon fontSize="small">work</Icon>,
+      },
+    ],
+  },
+
   {
     type: "collapse",
     name: "Blog",

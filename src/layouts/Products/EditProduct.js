@@ -5,8 +5,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./Product.css";
 import ColorNamer from "color-namer";
 import { Button, Switch } from "@mui/material";
-import { useDispatch } from "react-redux";
+
 import { startLoading, stopLoading } from "components/loader/appSlice";
+
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function EditProduct() {
   const [controller] = useMaterialUIController();
@@ -24,7 +26,7 @@ function EditProduct() {
   const [returnProduct, setReturnProduct] = useState({ title: "", image: null });
   const returnImageInputRef = useRef(null);
   const thumbnailInputRef = useRef(null); // Added for thumbnail handling
-  const dispatch = useDispatch();
+
   const sectionIds = ["basicinfo", "imagesection", "category-section", "citysection", "taxsection"];
 
   // State declarations
@@ -78,16 +80,16 @@ function EditProduct() {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [isFeatured, setIsFeatured] = useState(false);
   const [filterpopup, setShowFilterPopup] = useState(false);
-  const [addfilter, setAddFilter] = useState('');
-  const [selectedfilter, setSelectedFilter] = useState('');
+  const [addfilter, setAddFilter] = useState("");
+  const [selectedfilter, setSelectedFilter] = useState("");
   const [addfiltervaluepopup, setAddFilterValuePopup] = useState(false);
-  const [filterTypeName, setFilterTypeName] = useState('');
+  const [filterTypeName, setFilterTypeName] = useState("");
   const [filters, setFilters] = useState([]);
   const [selectedValuesByFilter, setSelectedValuesByFilter] = useState({});
-  const [newFilterValue, setNewFilterValue] = useState('');
-  const [filterid, setFilterId] = useState('');
+  const [newFilterValue, setNewFilterValue] = useState("");
+  const [filterid, setFilterId] = useState("");
   const [singlefilterdata, setSingleFilterData] = useState([]);
-  const [selecetdcategory, setSelectedcategory] = useState('');
+  const [selecetdcategory, setSelectedcategory] = useState("");
   const [isFood, setIsFood] = useState(false);
   const [isVeg, setIsVeg] = useState(false);
   const [isNonVeg, setIsNonVeg] = useState(false);
@@ -184,7 +186,7 @@ function EditProduct() {
             file,
             newfiles,
           });
-         if (index === 0 && currentCount === 0 && !thumbnailImage) {
+          if (index === 0 && currentCount === 0 && !thumbnailImage) {
             setThumbnailImage(file);
             setPreview(URL.createObjectURL(file));
             setThumbnailError("");
@@ -208,10 +210,8 @@ function EditProduct() {
     setSelectedImages((prev) => [...prev, ...newImages]);
   };
 
- const handleImageRemove = (indexToRemove) => {
-    setSelectedImages((prevImages) =>
-      prevImages.filter((_, index) => index !== indexToRemove)
-    );
+  const handleImageRemove = (indexToRemove) => {
+    setSelectedImages((prevImages) => prevImages.filter((_, index) => index !== indexToRemove));
     // If removing the first image (thumbnail), clear thumbnail
     if (indexToRemove === 0 && selectedImages.length > 0) {
       setThumbnailImage(null);
@@ -236,8 +236,7 @@ function EditProduct() {
     if (variantName && selectedAttr) {
       const isDuplicate = attributeValue.some(
         (item) =>
-          item.variantName === variantName &&
-          item.attributeName === selectedAttr.Attribute_name
+          item.variantName === variantName && item.attributeName === selectedAttr.Attribute_name
       );
 
       if (!isDuplicate) {
@@ -315,7 +314,9 @@ function EditProduct() {
       setSubsubCategories(selectedSub.subsubcat || []);
       const selectedCats = categories.filter((cat) => category.includes(cat._id));
       const combinedAttributes = selectedCats.flatMap((cat) => cat.attribute || []);
-      setFilteredAttributes(selectedSub.attribute?.length > 0 ? selectedSub.attribute : combinedAttributes);
+      setFilteredAttributes(
+        selectedSub.attribute?.length > 0 ? selectedSub.attribute : combinedAttributes
+      );
     } else {
       setSubsubCategories([]);
       const selectedCats = categories.filter((cat) => category.includes(cat._id));
@@ -339,14 +340,16 @@ function EditProduct() {
         selectedSubSub.attribute?.length > 0
           ? selectedSubSub.attribute
           : selectedSub?.attribute?.length > 0
-            ? selectedSub.attribute
-            : combinedAttributes
+          ? selectedSub.attribute
+          : combinedAttributes
       );
     } else {
       const selectedSub = subCategories.find((sub) => sub._id === subCategory);
       const selectedCats = categories.filter((cat) => category.includes(cat._id));
       const combinedAttributes = selectedCats.flatMap((cat) => cat.attribute || []);
-      setFilteredAttributes(selectedSub?.attribute?.length > 0 ? selectedSub.attribute : combinedAttributes);
+      setFilteredAttributes(
+        selectedSub?.attribute?.length > 0 ? selectedSub.attribute : combinedAttributes
+      );
     }
   };
 
@@ -499,15 +502,18 @@ function EditProduct() {
       const allZoneAddresses = [...new Set(cityZonesList.map((zone) => zone.address))];
       setZone(allZoneAddresses);
 
-      if (!selectedCities.some(c => c._id === cityId)) {
-        setSelectedCities(prev => [...prev, {
-          _id: selectedCity._id,
-          city: selectedCity.city,
-          zones: cityZonesList
-        }]);
-        setCityZones(prev => ({
+      if (!selectedCities.some((c) => c._id === cityId)) {
+        setSelectedCities((prev) => [
           ...prev,
-          [cityId]: cityZonesList.map(zone => zone.address)
+          {
+            _id: selectedCity._id,
+            city: selectedCity.city,
+            zones: cityZonesList,
+          },
+        ]);
+        setCityZones((prev) => ({
+          ...prev,
+          [cityId]: cityZonesList.map((zone) => zone.address),
         }));
       }
     } else {
@@ -517,57 +523,57 @@ function EditProduct() {
   };
 
   const handleRemoveCity = (cityId) => {
-    setSelectedCities(prev => prev.filter(city => city._id !== cityId));
-    setCityZones(prev => {
+    setSelectedCities((prev) => prev.filter((city) => city._id !== cityId));
+    setCityZones((prev) => {
       const updated = { ...prev };
       delete updated[cityId];
       return updated;
     });
 
     if (city === cityId) {
-      setCity('');
+      setCity("");
       setZones([]);
       setZone([]);
     }
   };
 
-const handleReturnImageChange = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
-    if (!validImageTypes.includes(file.type)) {
-      setError("Please upload a valid image (JPEG, PNG, JPG) for return policy");
-      setReturnProduct((prev) => ({ ...prev, image: null }));
-      return;
+  const handleReturnImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!validImageTypes.includes(file.type)) {
+        setError("Please upload a valid image (JPEG, PNG, JPG) for return policy");
+        setReturnProduct((prev) => ({ ...prev, image: null }));
+        return;
+      }
+      if (file.size > maxSize) {
+        setError("Return policy image must be less than 500KB");
+        setReturnProduct((prev) => ({ ...prev, image: null }));
+        return;
+      }
+      setError("");
+      setReturnProduct((prev) => ({ ...prev, image: file }));
     }
-    if (file.size > maxSize) {
-      setError("Return policy image must be less than 500KB");
-      setReturnProduct((prev) => ({ ...prev, image: null }));
-      return;
-    }
-    setError("");
-    setReturnProduct((prev) => ({ ...prev, image: file }));
-  }
-};
+  };
 
-const handleRemoveReturnImage = () => {
-  setReturnProduct((prev) => ({ ...prev, image: null }));
-  if (returnImageInputRef.current) {
-    returnImageInputRef.current.value = "";
-  }
-};
- const handleReturnPolicyChange = (policy) => {
-  setReturnProduct((prev) => ({ ...prev, title: policy }));
-};
+  const handleRemoveReturnImage = () => {
+    setReturnProduct((prev) => ({ ...prev, image: null }));
+    if (returnImageInputRef.current) {
+      returnImageInputRef.current.value = "";
+    }
+  };
+  const handleReturnPolicyChange = (policy) => {
+    setReturnProduct((prev) => ({ ...prev, title: policy }));
+  };
 
   const handleRemoveZoneFromCity = (cityId, zoneAddress) => {
-    setCityZones(prev => ({
+    setCityZones((prev) => ({
       ...prev,
-      [cityId]: prev[cityId].filter(z => z !== zoneAddress)
+      [cityId]: prev[cityId].filter((z) => z !== zoneAddress),
     }));
 
     if (city === cityId) {
-      setZone(prev => prev.filter(z => z !== zoneAddress));
+      setZone((prev) => prev.filter((z) => z !== zoneAddress));
     }
   };
 
@@ -577,7 +583,9 @@ const handleRemoveReturnImage = () => {
   };
 
   const addColor = () => {
-    const hasColorVariant = attributeValue.some((item) => item.attributeName.toLowerCase() === "color");
+    const hasColorVariant = attributeValue.some(
+      (item) => item.attributeName.toLowerCase() === "color"
+    );
     if (!hasColorVariant) {
       setColorError("Please select a color variant first.");
       return;
@@ -590,7 +598,9 @@ const handleRemoveReturnImage = () => {
       if (activeVariant) {
         setColorHexCodes((prev) => ({ ...prev, [activeVariant]: currentColor }));
       } else {
-        const colorVariants = attributeValue.filter((item) => item.attributeName.toLowerCase() === "color");
+        const colorVariants = attributeValue.filter(
+          (item) => item.attributeName.toLowerCase() === "color"
+        );
         if (colorVariants.length > 0) {
           const latestColorVariant = colorVariants[colorVariants.length - 1];
           setColorHexCodes((prev) => ({ ...prev, [latestColorVariant.variantName]: currentColor }));
@@ -620,9 +630,9 @@ const handleRemoveReturnImage = () => {
   };
 
   const handleRemoveVariant = (variantIdToRemove, variantNameToRemove) => {
-    setAttributeValue(prev =>
-      prev.filter(item =>
-        item._id !== variantIdToRemove || item.variantName !== variantNameToRemove
+    setAttributeValue((prev) =>
+      prev.filter(
+        (item) => item._id !== variantIdToRemove || item.variantName !== variantNameToRemove
       )
     );
   };
@@ -665,7 +675,9 @@ const handleRemoveReturnImage = () => {
         return;
       }
       try {
-        const result = await fetch(`https://node-m8jb.onrender.com/getcategorybyid/${selecetdcategory}`);
+        const result = await fetch(
+          `https://node-m8jb.onrender.com/getcategorybyid/${selecetdcategory}`
+        );
         if (result.status === 200) {
           const data = await result.json();
           const rawFilters = data.response.filter || [];
@@ -683,7 +695,9 @@ const handleRemoveReturnImage = () => {
           setSelectedValuesByFilter(selectedByFilter);
 
           if (filterTypeName) {
-            const filterRes = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);
+            const filterRes = await fetch(
+              `https://node-m8jb.onrender.com/getfilter/${filterTypeName}`
+            );
             if (filterRes.status === 200) {
               const filterData = await filterRes.json();
               setFilterValues(filterData.result?.Filter || []);
@@ -797,9 +811,7 @@ const handleRemoveReturnImage = () => {
       setThumbnailImage(data.productThumbnailUrl || null);
       setPreview(data.productThumbnailUrl || null);
 
-      setSelectedImages(
-        data.productImageUrl?.map((url) => ({ file: null, newfiles: url })) || []
-      );
+      setSelectedImages(data.productImageUrl?.map((url) => ({ file: null, newfiles: url })) || []);
 
       const categoryIds = data.category?.map((cat) => cat._id) || [];
       setCategory(categoryIds);
@@ -858,13 +870,20 @@ const handleRemoveReturnImage = () => {
       setCgst(data.tax || "");
       setUnitName(data.unit?.name || "");
 
-      if (data.variants?.length > 0) {
-        const newAttributeValue = data.variants.map((variant) => ({
-          attributeName: variant.attributeName,
-          variantName: variant.variantValue.split(" ")[0],
-          unit: variant.variantValue.split(" ")[1] || "",
-        }));
+      if (Array.isArray(data.variants) && data.variants.length > 0) {
+        const newAttributeValue = data.variants.map((variant) => {
+          const variantValue = variant.variantValue || ""; // safe fallback
+          const [name = "", unit = ""] = variantValue.split(" ");
+
+          return {
+            attributeName: variant.attributeName || "",
+            variantName: name,
+            unit: unit,
+          };
+        });
+
         setAttributeValue(newAttributeValue);
+
         const firstatt = newAttributeValue[0];
         if (firstatt) {
           setAttributeData(firstatt._id);
@@ -872,7 +891,10 @@ const handleRemoveReturnImage = () => {
 
         const newVariantPrices = {};
         data.variants.forEach((variant) => {
-          newVariantPrices[variant.variantValue.split(" ")[0]] = {
+          const variantValue = variant.variantValue || "";
+          const [name = ""] = variantValue.split(" ");
+
+          newVariantPrices[name] = {
             mrp: variant.mrp || "",
             sell_price: variant.sell_price || "",
           };
@@ -892,7 +914,7 @@ const handleRemoveReturnImage = () => {
         setVariantImages(newVariantImages);
 
         const colorVariants = data.variants.filter(
-          (variant) => variant.attributeName.toLowerCase() === "color" && variant.hexCode
+          (variant) => (variant.attributeName || "").toLowerCase() === "color" && variant.hexCode
         );
         if (colorVariants.length > 0) {
           const newColorHexCodes = {};
@@ -989,7 +1011,7 @@ const handleRemoveReturnImage = () => {
   }, []);
 
   const handelProduct = async () => {
-    dispatch(startLoading());
+    showAlert("loading", "Updating product...");
     const selectedFilterIds = Object.keys(selectedValuesByFilter)
       .filter((filterId) => {
         const selectedArray = selectedValuesByFilter[filterId];
@@ -997,16 +1019,19 @@ const handleRemoveReturnImage = () => {
       })
       .map((filterId) => filterId);
     const newformdata1 = new FormData();
-    newformdata1.append('filterIds', JSON.stringify(selectedFilterIds));
+    newformdata1.append("filterIds", JSON.stringify(selectedFilterIds));
 
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/addFilterInCategory/${selecetdcategory}`, {
-      method: "PUT",
-      body: newformdata1,
-    });
+    const res = await fetch(
+      `${process.env.REACT_APP_API_URL}/addFilterInCategory/${selecetdcategory}`,
+      {
+        method: "PUT",
+        body: newformdata1,
+      }
+    );
     if (res.status === 200) {
-      console.log('Success');
+      console.log("Success");
     } else {
-      console.log('Something wrong');
+      console.log("Something wrong");
     }
 
     const formData = new FormData();
@@ -1020,7 +1045,7 @@ const handleRemoveReturnImage = () => {
     formData.append("online_visible", true);
     formData.append("status", status);
 
-     if (isFood) {
+    if (isFood) {
       if (isVeg) {
         formData.append("isVeg", 1); // Send 1 if Veg is selected
       }
@@ -1030,14 +1055,14 @@ const handleRemoveReturnImage = () => {
     }
 
     if (returnProduct.title) {
-     formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
+      formData.append("returnProduct", JSON.stringify({ title: returnProduct.title }));
     }
 
     if (returnProduct.image) {
-     formData.append("file", returnProduct.image);
+      formData.append("file", returnProduct.image);
     }
 
-   if (thumbnailImage) {
+    if (thumbnailImage) {
       formData.append("image", thumbnailImage);
     }
 
@@ -1048,7 +1073,7 @@ const handleRemoveReturnImage = () => {
     const categoryData = category
       .map((catId) => {
         const cat = categories.find((c) => c._id === catId);
-        return cat ? cat._id  : null;
+        return cat ? cat._id : null;
       })
       .filter(Boolean);
     formData.append("category", JSON.stringify(categoryData));
@@ -1112,41 +1137,41 @@ const handleRemoveReturnImage = () => {
     }
 
     if (attributeValue.length > 0) {
-  const variants = attributeValue
-    .map((item, index) => {
-      const prices = variantPrices[item.variantName];
-      if (!prices || !prices.mrp || !prices.sell_price) {
-        return null;
+      const variants = attributeValue
+        .map((item, index) => {
+          const prices = variantPrices[item.variantName];
+          if (!prices || !prices.mrp || !prices.sell_price) {
+            return null;
+          }
+          // Find the original variant data from the initial product data
+          const originalVariant = location.state?.variants?.find(
+            (v) => v.variantValue.split(" ")[0] === item.variantName
+          );
+          return {
+            ...(originalVariant?._id && { _id: originalVariant._id }), // Include _id if it exists
+            attributeName: item.attributeName,
+            variantValue: `${item.variantName}${item.unit ? ` ${item.unit}` : ""}`,
+            mrp: parseFloat(prices.mrp) || 0,
+            sell_price: parseFloat(prices.sell_price) || 0,
+            imageKey: `var${index + 1}`,
+            ...(item.attributeName.toLowerCase() === "color" && colorHexCodes[item.variantName]
+              ? { hexCode: colorHexCodes[item.variantName] }
+              : {}),
+          };
+        })
+        .filter(Boolean);
+      if (variants.length > 0) {
+        formData.append("variants", JSON.stringify(variants));
       }
-      // Find the original variant data from the initial product data
-      const originalVariant = location.state?.variants?.find(
-        (v) => v.variantValue.split(" ")[0] === item.variantName
-      );
-      return {
-        ...(originalVariant?._id && { _id: originalVariant._id }), // Include _id if it exists
-        attributeName: item.attributeName,
-        variantValue: `${item.variantName}${item.unit ? ` ${item.unit}` : ''}`,
-        mrp: parseFloat(prices.mrp) || 0,
-        sell_price: parseFloat(prices.sell_price) || 0,
-        imageKey: `var${index + 1}`,
-        ...(item.attributeName.toLowerCase() === "color" && colorHexCodes[item.variantName]
-          ? { hexCode: colorHexCodes[item.variantName] }
-          : {}),
-      };
-    })
-    .filter(Boolean);
-  if (variants.length > 0) {
-    formData.append("variants", JSON.stringify(variants));
-  }
 
-  attributeValue
-    .filter((item) => variantPrices[item.variantName])
-    .forEach((item, index) => {
-      if (variantImages[item.variantName]?.file) {
-        formData.append(`var${index + 1}`, variantImages[item.variantName].file);
-      }
-    });
-}
+      attributeValue
+        .filter((item) => variantPrices[item.variantName])
+        .forEach((item, index) => {
+          if (variantImages[item.variantName]?.file) {
+            formData.append(`var${index + 1}`, variantImages[item.variantName].file);
+          }
+        });
+    }
 
     const combinedFilterData = {};
     originalFilterData.forEach((filter) => {
@@ -1161,9 +1186,7 @@ const handleRemoveReturnImage = () => {
     Object.keys(selectedValuesByFilter).forEach((filterId) => {
       const filter = filters.find((f) => f._id === filterId);
       if (filter && filter._id) {
-        const selectedIds = selectedValuesByFilter[filterId]
-          .map((val) => val._id)
-          .filter(Boolean);
+        const selectedIds = selectedValuesByFilter[filterId].map((val) => val._id).filter(Boolean);
         if (selectedIds.length > 0) {
           combinedFilterData[filterId] = {
             _id: filter._id,
@@ -1185,17 +1208,13 @@ const handleRemoveReturnImage = () => {
       });
       const responseBody = await result.json();
       if (result.status === 200) {
-        dispatch(stopLoading());
-        alert("Product Updated Successfully");
+        showAlert("success", "Product updated successfully");
         navigate(-1);
       } else {
-        dispatch(stopLoading());
-        alert(`Error: ${responseBody.message || "Unknown server error"}`);
+        showAlert("error", responseBody.message || "Unknown server error");
       }
     } catch (err) {
-      dispatch(stopLoading());
-      console.error("Request Error:", err);
-      alert("Error updating product: " + err.message);
+      showAlert("error", "Error updating product: " + err.message);
     }
   };
 
@@ -1204,17 +1223,20 @@ const handleRemoveReturnImage = () => {
 
   const handlefiltervalue = async () => {
     try {
-      const newvalue = await fetch(`${process.env.REACT_APP_API_URL}/editFilter/${filterTypeName}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          Filter: [{ name: newFilterValue }],
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const newvalue = await fetch(
+        `${process.env.REACT_APP_API_URL}/editFilter/${filterTypeName}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            Filter: [{ name: newFilterValue }],
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       if (newvalue.status === 200) {
-        alert('Success');
+        alert("Success");
         const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);
         const data = await res.json();
         setFilterValues(data.result?.Filter || []);
@@ -1281,95 +1303,98 @@ const handleRemoveReturnImage = () => {
                 />
               </div>
             </div>
-     <div className="row-section">
-       <div className="input-container">
-         <label>Feature Product</label>
-         <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
-         <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
-           {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
-         </div>
-       </div>
-       <div className="input-container">
-         <label>
-           Return Policy <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
-         </label>
-         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
-             <input
-               type="checkbox"
-               checked={returnProduct.title === "No Return"}
-               onChange={() => handleReturnPolicyChange("No Return")}
-               style={{ marginRight: "8px" }}
-             />
-             No Return
-           </label>
-           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
-             <input
-               type="checkbox"
-               checked={returnProduct.title === "No Exchange"}
-               onChange={() => handleReturnPolicyChange("No Exchange")}
-               style={{ marginRight: "8px" }}
-             />
-             No Exchange
-           </label>
-           <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
-             <input
-               type="checkbox"
-               checked={returnProduct.title === "3 Day Return"}
-               onChange={() => handleReturnPolicyChange("3 Day Return")}
-               style={{ marginRight: "8px" }}
-             />
-             3 Day Return
-           </label>
-           <div style={{ marginTop: "10px" }}>
-             <label>Return Policy Image (Optional)</label>
-             <input
-               type="file"
-               accept="image/jpeg,image/png,image/jpg"
-               ref={returnImageInputRef}
-               onChange={handleReturnImageChange}
-               style={{ marginTop: "8px" }}
-             />
-             {returnProduct.image && (
-               <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
-                 <img
-                   src={`${process.env.REACT_APP_IMAGE_LINK}${URL.createObjectURL(returnProduct.image)}`}
-                   alt="Return Policy Preview"
-                   style={{
-                     width: "50px",
-                     height: "50px",
-                     objectFit: "cover",
-                     borderRadius: "8px",
-                     marginRight: "10px",
-                   }}
-                 />
-                 <button
-                   onClick={handleRemoveReturnImage}
-                   style={{
-                     background: "red",
-                     color: "white",
-                     border: "none",
-                     borderRadius: "4px",
-                     padding: "4px 8px",
-                     cursor: "pointer",
-                     fontSize: "12px",
-                   }}
-                 >
-                   Remove
-                 </button>
-               </div>
-             )}
-           </div>
-         </div>
-       </div>
-     </div>
+            <div className="row-section">
+              <div className="input-container">
+                <label>Feature Product</label>
+                <Switch checked={isFeatured} onChange={handleFeatureToggle} color="primary" />
+                <div style={{ fontWeight: "bold", color: isFeatured ? "green" : "gray" }}>
+                  {isFeatured ? "✅ Featured Product" : "❌ Not Featured Product"}
+                </div>
+              </div>
+              <div className="input-container">
+                <label>
+                  Return Policy <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={returnProduct.title === "No Return"}
+                      onChange={() => handleReturnPolicyChange("No Return")}
+                      style={{ marginRight: "8px" }}
+                    />
+                    No Return
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={returnProduct.title === "No Exchange"}
+                      onChange={() => handleReturnPolicyChange("No Exchange")}
+                      style={{ marginRight: "8px" }}
+                    />
+                    No Exchange
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={returnProduct.title === "3 Day Return"}
+                      onChange={() => handleReturnPolicyChange("3 Day Return")}
+                      style={{ marginRight: "8px" }}
+                    />
+                    3 Day Return
+                  </label>
+                  <div style={{ marginTop: "10px" }}>
+                    <label>Return Policy Image (Optional)</label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/jpg"
+                      ref={returnImageInputRef}
+                      onChange={handleReturnImageChange}
+                      style={{ marginTop: "8px" }}
+                    />
+                    {returnProduct.image && (
+                      <div style={{ marginTop: "10px", display: "flex", alignItems: "center" }}>
+                        <img
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${URL.createObjectURL(
+                            returnProduct.image
+                          )}`}
+                          alt="Return Policy Preview"
+                          style={{
+                            width: "50px",
+                            height: "50px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            marginRight: "10px",
+                          }}
+                        />
+                        <button
+                          onClick={handleRemoveReturnImage}
+                          style={{
+                            background: "red",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-    <div className="background">
+          <div className="background">
             <div className="row-section">
               <div className="input-container">
                 <label>
-                  Is this a food product? <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                  Is this a food product?{" "}
+                  <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
                 </label>
                 <Switch checked={isFood} onChange={() => setIsFood(!isFood)} color="primary" />
               </div>
@@ -1382,11 +1407,7 @@ const handleRemoveReturnImage = () => {
                     Select Type <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
                   </label>
                   <label>
-                    <input
-                      type="checkbox"
-                      checked={isVeg}
-                      onChange={() => setIsVeg(!isVeg)}
-                    />
+                    <input type="checkbox" checked={isVeg} onChange={() => setIsVeg(!isVeg)} />
                     Veg
                   </label>
                   <label>
@@ -1400,7 +1421,7 @@ const handleRemoveReturnImage = () => {
                 </div>
               </div>
             )}
-</div>
+          </div>
 
           {/* Image Upload */}
           <div className="background" id="imagesection">
@@ -1661,7 +1682,11 @@ const handleRemoveReturnImage = () => {
                 <label>
                   Select Units <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
                 </label>
-                <select className="input-field" value={unitname} onChange={(e) => setUnitName(e.target.value)}>
+                <select
+                  className="input-field"
+                  value={unitname}
+                  onChange={(e) => setUnitName(e.target.value)}
+                >
                   <option value="">--Select Units--</option>
                   {unitsData.map((item) => (
                     <option key={item._id} value={item.unitname}>
@@ -1835,7 +1860,8 @@ const handleRemoveReturnImage = () => {
             <div className="row-section">
               <div className="input-container">
                 <label>
-                  Select Filter (Type) <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
+                  Select Filter (Type){" "}
+                  <span style={{ marginLeft: "5px", marginTop: "10px" }}> *</span>
                 </label>
                 <select
                   className="input-field"
@@ -1846,7 +1872,9 @@ const handleRemoveReturnImage = () => {
                     setSelectedFilterValue("");
 
                     try {
-                      const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${selectedId}`);
+                      const res = await fetch(
+                        `https://node-m8jb.onrender.com/getfilter/${selectedId}`
+                      );
                       if (res.status === 200) {
                         const data = await res.json();
                         setFilterValues(data.result?.Filter || []);
@@ -1936,11 +1964,14 @@ const handleRemoveReturnImage = () => {
               }}
             >
               {Object.entries(selectedValuesByFilter).map(([filterId, values]) => {
-                const filterName = filters.find((f) => f._id === filterId)?.Filter_name || "Unknown Filter";
+                const filterName =
+                  filters.find((f) => f._id === filterId)?.Filter_name || "Unknown Filter";
                 return (
                   <div key={filterId}>
                     <strong style={{ fontSize: "14px", color: "#007b83" }}>{filterName}</strong>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "5px" }}>
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "5px" }}
+                    >
                       {values.map((val) => (
                         <div
                           key={val._id}
@@ -1957,7 +1988,9 @@ const handleRemoveReturnImage = () => {
                           <span
                             onClick={() => {
                               setSelectedValuesByFilter((prev) => {
-                                const updatedValues = (prev[filterId] || []).filter((v) => v._id !== val._id);
+                                const updatedValues = (prev[filterId] || []).filter(
+                                  (v) => v._id !== val._id
+                                );
                                 const updated = { ...prev, [filterId]: updatedValues };
                                 if (updatedValues.length === 0) delete updated[filterId];
                                 return updated;
@@ -2175,7 +2208,9 @@ const handleRemoveReturnImage = () => {
                       placeholder="Enter Variant Selling Price"
                       className="input-field"
                       value={variantPrices[item.variantName]?.sell_price || ""}
-                      onChange={(e) => handlePriceChange(item.variantName, "sell_price", e.target.value)}
+                      onChange={(e) =>
+                        handlePriceChange(item.variantName, "sell_price", e.target.value)
+                      }
                     />
 
                     <input
@@ -2189,9 +2224,16 @@ const handleRemoveReturnImage = () => {
                     {variantImages[item.variantName]?.preview && (
                       <div style={{ marginTop: "10px" }}>
                         <img
-                          src={`${process.env.REACT_APP_IMAGE_LINK}${variantImages[item.variantName].preview}`}
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${
+                            variantImages[item.variantName].preview
+                          }`}
                           alt={`variant-preview-${item.variantName}`}
-                          style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px" }}
+                          style={{
+                            width: "100px",
+                            height: "100px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                          }}
                         />
                         <button
                           onClick={() =>
@@ -2266,7 +2308,9 @@ const handleRemoveReturnImage = () => {
                   </button>
                 </div>
                 {colorError && (
-                  <p style={{ color: "red", fontSize: "12px", marginBottom: "10px" }}>{colorError}</p>
+                  <p style={{ color: "red", fontSize: "12px", marginBottom: "10px" }}>
+                    {colorError}
+                  </p>
                 )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                   {colors.map((color, index) => (
@@ -2321,7 +2365,6 @@ const handleRemoveReturnImage = () => {
             )}
           </div>
 
-
           {/* Tax Section  */}
           <div className="background" id="taxsection">
             <span style={{ marginLeft: "20px", fontWeight: "bold", marginBottom: "10px" }}>
@@ -2348,7 +2391,9 @@ const handleRemoveReturnImage = () => {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "30px", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{ display: "flex", gap: "30px", alignItems: "center", justifyContent: "center" }}
+          >
             <Button
               variant="contained"
               style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px" }}
@@ -2378,8 +2423,11 @@ const handleRemoveReturnImage = () => {
             <div key={item.id} style={{ position: "relative" }}>
               {index < array.length - 1 && (
                 <div
-                  className={`dashed-line ${activeSection === item.id || array[index + 1].id === activeSection ? "active" : ""
-                    }`}
+                  className={`dashed-line ${
+                    activeSection === item.id || array[index + 1].id === activeSection
+                      ? "active"
+                      : ""
+                  }`}
                 ></div>
               )}
               <a

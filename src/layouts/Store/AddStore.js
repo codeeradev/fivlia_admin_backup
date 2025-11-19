@@ -4,11 +4,10 @@ import { useMaterialUIController } from "context";
 import "./AddStore.css";
 import { Button, Switch } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useDispatch } from "react-redux";
 import { Marker, Circle } from "@react-google-maps/api"; // works for Ola via AdaptiveMap
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
-import { startLoading, stopLoading } from "components/loader/appSlice";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function AddStore() {
   const [controller] = useMaterialUIController();
@@ -37,7 +36,6 @@ function AddStore() {
   const [cities, setCities] = useState([]);
   const [availableZones, setAvailableZones] = useState([]);
   const [mainCategories, setMainCategories] = useState([]);
-  const dispatch = useDispatch();
 
   const mapRef = useRef(null);
   const inputRef = useRef(null);
@@ -158,7 +156,7 @@ function AddStore() {
     if (file) {
       const maxSize = 500 * 1024;
       if (file.size > maxSize) {
-        alert("Image size must be less than 500KB");
+        showAlert("warning", "Image size must be less than 500KB");
         return;
       }
       setSelectedImage(file);
@@ -191,23 +189,23 @@ function AddStore() {
 
   const handleStore = async () => {
     if (!storeName || !ownerName || !phone || !email || !latitude || !longitude || !selectedCity) {
-      alert("Please fill all required fields.");
+      showAlert("warning", "Please fill all required fields");
       return;
     }
 
     if (isAuthorized && selectedCategory.length === 0) {
-      alert("Please select at least one category for authorized store.");
+      showAlert("warning", "Please select at least one category for authorized store");
       return;
     }
 
     if (selectedZone.length === 0) {
-      alert("Please select at least one zone.");
+      showAlert("warning", "Please select at least one zone");
       return;
     }
 
     try {
       const formData = new FormData();
-      dispatch(startLoading());
+      showAlert("loading", "Saving store...");
       formData.append("storeName", storeName);
       formData.append("ownerName", ownerName);
       formData.append("PhoneNumber", phone);
@@ -242,21 +240,20 @@ function AddStore() {
       }
 
       if (response.status === 201) {
-        dispatch(stopLoading());
-        alert("Store added successfully!");
+        showAlert("success", "Store added successfully!");
         navigate(-1);
       } else if (response.status === 200) {
-        dispatch(stopLoading());
-        alert("Store Updated successfully!");
+        showAlert("success", "Store updated successfully!");
         navigate(-1);
+      } else if (response.status === 409) {
+        // duplicate phone (or similar conflict)
+        showAlert("error", "Phone number already in use");
       } else {
         const errorData = await response.json();
-        dispatch(stopLoading());
-        alert(`Error: ${errorData.message || "Failed to add store"}`);
+        showAlert("Error:", errorData.message || "Failed to save store");
       }
     } catch (error) {
-      dispatch(stopLoading());
-      alert("Error adding store: " + error.message);
+      showAlert("error", "Error saving store: " + (error.message || "Network error"));
     }
   };
 
@@ -300,6 +297,7 @@ function AddStore() {
                 type="text"
                 placeholder="Store Phone Number"
                 value={phone}
+                maxLength={13} 
                 onChange={(e) => setPhone(e.target.value)}
               />
             </div>

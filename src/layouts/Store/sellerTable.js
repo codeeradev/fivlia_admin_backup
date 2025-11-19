@@ -63,7 +63,7 @@ function SellerTable() {
   const [selectedStore, setSelectedStore] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ Pagination
+  // Pagination
   const [entries, setEntries] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -79,7 +79,6 @@ function SellerTable() {
 
   const handleAdminLogin = async (store) => {
     try {
-      // 1️⃣ Call your backend API to generate the access key
       showAlert("loading", "Generating access key...");
       const response = await fetch(`${process.env.REACT_APP_API_URL}/generateKey`, {
         method: "POST",
@@ -93,17 +92,13 @@ function SellerTable() {
         }),
       });
 
-      // 2️⃣ Handle response
       if (response.ok) {
         const data = await response.json();
         const generatedKey = data.accessKey;
 
         showAlert("success", "Access key generated successfully");
-        // 3️⃣ Construct redirect URL
         const redirectUrl = `https://seller.fivlia.in/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
-
-        // 4️⃣ Redirect to seller panel
-        window.open(redirectUrl, "_blank"); // open in new tab
+        window.open(redirectUrl, "_blank");
       } else if (response.status === 403) {
         showAlert("error", "Access denied.");
       } else {
@@ -223,7 +218,6 @@ function SellerTable() {
 
   const cityOptions = [...new Set(stores.map((s) => s.city?.name).filter(Boolean))];
 
-  // ✅ Pagination
   const indexOfLast = currentPage * entries;
   const indexOfFirst = indexOfLast - entries;
   const paginatedStores = filteredStores.slice(indexOfFirst, indexOfLast);
@@ -247,7 +241,7 @@ function SellerTable() {
             overflowX: "auto",
           }}
         >
-          {/* ✅ Header */}
+          {/* Header */}
           <div
             style={{
               display: "flex",
@@ -278,7 +272,87 @@ function SellerTable() {
             </Button>
           </div>
 
-          {/* ✅ Filters + Table */}
+          {/* ============================
+              ⭐ INSERTED FILTERS SECTION 
+              ============================ */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px",
+              gap: "10px",
+            }}
+          >
+            {/* LEFT SIDE FILTERS */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
+              {/* Show Entries */}
+              <FormControl style={{ width: "120px", marginTop: "-4px" }}>
+                <span style={{ fontSize: "12px" }}>Show Entries</span>
+                <Select
+                  value={entries}
+                  onChange={(e) => {
+                    setEntries(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ height: "45px" }}
+                >
+                  {[50, 100, 200, 400].map((num) => (
+                    <MenuItem key={num} value={num}>
+                      {num}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Filter by City */}
+              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
+                <InputLabel>Filter by City</InputLabel>
+                <Select
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  style={{ height: "45px" }}
+                >
+                  <MenuItem value="">All Cities</MenuItem>
+                  {cityOptions.map((city) => (
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Filter by Status */}
+              <FormControl style={{ minWidth: "180px", marginTop: "15px" }}>
+                <InputLabel>Filter by Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{ height: "45px" }}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="online">Online</MenuItem>
+                  <MenuItem value="offline">Offline</MenuItem>
+                </Select>
+              </FormControl>
+            </div>
+
+            {/* RIGHT SIDE SEARCH */}
+            <TextField
+              label="Search by Store/Owner"
+              variant="outlined"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ minWidth: "250px" }}
+            />
+          </div>
+
+          {/* ======================
+              ⭐ END FILTERS SECTION
+              ====================== */}
+
+          {/* Table */}
           <div style={{ width: "100%", overflowX: "auto" }}>
             <table
               style={{
@@ -357,7 +431,7 @@ function SellerTable() {
                       </strong>
                     </td>
 
-                    {/* Wallet Column — opens wallet modal */}
+                    {/* Wallet */}
                     <td
                       style={{ ...bodyCell, textAlign: "left" }}
                       onClick={() => {
@@ -380,6 +454,7 @@ function SellerTable() {
                     <td style={bodyCell}>{store.city?.name || "N/A"}</td>
                     <td style={bodyCell}>{store.zone?.length || 0}</td>
                     <td style={bodyCell}>{store.Category?.length || 0}</td>
+
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <Switch
                         checked={store.status}
@@ -387,6 +462,7 @@ function SellerTable() {
                         color="primary"
                       />
                     </td>
+
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <Switch
                         checked={store.approveStatus === "banned"}
@@ -394,10 +470,12 @@ function SellerTable() {
                         color="error"
                       />
                     </td>
+
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <IconButton onClick={(e) => handleActionClick(e, store)} size="small">
                         <MoreVertIcon />
                       </IconButton>
+
                       <Menu
                         anchorEl={actionAnchorEl}
                         open={Boolean(actionAnchorEl) && actionStore?._id === store._id}
@@ -411,6 +489,7 @@ function SellerTable() {
                         >
                           Edit
                         </MenuItem>
+
                         <MenuItem
                           onClick={async () => {
                             handleActionClose();
@@ -428,6 +507,7 @@ function SellerTable() {
           </div>
         </div>
 
+        {/* Wallet Modal */}
         {/* ✅ Wallet Modal */}
         <Dialog
           open={walletModalOpen}

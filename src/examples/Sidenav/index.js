@@ -277,6 +277,12 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           {...rest}
           variant="permanent"
           ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
+          sx={{
+    width: miniSidenav ? "80px" : "250px", // ✅ defines actual width
+    flexShrink: 0,
+    transition: "width 0.3s ease",
+  }}
+
         >
           <MDBox pt={3} pb={1} px={4} textAlign="center">
             {brand && (

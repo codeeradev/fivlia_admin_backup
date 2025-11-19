@@ -1,331 +1,560 @@
-import React, { useEffect, useState } from "react";
+// DriversApprovalRequests.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useMaterialUIController } from "context";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 import Swal from "sweetalert2";
-import MDBox from "components/MDBox";
 
-export default function DriversRequest() {
+import MDBox from "components/MDBox";
+import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
+import MDInput from "components/MDInput";
+
+import Card from "@mui/material/Card";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import IconButton from "@mui/material/IconButton";
+import Grid from "@mui/material/Grid";
+import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
+import { Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+
+import DataTable from "react-data-table-component";
+
+export default function DriversApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const dispatch = useDispatch();
 
   const [driverRequests, setDriverRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [entriesToShow, setEntriesToShow] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [error, setError] = useState("");
+  const [entriesToShow, setEntriesToShow] = useState(10);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
-  const headerCell = {
-    padding: "14px 12px",
-    border: "1px solid #ddd",
-    fontSize: 18,
-    fontWeight: "bold",
-    backgroundColor: "#007bff",
-    color: "white",
-  };
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [openUpload, setOpenUpload] = useState(false);
 
-  const bodyCell = {
-    padding: "12px",
-    border: "1px solid #eee",
-    fontSize: 16,
-    backgroundColor: "#fff",
-  };
+  const [uploadDriver, setUploadDriver] = useState(null);
 
-  // Fetch driver requests
-  useEffect(() => {
-    const fetchDriverRequests = async () => {
-      try {
-        dispatch(startLoading());
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getDriverRequest`);
-        const data = await response.json();
-        if (Array.isArray(data.requests)) {
-          setDriverRequests(data.requests);
-        } else {
-          setError("Invalid driver requests data format");
-        }
-      } catch (error) {
-        console.error("Failed to fetch driver requests:", error);
-        setError("Failed to fetch driver requests. Please try again.");
-      } finally {
-        dispatch(stopLoading());
-      }
-    };
+  // 4 SEPARATE FILES
+  const [aadharFront, setAadharFront] = useState(null);
+  const [aadharBack, setAadharBack] = useState(null);
+  const [dlFront, setDlFront] = useState(null);
+  const [dlBack, setDlBack] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
 
-    fetchDriverRequests();
-  }, [dispatch]);
+  const [uploading, setUploading] = useState(false);
 
-  // Approve or Decline driver request
-  const handleDriverAction = async (id, action) => {
+  const IMAGE_BASE = process.env.REACT_APP_IMAGE_LINK;
+
+  // ===============================
+  // FETCH REQUESTS
+  // ===============================
+  const fetchRequests = async () => {
     try {
       dispatch(startLoading());
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/acceptDeclineRequest`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "driver", approval: action, id}),
-        }
-      );
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/getDriverRequest`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Fetch failed");
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} driver request`);
-      }
-
-      setDriverRequests((prev) =>
-        prev.map((req) =>
-          req._id === id
-            ? { ...req, status: action === "approve" ? "approved" : "declined" }
-            : req
-        )
-      );
-      Swal.fire({
-      icon: action === "approve" ? "success" : "error",
-      title: `Driver ${action === "approve" ? "approved" : "declined"}!`,
-      text: `The driver request has been ${action === "approve" ? "approved" : "declined"}.`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-
-    } catch (error) {
-      console.error(`Error ${action}ing driver request:`, error);
-      setError(`Failed to ${action} driver request: ${error.message}`);
-      Swal.fire({
-      icon: "error",
-      title: "Oops!",
-      text: `Failed to ${action} driver request: ${error.message}`,
-    });
+      setDriverRequests(Array.isArray(data.requests) ? data.requests : []);
+    } catch {
+      Swal.fire("Error", "Failed to fetch driver requests", "error");
     } finally {
       dispatch(stopLoading());
     }
   };
 
-  // Filter requests by search term
-  const filteredRequests = driverRequests.filter(
-    (req) =>
-      req.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.address.mobileNo.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  // ===============================
+  // APPROVE / REJECT
+  // ===============================
+  const handleDriverAction = async (id, action) => {
+    try {
+      dispatch(startLoading());
+      const body = { type: "driver", approval: action, id };
+      
+
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+
+      setDriverRequests((prev) =>
+        prev.map((d) => (d._id === id ? { ...d, approveStatus: action } : d))
+      );
+
+      Swal.fire(action, json.message, action === "approved" ? "success" : "error");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
+      dispatch(stopLoading());
+    }
+  };
+
+  // ===============================
+  // OPEN UPLOAD MODAL
+  // ===============================
+  const openUploadModal = (driver) => {
+    setUploadDriver(driver);
+
+    // Reset previous files
+    setAadharFront(null);
+    setAadharBack(null);
+    setDlFront(null);
+    setDlBack(null);
+    setProfileImage(null);
+
+    setOpenUpload(true);
+  };
+
+  // ===============================
+  // UPLOAD SUBMIT — FINAL VERSION
+  // ===============================
+  const handleUploadSubmit = async () => {
+    if (!uploadDriver) return;
+
+    if (!aadharFront || !aadharBack) {
+      return Swal.fire("Missing Aadhar", "Upload both Aadhar front & back", "warning");
+    }
+    if (!dlFront || !dlBack) {
+      return Swal.fire("Missing Licence", "Upload both Licence front & back", "warning");
+    }
+
+    try {
+      dispatch(startLoading());
+      setUploading(true);
+
+      const form = new FormData();
+
+      if (profileImage) form.append("image", profileImage);
+
+      // MUST append in exact order for backend
+      form.append("aadharCard", aadharFront);
+      form.append("aadharCard", aadharBack);
+
+      form.append("drivingLicence", dlFront);
+      form.append("drivingLicence", dlBack);
+
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/editDriver/${uploadDriver._id}`, {
+        method: "PUT",
+        body: form,
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Upload failed");
+
+      Swal.fire("Success", "Documents updated", "success");
+
+      setOpenUpload(false);
+      fetchRequests();
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
+      dispatch(stopLoading());
+      setUploading(false);
+    }
+  };
+
+  // ===============================
+  // DATATABLE COLUMNS
+  // ===============================
+  const columns = useMemo(
+    () => [
+      {
+        name: "#",
+        selector: (row, idx) => idx + 1,
+        width: "60px",
+        center: true,
+      },
+      {
+        name: "Image",
+        cell: (row) => (
+          <img
+            src={row.image ? `${IMAGE_BASE}${row.image}` : `${IMAGE_BASE}/default-avatar.png`}
+            width={42}
+            height={42}
+            style={{ borderRadius: "50%", objectFit: "cover" }}
+          />
+        ),
+        center: true,
+        width: "70px",
+      },
+      {
+        name: "Driver Name",
+        selector: (row) => row.driverName,
+        sortable: true,
+      },
+      {
+        name: "Mobile",
+        selector: (row) => row.address?.mobileNo,
+      },
+      {
+        name: "Email",
+        selector: (row) => row.email,
+      },
+      {
+        name: "Status",
+        cell: (row) => (
+          <Chip
+            label={row.approveStatus?.replace(/_/g, " ") || "pending"}
+            color={
+              row.approveStatus === "approved"
+                ? "success"
+                : row.approveStatus === "rejected"
+                ? "error"
+                : "warning"
+            }
+            size="small"
+          />
+        ),
+        center: true,
+      },
+      {
+        name: "Upload Docs",
+        center: true,
+        cell: (row) => (
+          <MDButton
+            color="info"
+            size="small"
+            onClick={() => openUploadModal(row)}
+            startIcon={<UploadFileIcon />}
+          >
+            Upload
+          </MDButton>
+        ),
+      },
+      {
+        name: "Action",
+        center: true,
+        cell: (row) => {
+          const pending = !row.approveStatus || row.approveStatus === "pending_admin_approval";
+
+          return pending ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "12px",
+                padding: "4px 0",
+              }}
+            >
+              <MDButton
+                size="small"
+                color="success"
+                onClick={() => handleDriverAction(row._id, "approved")}
+                startIcon={<CheckIcon />}
+                style={{ minWidth: "90px" }}
+              >
+                Approve
+              </MDButton>
+
+              <MDButton
+                size="small"
+                color="error"
+                onClick={() => handleDriverAction(row._id, "rejected")}
+                startIcon={<CloseIcon />}
+                style={{ minWidth: "90px" }}
+              >
+                Reject
+              </MDButton>
+            </div>
+          ) : (
+            <Chip
+              label={row.approveStatus}
+              size="small"
+              color={row.approveStatus === "approved" ? "success" : "error"}
+              style={{ fontWeight: "bold" }}
+            />
+          );
+        },
+      },
+      {
+        name: "View",
+        center: true,
+        cell: (row) => (
+          <IconButton
+            onClick={() => {
+              setSelectedRequest(row);
+              setOpenViewDialog(true);
+            }}
+          >
+            <VisibilityIcon />
+          </IconButton>
+        ),
+      },
+    ],
+    []
   );
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredRequests.length / entriesToShow);
-  const startIndex = (currentPage - 1) * entriesToShow;
-  const endIndex = startIndex + entriesToShow;
-  const currentRequests = filteredRequests.slice(startIndex, endIndex);
+  // ===============================
+  // FILTER
+  // ===============================
+  const filtered = driverRequests.filter((d) =>
+    `${d.driverName} ${d.email} ${d.address?.mobileNo}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
 
-  const handleEntriesChange = (e) => {
-    setEntriesToShow(parseInt(e.target.value));
-    setCurrentPage(1);
-  };
+  // ===============================
+  // VIEW DETAILS
+  // ===============================
+  const renderDetails = (r) => (
+    <Grid container spacing={2}>
+      <Grid item xs={6}>
+        <MDTypography>
+          <b>Name:</b> {r.driverName}
+        </MDTypography>
+        <MDTypography>
+          <b>Email:</b> {r.email}
+        </MDTypography>
+        <MDTypography>
+          <b>Mobile:</b> {r.address?.mobileNo}
+        </MDTypography>
+      </Grid>
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
+      <Grid item xs={6}>
+        <MDTypography fontWeight="bold" mb={1}>
+          Aadhar
+        </MDTypography>
 
-  const handlePrevious = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+        <MDBox display="flex" gap={2} flexWrap="wrap" mb={3}>
+          {r.aadharCard?.front ? (
+            <MDBox textAlign="center">
+              <MDTypography variant="caption">Front</MDTypography>
+              <img
+                src={`${IMAGE_BASE}${r.aadharCard.front}`}
+                width={120}
+                style={{
+                  borderRadius: 6,
+                  display: "block",
+                  marginTop: 4,
+                  border: "1px solid #ddd",
+                  padding: 4,
+                }}
+              />
+            </MDBox>
+          ) : (
+            <MDTypography variant="body2" color="textSecondary">
+              No Aadhar Front
+            </MDTypography>
+          )}
 
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
+          {r.aadharCard?.back ? (
+            <MDBox textAlign="center">
+              <MDTypography variant="caption">Back</MDTypography>
+              <img
+                src={`${IMAGE_BASE}${r.aadharCard.back}`}
+                width={120}
+                style={{
+                  borderRadius: 6,
+                  display: "block",
+                  marginTop: 4,
+                  border: "1px solid #ddd",
+                  padding: 4,
+                }}
+              />
+            </MDBox>
+          ) : (
+            <MDTypography variant="body2" color="textSecondary">
+              No Aadhar Back
+            </MDTypography>
+          )}
+        </MDBox>
+
+        <MDTypography fontWeight="bold" mb={1}>
+          Driving Licence
+        </MDTypography>
+
+        <MDBox display="flex" gap={2} flexWrap="wrap">
+          {r.drivingLicence?.front ? (
+            <MDBox textAlign="center">
+              <MDTypography variant="caption">Front</MDTypography>
+              <img
+                src={`${IMAGE_BASE}${r.drivingLicence.front}`}
+                width={120}
+                style={{
+                  borderRadius: 6,
+                  display: "block",
+                  marginTop: 4,
+                  border: "1px solid #ddd",
+                  padding: 4,
+                }}
+              />
+            </MDBox>
+          ) : (
+            <MDTypography variant="body2" color="textSecondary">
+              No Licence Front
+            </MDTypography>
+          )}
+
+          {r.drivingLicence?.back ? (
+            <MDBox textAlign="center">
+              <MDTypography variant="caption">Back</MDTypography>
+              <img
+                src={`${IMAGE_BASE}${r.drivingLicence.back}`}
+                width={120}
+                style={{
+                  borderRadius: 6,
+                  display: "block",
+                  marginTop: 4,
+                  border: "1px solid #ddd",
+                  padding: 4,
+                }}
+              />
+            </MDBox>
+          ) : (
+            <MDTypography variant="body2" color="textSecondary">
+              No Licence Back
+            </MDTypography>
+          )}
+        </MDBox>
+      </Grid>
+    </Grid>
+  );
 
   return (
-    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
-      <div style={{ width: "100%", padding: "0 20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2}>
+      <MDBox px={3}>
+        <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>
+            <MDTypography variant="h5" fontWeight="bold">
               Driver Approval Requests
-            </h2>
-            <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
-              Review and approve or decline new driver requests
-            </p>
+            </MDTypography>
           </div>
-        </div>
 
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          <div>
-            <label style={{ fontSize: 17 }}>Show Entries </label>
-            <select
-              value={entriesToShow}
-              onChange={handleEntriesChange}
-              style={{
-                fontSize: 16,
-                padding: "6px 10px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-              }}
-            >
-              {[5, 10, 20, 30].map((num) => (
-                <option key={num} value={num}>
-                  {num}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginLeft: "auto" }}>
-            <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
-            <input
-              type="text"
+          <MDBox display="flex" gap={2}>
+            <FormControl size="small">
+              <InputLabel>Entries</InputLabel>
+              <Select
+                value={entriesToShow}
+                label="Entries"
+                onChange={(e) => setEntriesToShow(e.target.value)}
+              >
+                {[5, 10, 20, 30].map((n) => (
+                  <MenuItem key={n} value={n}>
+                    {n}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <MDInput
+              placeholder="Search…"
               value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search by Driver, Email, or Mobile..."
-              style={{
-                padding: "8px 34px",
-                borderRadius: "8px",
-                height: "42px",
-                width: "260px",
-                border: "1px solid #ccc",
-                fontSize: 16,
-                outline: "none",
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
-        </div>
+          </MDBox>
+        </MDBox>
 
-        {error && (
-          <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
-        )}
+        <Card sx={{ p: 2 }}>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            pagination
+            paginationPerPage={entriesToShow}
+            highlightOnHover
+          />
+        </Card>
 
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontFamily: '"Urbanist", sans-serif',
-            fontSize: "17px",
-            border: "1px solid #007BFF",
-            marginTop: "20px",
-          }}
+        {/* View Modal */}
+        <Dialog
+          open={openViewDialog}
+          onClose={() => setOpenViewDialog(false)}
+          maxWidth="md"
+          fullWidth
         >
-          <thead>
-            <tr>
-              <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Image</th>
-              <th style={headerCell}>Driver Name</th>
-              <th style={headerCell}>Mobile</th>
-              <th style={headerCell}>Email</th>
-              <th style={headerCell}>Status</th>
-              <th style={headerCell}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentRequests.length > 0 ? (
-              currentRequests.map((request, index) => (
-                <tr key={request._id}>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
-                    <td style={{ ...bodyCell, textAlign: "center" }}>
-                      <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>
-                        <img
-                          src={`${process.env.REACT_APP_IMAGE_LINK}${request.image}`}
-                          alt={request.driverName}
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                            borderRadius: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      </div>
-                    </td>
-                  <td style={bodyCell}>{request.driverName}</td>
-                  <td style={bodyCell}>{request.address.mobileNo}</td>
-                  <td style={bodyCell}>{request.email}</td>
-                  <td style={bodyCell}>{request.approveStatus}</td>
-                  <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {request.approveStatus === "pending_admin_approval" ? (
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                        <button
-                          onClick={() => handleDriverAction(request._id, "approve")}
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleDriverAction(request._id, "decline")}
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        style={{
-                          color: request.approveStatus === "approved" ? "green" : "red",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {request.approveStatus}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" style={{ textAlign: "center", padding: "20px" }}>
-                  No driver requests found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <DialogTitle>Driver Details</DialogTitle>
+          <DialogContent>{selectedRequest && renderDetails(selectedRequest)}</DialogContent>
+          <DialogActions>
+            <MDButton onClick={() => setOpenViewDialog(false)}>Close</MDButton>
+          </DialogActions>
+        </Dialog>
 
-        <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-          <div>
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredRequests.length)} of{" "}
-            {filteredRequests.length} entries
-          </div>
-          <div>
-            <button
-              onClick={handlePrevious}
-              disabled={currentPage === 1}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === 1 ? "#ccc" : "#007BFF",
-                color: currentPage === 1 ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                marginRight: "8px",
-              }}
+        {/* Upload Modal */}
+        <Dialog open={openUpload} onClose={() => setOpenUpload(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Upload Documents — {uploadDriver?.driverName}</DialogTitle>
+          <DialogContent dividers>
+            <Grid container spacing={2}>
+              {/* Profile Image */}
+              <Grid item xs={12}>
+                <MDTypography>Profile Image</MDTypography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setProfileImage(e.target.files[0])}
+                />
+              </Grid>
+
+              {/* Aadhar Front */}
+              <Grid item xs={12} sm={6}>
+                <MDTypography>Aadhar Front</MDTypography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setAadharFront(e.target.files[0])}
+                />
+              </Grid>
+
+              {/* Aadhar Back */}
+              <Grid item xs={12} sm={6}>
+                <MDTypography>Aadhar Back</MDTypography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setAadharBack(e.target.files[0])}
+                />
+              </Grid>
+
+              {/* Licence Front */}
+              <Grid item xs={12} sm={6}>
+                <MDTypography>Driving Licence Front</MDTypography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setDlFront(e.target.files[0])}
+                />
+              </Grid>
+
+              {/* Licence Back */}
+              <Grid item xs={12} sm={6}>
+                <MDTypography>Driving Licence Back</MDTypography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setDlBack(e.target.files[0])}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+
+          <DialogActions>
+            <MDButton onClick={() => setOpenUpload(false)}>Cancel</MDButton>
+            <MDButton
+              variant="contained"
+              color="primary"
+              disabled={uploading}
+              onClick={handleUploadSubmit}
             >
-              Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === totalPages ? "#ccc" : "#007BFF",
-                color: currentPage === totalPages ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
+              {uploading ? "Uploading…" : "Upload"}
+            </MDButton>
+          </DialogActions>
+        </Dialog>
+      </MDBox>
     </MDBox>
   );
 }

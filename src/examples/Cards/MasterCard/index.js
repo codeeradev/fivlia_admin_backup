@@ -25,7 +25,6 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 
 // Images
-import pattern from "assets/images/illustrations/pattern-tree.svg";
 import masterCardLogo from "assets/images/logos/mastercard.png";
 
 function MasterCard({ color, number, holder, expires }) {
@@ -60,7 +59,6 @@ function MasterCard({ color, number, holder, expires }) {
         height="100%"
         opacity={0.2}
         sx={{
-          backgroundImage: `url(${pattern})`,
           backgroundSize: "cover",
         }}
       />

@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
-import { Button, Menu, MenuItem, IconButton, Switch, Chip, Tooltip, Popover, Typography } from "@mui/material";
+import {
+  Button,
+  Menu,
+  MenuItem,
+  IconButton,
+  Switch,
+  Chip,
+  Tooltip,
+  Popover,
+  Typography,
+  Modal,
+  Box,
+} from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import ListIcon from "@mui/icons-material/List";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { MoreHoriz } from "@mui/icons-material";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 // Styles for table headers and cells
 const headerCell = {
@@ -50,31 +62,41 @@ function ProductTable() {
   const [popoverData, setPopoverData] = useState([]);
   const [popoverIndex, setPopoverIndex] = useState(null);
   const [popoverType, setPopoverType] = useState("");
+  const [uploadPreview, setUploadPreview] = useState(null);
+  const [openFormatModal, setOpenFormatModal] = useState(false);
+  const [csvPreviewRows, setCsvPreviewRows] = useState([]);
+  const [openCsvPreviewModal, setOpenCsvPreviewModal] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
 
- 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const result = await fetch(
-        `${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(searchQuery)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
-      );
-      const res = await result.json();
-      setData(res.Product || []);
-      setTotalItems(res.count || 0);
-      setTotalPages(res.totalPages || 1);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await fetch(
+          `${
+            process.env.REACT_APP_API_URL
+          }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
+            searchQuery
+          )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
+            selectedCategory
+          )}`
+        );
+        const res = await result.json();
+        setData(res.Product || []);
+        setTotalItems(res.count || 0);
+        setTotalPages(res.totalPages || 1);
 
-      const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
-        acc[cur._id] = cur.status === true;
-        return acc;
-      }, {});
-      setPublicStatus(initialPublicStatus);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-    }
-  };
+        const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
+          acc[cur._id] = cur.status === true;
+          return acc;
+        }, {});
+        setPublicStatus(initialPublicStatus);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+      }
+    };
 
-  fetchData();
-}, [searchQuery, entries, selectedCity, selectedCategory, currentPage]);
+    fetchData();
+  }, [searchQuery, entries, selectedCity, selectedCategory, currentPage]);
 
   const handleMenuOpen = (event, index) => {
     setAnchorEl(event.currentTarget);
@@ -97,9 +119,13 @@ useEffect(() => {
       });
 
       if (result.status === 200) {
-        alert("Product Deleted Successfully");
+        showAlert("success", "Product deleted successfully");
         // Refetch products with current page and limit
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`);
+        const result = await fetch(
+          `${
+            process.env.REACT_APP_API_URL
+          }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`
+        );
         const res = await result.json();
         const products = res.Product || [];
         setData(products);
@@ -112,7 +138,7 @@ useEffect(() => {
         }, {});
         setPublicStatus(updatedStatus);
       } else {
-        alert("Error");
+        showAlert("error", "Failed to delete product");
       }
     } catch (err) {
       console.error("Delete Error:", err);
@@ -123,14 +149,10 @@ useEffect(() => {
   const filteredProducts = Array.isArray(data)
     ? data
         .filter((item) =>
-          selectedCity
-            ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity)
-            : true
+          selectedCity ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity) : true
         )
         .filter((item) =>
-          selectedCategory
-            ? item.category?.some((cat) => cat.name === selectedCategory)
-            : true
+          selectedCategory ? item.category?.some((cat) => cat.name === selectedCategory) : true
         )
         .filter((item) =>
           Object.values(item).some((val) =>
@@ -147,26 +169,31 @@ useEffect(() => {
         )
     : [];
 
-    const fetchProducts = async () => {
-  try {
-    const result = await fetch(
-      `${process.env.REACT_APP_API_URL}/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`
-    );
-    const res = await result.json();
-    setData(res.Product || []);
-    setTotalItems(res.count || 0);
-    setTotalPages(res.totalPages || 1);
+  const fetchProducts = async () => {
+    try {
+      const result = await fetch(
+        `${
+          process.env.REACT_APP_API_URL
+        }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
+          search
+        )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
+          selectedCategory
+        )}`
+      );
+      const res = await result.json();
+      setData(res.Product || []);
+      setTotalItems(res.count || 0);
+      setTotalPages(res.totalPages || 1);
 
-    const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
-      acc[cur._id] = cur.status === true;
-      return acc;
-    }, {});
-    setPublicStatus(initialPublicStatus);
-  } catch (err) {
-    console.error("Error fetching products:", err);
-  }
-};
-
+      const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
+        acc[cur._id] = cur.status === true;
+        return acc;
+      }, {});
+      setPublicStatus(initialPublicStatus);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -218,10 +245,11 @@ useEffect(() => {
           SKU: item.sku,
           City: item.location?.map((loc) => loc.city?.[0]?.name || "N/A").join(", ") || "N/A",
           Zone: item.location?.[0]?.zone?.[0]?.name || "N/A",
-          Price: item.variants
-            ?.map((v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`)
-            .slice(0, 2)
-            .join(", ") || "N/A",
+          Price:
+            item.variants
+              ?.map((v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`)
+              .slice(0, 2)
+              .join(", ") || "N/A",
           Categories: item.category?.map((c) => c.name).join(", "),
           Public: publicStatus[item._id] ? "Yes" : "No",
         };
@@ -238,16 +266,7 @@ useEffect(() => {
       doc.setFontSize(12);
       doc.text("Product List", 14, 15);
 
-      const columns = [
-        "Sr. No",
-        "Product",
-        "SKU",
-        "City",
-        "Zone",
-        "Price",
-        "Categories",
-        "Public",
-      ];
+      const columns = ["Sr. No", "Product", "SKU", "City", "Zone", "Price", "Categories", "Public"];
 
       const rows = exportData.map((row) => [
         row["Sr. No"],
@@ -282,11 +301,7 @@ useEffect(() => {
               const imgWidth = 15;
               doc.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
               doc.setFontSize(8);
-              doc.text(
-                rows[data.row.index][1],
-                x + imgWidth + 4,
-                y + imgHeight / 1.5
-              );
+              doc.text(rows[data.row.index][1], x + imgWidth + 4, y + imgHeight / 1.5);
             }
           }
         },
@@ -309,6 +324,154 @@ useEffect(() => {
     setPopoverData([]);
     setPopoverIndex(null);
     setPopoverType("");
+  };
+
+  const downloadSampleCSV = () => {
+    const sampleData = [
+      [
+        "Image",
+        "productName",
+        "Description",
+        "Mrp",
+        "Price",
+        "Feature Product (0 = false, 1 = true)",
+        "Category (CAT = (Main Category Id), SUB = (Sub Category Id), SUBB = (Sub Sub Category Id))",
+        "Brand",
+        "Attribute",
+        "Return Policy (0 = false, 1 = true)",
+        "IsVeg (0 = No Food, 1 = Is Food, 2 = Non Veg )",
+      ],
+
+      [
+        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
+        "Burger",
+        "Deluxe burger",
+        "150",
+        "120",
+        "1",
+        "CAT01",
+        "BRD01",
+        "VAR03",
+        "0",
+        "2",
+      ],
+
+      [
+        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
+        "Chowmein",
+        "Chowmein from china",
+        "80",
+        "60",
+        "1",
+        "SUBB01",
+        "BRD01",
+        "VAR01",
+        "0",
+        "1",
+      ],
+
+      [
+        "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+        "Shoes",
+        "Nike shoes brand new",
+        "300",
+        "250",
+        "0",
+        "SUB01",
+        "BRD01",
+        "VAR01",
+        "0",
+        "0",
+      ],
+
+      [
+        "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+        "Laptop Bag",
+        "HP laptop bag",
+        "350",
+        "300",
+        "0",
+        "CAT01",
+        "BRD01",
+        "VAR01",
+        "0",
+        "0",
+      ],
+
+      [
+        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
+        "Shirt",
+        "Balenciaga shirt white",
+        "70",
+        "50",
+        "1",
+        "SUBB01",
+        "BRD01",
+        "VAR01",
+        "0",
+        "0",
+      ],
+
+      [
+        "https://images.unsplash.com/photo--232111445657?w=800",
+        "Maggi",
+        "Nestle Maggi",
+        "120",
+        "100",
+        "0",
+        "SUB01",
+        "BRD02",
+        "VAR02",
+        "0",
+        "1",
+      ],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sample");
+
+    XLSX.writeFile(wb, "sample_products.csv");
+  };
+
+  const handleCSVUpload = async (e) => {
+    const file = e.target.files[0];
+    setCsvFile(file);
+    if (!file) return;
+
+    if (!file.name.endsWith(".csv")) {
+      showAlert("error", "Please upload a valid CSV file");
+      return;
+    }
+
+    showAlert("loading", "Reading CSV...");
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      let csvText = event.target.result;
+
+      // Remove BOM
+      csvText = csvText.replace(/^\uFEFF/, "");
+
+      const workbook = XLSX.read(csvText, { type: "string" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      let rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
+
+      rows = rows.map((row) => {
+        const cleanRow = {};
+        for (const key in row) {
+          const cleanedKey = key.replace(/^\uFEFF/, "").trim();
+          cleanRow[cleanedKey] = row[key];
+        }
+        return cleanRow;
+      });
+
+      setCsvPreviewRows(rows);
+      showAlert("close");
+      setOpenCsvPreviewModal(true);
+    };
+
+    reader.readAsText(file, "UTF-8"); // <-- VERY IMPORTANT
   };
 
   return (
@@ -335,6 +498,44 @@ useEffect(() => {
             <br />
             <span style={{ fontSize: 17 }}>View and manage all products</span>
           </div>
+          <div style={{ display: "flex", gap: 15 }}>
+            <Button
+              style={{
+                backgroundColor: "#1976d2",
+                height: 45,
+                width: 200,
+                fontSize: 13,
+                color: "white",
+                letterSpacing: "1px",
+              }}
+              onClick={downloadSampleCSV}
+            >
+              Download Sample CSV
+            </Button>
+
+            <Button
+              style={{
+                backgroundColor: "#ff9800",
+                height: 45,
+                width: 180,
+                fontSize: 13,
+                color: "white",
+                letterSpacing: "1px",
+              }}
+              onClick={() => document.getElementById("csvUploadInput").click()}
+            >
+              Upload CSV
+            </Button>
+
+            <input
+              id="csvUploadInput"
+              type="file"
+              accept=".csv"
+              style={{ display: "none" }}
+              onChange={handleCSVUpload}
+            />
+          </div>
+
           <Button
             style={{
               backgroundColor: "#00c853",
@@ -359,7 +560,6 @@ useEffect(() => {
             flexWrap: "wrap",
           }}
         >
-
           <div>
             <span style={{ fontSize: 16 }}>Show Entries:</span>
             <select
@@ -374,6 +574,19 @@ useEffect(() => {
               <option value={1000}>1000</option>
             </select>
           </div>
+          <Button
+            style={{
+              backgroundColor: "#0288d1",
+              height: 45,
+              width: 200,
+              fontSize: 13,
+              color: "white",
+              letterSpacing: "1px",
+            }}
+            onClick={() => setOpenFormatModal(true)}
+          >
+            CSV Format Guide
+          </Button>
 
           <div style={{ display: "flex", gap: 30 }}>
             <div>
@@ -409,9 +622,9 @@ useEffect(() => {
                 <option value="">All Cities</option>
                 {Array.from(
                   new Set(
-                    data.flatMap((p) => p.location?.map((loc) => loc.city?.[0]?.name)).filter(
-                      Boolean
-                    )
+                    data
+                      .flatMap((p) => p.location?.map((loc) => loc.city?.[0]?.name))
+                      .filter(Boolean)
                   )
                 ).map((cityName, idx) => (
                   <option key={idx} value={cityName}>
@@ -431,9 +644,7 @@ useEffect(() => {
               >
                 <option value="">All Categories</option>
                 {Array.from(
-                  new Set(
-                    data.flatMap((p) => p.category?.map((cat) => cat.name)).filter(Boolean)
-                  )
+                  new Set(data.flatMap((p) => p.category?.map((cat) => cat.name)).filter(Boolean))
                 ).map((categoryName, idx) => (
                   <option key={idx} value={categoryName}>
                     {categoryName}
@@ -444,31 +655,125 @@ useEffect(() => {
             <div>
               <label style={{ fontSize: 16 }}>Search:</label>
               <br />
-       <input
-  type="text"
-  value={searchInput}
-  onChange={(e) => setSearchInput(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      setSearchQuery(searchInput); // trigger API call only on Enter
-      setCurrentPage(1); // reset to first page
-    }
-  }}
-  placeholder="Search..."
-  style={{
-    padding: "10px",
-    borderRadius: "20px",
-    height: "40px",
-    width: "200px",
-    border: "1px solid #ccc",
-    fontSize: 16,
-    marginTop: 5,
-  }}
-/>
-
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setSearchQuery(searchInput); // trigger API call only on Enter
+                    setCurrentPage(1); // reset to first page
+                  }
+                }}
+                placeholder="Search..."
+                style={{
+                  padding: "10px",
+                  borderRadius: "20px",
+                  height: "40px",
+                  width: "200px",
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  marginTop: 5,
+                }}
+              />
             </div>
           </div>
         </div>
+
+        {/* CSV Preview Panel */}
+        {uploadPreview && (
+          <div
+            style={{
+              marginTop: 25,
+              padding: 25,
+              borderRadius: 12,
+              background: "#ffffff",
+              border: "1px solid #e0e0e0",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              animation: "fadeIn 0.3s ease",
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 15,
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#333",
+                borderBottom: "2px solid #1976d2",
+                paddingBottom: 8,
+                width: "fit-content",
+              }}
+            >
+              CSV Upload Summary
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+
+              {/* INVALID IMAGES */}
+              {uploadPreview.invalidImages.length > 0 && (
+                <div
+                  style={{
+                    padding: 15,
+                    borderRadius: 10,
+                    background: "#fff8e1",
+                    borderLeft: "5px solid #ffb300",
+                  }}
+                >
+                  <h4
+                    style={{
+                      marginTop: 0,
+                      marginBottom: 10,
+                      color: "#f57c00",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Invalid Images — Placeholder Used
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {uploadPreview.invalidImages.map((item, idx) => (
+                      <li key={idx} style={{ marginBottom: 5 }}>
+                        <b>Row {item.row}</b> — {item.productName}
+                        <span style={{ color: "#e65100" }}> ({item.imageUrl})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* SKIPPED ROWS */}
+              {uploadPreview.skipped.length > 0 && (
+                <div
+                  style={{
+                    padding: 15,
+                    borderRadius: 10,
+                    background: "#e3f2fd",
+                    borderLeft: "5px solid #d32f2f",
+                  }}
+                >
+                  <h4
+                    style={{
+                      marginTop: 0,
+                      marginBottom: 10,
+                      color: "#d32f2f",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Skipped Rows
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {uploadPreview.skipped.map((item, idx) => (
+                      <li key={idx} style={{ marginBottom: 5 }}>
+                        <b>Row {item.row}</b> — {item.productName || "No Name"}
+                        <span style={{ color: "#d32f2f" }}> (Reason: {item.reason})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
@@ -495,10 +800,12 @@ useEffect(() => {
             <tbody>
               {filteredProducts.length > 0 ? (
                 filteredProducts.map((item, index) => {
-                  const cities = item.location?.map((loc) => loc.city?.[0]?.name).filter(Boolean) || [];
-                  const prices = item.variants?.map(
-                    (v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`
-                  ) || [];
+                  const cities =
+                    item.location?.map((loc) => loc.city?.[0]?.name).filter(Boolean) || [];
+                  const prices =
+                    item.variants?.map(
+                      (v) => `${v.attributeName} - ${v.variantValue} - ₹${v.sell_price}`
+                    ) || [];
 
                   return (
                     <tr key={item._id}>
@@ -520,7 +827,14 @@ useEffect(() => {
                       </td>
                       <td style={bodyCell}>{item.sku}</td>
                       <td style={bodyCell}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            flexDirection: "row",
+                          }}
+                        >
                           <div>
                             {cities.slice(0, 2).map((city, idx) => (
                               <Chip
@@ -551,7 +865,11 @@ useEffect(() => {
                           {!cities.length && <span>N/A</span>}
                         </div>
                         <Popover
-                          open={Boolean(popoverAnchorEl) && popoverIndex === index && popoverType === "city"}
+                          open={
+                            Boolean(popoverAnchorEl) &&
+                            popoverIndex === index &&
+                            popoverType === "city"
+                          }
                           anchorEl={popoverAnchorEl}
                           onClose={handlePopoverClose}
                           anchorOrigin={{
@@ -581,7 +899,14 @@ useEffect(() => {
                         {item.location?.[0]?.zone?.[0]?.name?.split(",")[0] || "N/A"}
                       </td>
                       <td style={{ ...bodyCell }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexDirection: "row" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            flexDirection: "row",
+                          }}
+                        >
                           <div>
                             {item.variants?.slice(0, 2).map((variant, idx) => (
                               <Chip
@@ -611,7 +936,11 @@ useEffect(() => {
                           {!item.variants?.length && <span>N/A</span>}
                         </div>
                         <Popover
-                          open={Boolean(popoverAnchorEl) && popoverIndex === index && popoverType === "price"}
+                          open={
+                            Boolean(popoverAnchorEl) &&
+                            popoverIndex === index &&
+                            popoverType === "price"
+                          }
                           anchorEl={popoverAnchorEl}
                           onClose={handlePopoverClose}
                           anchorOrigin={{
@@ -741,6 +1070,345 @@ useEffect(() => {
           </Button>
         </div>
       </div>
+      <Modal
+        open={openFormatModal}
+        onClose={() => setOpenFormatModal(false)}
+        aria-labelledby="csv-format-modal"
+        sx={{
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 30,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "95%",
+            maxWidth: 750,
+            bgcolor: "#ffffff",
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0px -4px 20px rgba(0,0,0,0.1)",
+            p: 3,
+            maxHeight: "90vh",
+            overflowY: "auto",
+            animation: "slideUp 0.35s ease-out",
+          }}
+        >
+          {/* Slide animation */}
+          <style>
+            {`
+      @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+      `}
+          </style>
+
+          {/* Title Section */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: 20,
+              borderBottom: "1px solid #e0e0e0",
+              paddingBottom: 10,
+            }}
+          >
+            <InfoIcon style={{ fontSize: 30, color: "#0288d1", marginRight: 12 }} />
+            <h2 style={{ margin: 0, fontWeight: 700 }}>CSV Upload Format Guide</h2>
+          </div>
+
+          <p style={{ marginTop: 0, fontSize: 15, color: "#555", lineHeight: 1.6 }}>
+            Please follow this format to upload products safely without errors. The system validates
+            each row and provides a detailed upload summary.
+          </p>
+
+          {/* Format Box */}
+          <div
+            style={{
+              background: "#f1f8ff",
+              padding: "18px 22px",
+              borderRadius: 12,
+              borderLeft: "5px solid #0288d1",
+              marginBottom: 25,
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 12,
+                color: "#01579b",
+                fontWeight: 700,
+                fontSize: 18,
+              }}
+            >
+              Required Columns
+            </h3>
+
+            <ul style={{ lineHeight: "1.9", paddingLeft: 20, fontSize: 15 }}>
+              <li>
+                <b>productName</b> — Product title
+              </li>
+              <li>
+                <b>Feature Product</b> — 0 = Normal, 1 = Featured
+              </li>
+
+              <li>
+                <b>Category</b> — Supports:
+                <ul style={{ paddingLeft: 20 }}>
+                  <li>CAT01 (Main category)</li>
+                  <li>SUB01 (Sub-category)</li>
+                  <li>SUBB02 (Sub-sub-category)</li>
+                </ul>
+              </li>
+
+              <li>
+                <b>Attribute</b> — Example: VAR01:
+              </li>
+
+              <li>
+                <b>Brand</b> — Example: BRD01
+              </li>
+              <li>
+                <b>Image</b> — Direct image URL (fallback used when invalid)
+              </li>
+              <li>
+                <b>Return Policy</b> — Supports:
+                <ul style={{ paddingLeft: 20 }}>
+                  <li>0 (No Return)</li>
+                  <li>1 (3 Day Return)</li>
+                </ul>
+              </li>
+              <li>
+                <b>Description</b> — Product details
+              </li>
+              <li>
+                <b>Mrp</b> — Number
+              </li>
+              <li>
+                <b>Price</b> — Number
+              </li>
+
+              <li>
+                <b>IsVeg</b> —
+                <ul style={{ paddingLeft: 20 }}>
+                  <li>0 = Non-food item</li>
+                  <li>1 = Veg</li>
+                  <li>2 = Non-Veg</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          {/* Example Section */}
+          <h3
+            style={{
+              fontWeight: 700,
+              marginBottom: 12,
+              color: "#333",
+            }}
+          >
+            Example CSV Row
+          </h3>
+
+          <div
+            style={{
+              background: "#fff8e1",
+              padding: 15,
+              borderRadius: 10,
+              border: "1px solid #ffe082",
+              marginBottom: 25,
+              fontSize: 14,
+              overflowX: "auto",
+            }}
+          >
+            <code style={{ color: "#8d6e63" }}>
+              Burger,1,CAT01,BRD01,https://image.com/burger.jpg,No Return, Deluxe burger,150,120,2
+            </code>
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: "right" }}>
+            <Button
+              variant="contained"
+              onClick={() => setOpenFormatModal(false)}
+              style={{ backgroundColor: "#0288d1", padding: "8px 25px", color: "white" }}
+            >
+              Close
+            </Button>
+          </div>
+        </Box>
+      </Modal>
+      <Modal
+        open={openCsvPreviewModal}
+        onClose={() => setOpenCsvPreviewModal(false)}
+        aria-labelledby="csv-preview-modal"
+        sx={{ backdropFilter: "blur(4px)" }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 40,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "95%",
+            maxWidth: 850,
+            bgcolor: "#ffffff",
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0px -6px 25px rgba(0,0,0,0.12)",
+            p: 3,
+            maxHeight: "85vh",
+            overflowY: "auto",
+            animation: "slideUp 0.35s ease-out",
+          }}
+        >
+          <style>
+            {`
+      @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+    `}
+          </style>
+
+          <h2 style={{ fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center" }}>
+            <InfoIcon style={{ color: "#0288d1", marginRight: 10 }} />
+            Preview CSV Before Upload
+          </h2>
+
+          <p style={{ color: "#666", marginTop: 0 }}>
+            Review your CSV before uploading. This preview is read-only.
+          </p>
+
+          {/* TABLE PREVIEW */}
+          <div style={{ overflowX: "auto", border: "1px solid #eee", borderRadius: 10 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  {csvPreviewRows.length > 0 &&
+                    Object.keys(csvPreviewRows[0]).map((col) => (
+                      <th
+                        key={col}
+                        style={{
+                          padding: 10,
+                          background: "#0288d1",
+                          color: "white",
+                          textAlign: "left",
+                          fontSize: 14,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {col}
+                      </th>
+                    ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {csvPreviewRows.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {Object.keys(row).map((col) => (
+                      <td
+                        key={col}
+                        style={{
+                          padding: "10px 12px",
+                          borderBottom: "1px solid #eee",
+                          fontSize: 14,
+                          color: "#333",
+                          background: rowIndex % 2 === 0 ? "#fafafa" : "#fff",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                          overflow: "hidden",
+                          maxWidth: 200,
+                        }}
+                      >
+                        {col.toLowerCase() === "image" ? (
+                          <img
+                            src={row[col]}
+                            alt="preview"
+                            style={{
+                              width: 60,
+                              height: 60,
+                              objectFit: "cover",
+                              borderRadius: 6,
+                              border: "1px solid #ddd",
+                            }}
+                            onError={(e) => {
+                              e.target.src = "https://placehold.co/60x60/EEEEEE/AAAAAA?text=No+Img";
+                            }}
+                          />
+                        ) : (
+                          row[col]
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* BUTTONS */}
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between" }}>
+            <Button
+              onClick={() => {
+                setOpenCsvPreviewModal(false);
+                setCsvFile(null);
+                document.getElementById("csvUploadInput").value = "";
+              }}
+              style={{
+                background: "#ccc",
+                color: "#000",
+                padding: "8px 25px",
+                borderRadius: 8,
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="contained"
+              style={{
+                backgroundColor: "#0288d1",
+                padding: "8px 25px",
+                color: "white",
+                borderRadius: 8,
+              }}
+              onClick={async () => {
+                setOpenCsvPreviewModal(false);
+
+                if (!csvFile) {
+                  showAlert("error", "CSV file missing. Please re-upload.");
+                  return;
+                }
+
+                showAlert("loading", "Uploading CSV...");
+                const formData = new FormData();
+                formData.append("file", csvFile);
+
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/Product/bulk`, {
+                  method: "POST",
+                  body: formData,
+                });
+
+                const result = await res.json();
+                if (res.status === 201) {
+                  showAlert("success", `Uploaded Successfully`);
+                  setUploadPreview(result.preview);
+                  fetchProducts();
+                  document.getElementById("csvUploadInput").value = "";
+                  setCsvFile(null);
+                } else {
+                  showAlert("error", result.message);
+                }
+              }}
+            >
+              Confirm Upload
+            </Button>
+          </div>
+        </Box>
+      </Modal>
     </MDBox>
   );
 }

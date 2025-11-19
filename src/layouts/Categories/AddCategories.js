@@ -4,8 +4,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const AddCategories = () => {
   const [name, setCategoryName] = useState("");
@@ -22,7 +21,6 @@ const AddCategories = () => {
   const [attributeArray, setAttributeArray] = useState([]);
   const [filterType, setFilterType] = useState("");
   const [filterData, setFilterData] = useState([]);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [controller] = useMaterialUIController();
@@ -107,7 +105,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         headers: { "Content-Type": "application/json" },
       });
       if (result.status === 200) {
-        alert("Filter Added Successfully");
+        showAlert("success", "Filter Added Successfully");
         setFilterPopup(false);
         setFilterName("");
         // Refresh filter types
@@ -115,7 +113,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         const data = await res.json();
         setFilterTypes(data);
       } else {
-        alert("Something went wrong");
+        showAlert("error", "Something went wrong");
       }
     } catch (err) {
       console.log(err);
@@ -125,7 +123,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
   // Add new filter value
   const handleFilterType = async () => {
     if (!selectedFilter || !addFilterValue.trim()) {
-      alert("Please select a filter and enter a value");
+      showAlert("warning", "Please select a filter and enter a value");
       return;
     }
 
@@ -139,7 +137,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         headers: { "Content-Type": "application/json" },
       });
       if (result.status === 200) {
-        alert("Filter Value Added Successfully");
+        showAlert("success", "Filter Value Added Successfully");
         setShowFilterDropdown(false);
         setAddFilterValue("");
         // Refresh filter values
@@ -149,7 +147,7 @@ const handleFilterValueToggle = (filterId, valueId) => {
         const selectedFilterObj = data.find((f) => f._id === selectedFilter);
         setFilterValues(selectedFilterObj?.Filter || []);
       } else {
-        alert("Something went wrong");
+        showAlert("error", "Something went wrong");
       }
     } catch (err) {
       console.log(err);
@@ -250,12 +248,12 @@ fetchBrands();
       (type === "Sub Category" && !mainCategoryId) ||
       (type === "Sub Sub-Category" && !subCategory)
     ) {
-      alert("Please fill all fields!");
+      showAlert("warning", "Please fill all fields!");
       return;
     }
 
     const formData = new FormData();
-    dispatch(startLoading());
+    showAlert("loading", "Adding Category... Please wait");
     formData.append("name", name);
     formData.append("description", description);
     formData.append("image", image);
@@ -278,56 +276,47 @@ fetchBrands();
 
         const result = await response.json();
         if (response.status === 201) {
-          dispatch(stopLoading());
-          alert("Category Added Successfully");
+          showAlert("success", "Category Added Successfully");
           navigate("/categories");
         } else {
-          dispatch(stopLoading());
-          alert("Something went wrong");
+          showAlert("error", "Something went wrong");
           console.error("Server response:", result);
         }
       } catch (err) {
-        dispatch(stopLoading());
         console.error("Error while submitting:", err);
       }
     }
     // Add Sub Category
     else if (type === "Sub Category") {
       try {
-        const result = await fetch("https://node-m8jb.onrender.com/addSubCategory", {
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/addSubCategory`, {
           method: "POST",
           body: formData,
         });
-        if (result.status === 201) {
-          dispatch(stopLoading());
-          alert("Success");
+        if (result.status === 200) {
+          showAlert("success", "Sub Category Added Successfully");
           navigate("/categories");
         } else {
-          dispatch(stopLoading());
-          alert("Something Wrong");
+          showAlert("error", "Something went wrong");
         }
       } catch (err) {
-        dispatch(stopLoading());
         console.log(err);
       }
     }
     // Add Sub Sub-Category
     else {
       try {
-        const result = await fetch("https://node-m8jb.onrender.com/addSubSubCategory", {
+        const result = await fetch(`${process.env.REACT_APP_API_URL}/addSubSubCategory`, {
           method: "POST",
           body: formData,
         });
         if (result.status === 201) {
-          dispatch(stopLoading());
-          alert("Success");
+          showAlert("success", "Category Added Successfully");
           navigate("/categories");
         } else {
-          dispatch(stopLoading());
-          alert("Something Wrong");
+          showAlert("error", "Something went wrong");
         }
       } catch (err) {
-        dispatch(stopLoading());
         console.log(err);
       }
     }
