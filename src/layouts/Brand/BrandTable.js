@@ -3,6 +3,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import * as XLSX from "xlsx";
 
 const headerCell = {
   padding: "14px 12px",
@@ -52,6 +53,23 @@ function BrandTable() {
   const totalPages = Math.ceil(filteredBrands.length / entriesToShow);
   const startIndex = (currentPage - 1) * entriesToShow;
   const currentBrands = filteredBrands.slice(startIndex, startIndex + entriesToShow);
+
+    const downloadSampleCSV = () => {
+      const sampleData = brands.map((item) => ({
+        "Brand Name": `${item.brandName}`,
+        " ": ` `,
+        "Brand Code": `${item.brandId}`,
+      }));
+  
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+  
+      // Create Workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "brands");
+  
+      // Generate & Download File
+      XLSX.writeFile(workbook, "brand-codes.csv"); // or .xlsx
+    };
 
   const handleEntriesChange = (e) => {
     setEntriesToShow(Number(e.target.value));
@@ -117,22 +135,36 @@ function BrandTable() {
               <span style={{ fontSize: 17 }}>View and manage all brands</span>
             </div>
             <div>
-              <Button
-                style={{
-                  backgroundColor: "#00c853",
-                  height: 45,
-                  width: 150,
-                  fontSize: 14,
-                  color: "white",
-                  letterSpacing: "1px",
-                }}
-                onClick={() => navigate("/add-brand")}
-              >
-                + ADD BRAND
-              </Button>
+              <div style={{ display: "flex", gap: 15 }}>
+                <Button
+                  style={{
+                    backgroundColor: "#1976d2",
+                    height: 45,
+                    width: 160,
+                    fontSize: 12,
+                    color: "white",
+                    letterSpacing: "1px",
+                  }}
+                  onClick={downloadSampleCSV}
+                >
+                  Download Sample CSV
+                </Button>
+                <Button
+                  style={{
+                    backgroundColor: "#00c853",
+                    height: 45,
+                    width: 150,
+                    fontSize: 14,
+                    color: "white",
+                    letterSpacing: "1px",
+                  }}
+                  onClick={() => navigate("/add-brand")}
+                >
+                  + ADD BRAND
+                </Button>
+              </div>
             </div>
           </div>
-
           {/* Controls */}
           <div
             style={{
@@ -152,7 +184,8 @@ function BrandTable() {
             </div>
 
             <div style={{ marginBottom: 10 }}>
-              <label style={{ fontSize: 16 }}>Search</label><br />
+              <label style={{ fontSize: 16 }}>Search</label>
+              <br />
               <input
                 type="text"
                 value={searchTerm}
@@ -186,6 +219,7 @@ function BrandTable() {
                 <tr>
                   <th style={headerCell}>Sr. No</th>
                   <th style={headerCell}>Brand Name</th>
+                  <th style={headerCell}>Brand Code</th>
                   <th style={headerCell}>Brand Logo</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
                 </tr>
@@ -195,6 +229,7 @@ function BrandTable() {
                   <tr key={item._id}>
                     <td style={bodyCell}>{startIndex + index + 1}</td>
                     <td style={bodyCell}>{item.brandName}</td>
+                    <td style={bodyCell}>{item.brandId}</td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <img
                         src={`${process.env.REACT_APP_IMAGE_LINK}${item.brandLogo}`}
@@ -251,9 +286,8 @@ function BrandTable() {
             }}
           >
             <span>
-              Showing {startIndex + 1}-
-              {Math.min(startIndex + entriesToShow, filteredBrands.length)} of{" "}
-              {filteredBrands.length} brands
+              Showing {startIndex + 1}-{Math.min(startIndex + entriesToShow, filteredBrands.length)}{" "}
+              of {filteredBrands.length} brands
             </span>
             <div>
               <button

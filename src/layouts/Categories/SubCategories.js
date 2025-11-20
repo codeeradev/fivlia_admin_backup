@@ -92,18 +92,13 @@ function GetSubCategories() {
   };
 
   const handleDeleteSubcat = async (id) => {
-    const confirm = window.confirm(
-      "Are you sure you want to delete this sub-category?"
-    );
+    const confirm = window.confirm("Are you sure you want to delete this sub-category?");
     if (!confirm) return;
 
     try {
-      const res = await fetch(
-        `https://node-m8jb.onrender.com/delete-subcategory/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const res = await fetch(`https://node-m8jb.onrender.com/delete-subcategory/${id}`, {
+        method: "DELETE",
+      });
       if (res.status === 200) {
         alert("Deleted successfully");
         const updatedList = data.filter((item) => item._id !== id);
@@ -138,9 +133,7 @@ function GetSubCategories() {
         >
           {/* Header */}
           <div style={{ marginBottom: 20 }}>
-            <span style={{ fontWeight: "bold", fontSize: 26 }}>
-              Sub-Categories List
-            </span>
+            <span style={{ fontWeight: "bold", fontSize: 26 }}>Sub-Categories List</span>
             <br />
             <span style={{ fontSize: 17 }}>
               View and manage all Sub-Categories of {category?.name}
@@ -160,16 +153,11 @@ function GetSubCategories() {
                 <tr>
                   <th style={{ ...headerCell, width: "8%" }}>Sr. No</th>
                   <th style={headerCell}>Sub-Category Name</th>
-                  <th style={{ ...headerCell, width: "20%" }}>
-                    Sub Sub-Categories
-                  </th>
+                  <th style={headerCell}>Sub-Category Code</th>
+                  <th style={{ ...headerCell, width: "20%" }}>Sub Sub-Categories</th>
                   <th style={headerCell}>Items</th>
                   <th style={headerCell}>Public</th>
-                  <th
-                    style={{ ...headerCell, width: "20%", textAlign: "center" }}
-                  >
-                    Action
-                  </th>
+                  <th style={{ ...headerCell, width: "20%", textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,9 +167,7 @@ function GetSubCategories() {
 
                   return (
                     <tr key={subcatItem._id}>
-                      <td style={{ ...bodyCell, textAlign: "center" }}>
-                        {index + 1}
-                      </td>
+                      <td style={{ ...bodyCell, textAlign: "center" }}>{index + 1}</td>
                       <td style={{ ...bodyCell }}>
                         <div
                           style={{
@@ -209,6 +195,16 @@ function GetSubCategories() {
                           textAlign: "center",
                           cursor: "pointer",
                         }}
+                      >
+                        {subcatItem.subCategoryId}
+                      </td>
+
+                      <td
+                        style={{
+                          ...bodyCell,
+                          textAlign: "center",
+                          cursor: "pointer",
+                        }}
                         onClick={() =>
                           navigate("/getsubsubcat", {
                             state: { subcat: subcatItem },
@@ -217,26 +213,24 @@ function GetSubCategories() {
                       >
                         {subSubCount}
                       </td>
-                      <td style={{ ...bodyCell, textAlign: "center" }}>
-                        {totalItems}
-                      </td>
+                      <td style={{ ...bodyCell, textAlign: "center" }}>{totalItems}</td>
                       <td style={{ ...bodyCell, textAlign: "center" }}>
                         <Switch
                           checked={toggleStates[subcatItem._id] || false}
                           onChange={() => handleToggle(subcatItem._id)}
                           color="primary"
                           sx={{
-                          "& .MuiSwitch-switchBase.Mui-checked": {
-                            color: "green",
-                          },
-                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                            backgroundColor: "green !important",
-                          },
-                          "& .MuiSwitch-track": {
-                            backgroundColor: "red",
-                            opacity: 1,
-                          },
-                        }}
+                            "& .MuiSwitch-switchBase.Mui-checked": {
+                              color: "green",
+                            },
+                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                              backgroundColor: "green !important",
+                            },
+                            "& .MuiSwitch-track": {
+                              backgroundColor: "red",
+                              opacity: 1,
+                            },
+                          }}
                         />
                       </td>
                       <td style={{ ...bodyCell, textAlign: "center" }}>

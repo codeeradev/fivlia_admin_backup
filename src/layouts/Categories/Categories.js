@@ -3,6 +3,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
+import * as XLSX from "xlsx";
 
 const headerCell = {
   padding: "14px 12px",
@@ -48,23 +49,94 @@ function Categories() {
     getMainCategory();
   }, []);
 
-
-
   const filteredCategories = categories.filter((item) => {
     const search = searchTerm.toLowerCase();
     return (
       item.name.toLowerCase().includes(search) ||
-      String(item.items || "100").toLowerCase().includes(search) ||
-      "yes".includes(search) || "no".includes(search)
+      String(item.items || "100")
+        .toLowerCase()
+        .includes(search) ||
+      "yes".includes(search) ||
+      "no".includes(search)
     );
   });
 
   const totalPages = Math.ceil(filteredCategories.length / entriesToShow);
   const startIndex = (currentPage - 1) * entriesToShow;
-  const currentCategories = filteredCategories.slice(
-    startIndex,
-    startIndex + entriesToShow
-  );
+  const currentCategories = filteredCategories.slice(startIndex, startIndex + entriesToShow);
+
+  const downloadSampleCSV = () => {
+    const sampleData = [
+      [
+        "Category Name",
+        "",
+        "Category Code",
+        "",
+        "Subcategory Name",
+        "",
+        "Subcategory Code",
+        "",
+        "Sub-Subcategory Name",
+        "",
+        "Sub-Subcategory Code",
+      ],
+    ];
+
+    categories.forEach((category) => {
+      let firstCategoryRow = true;
+
+      category.subcat.forEach((sub) => {
+        let firstSubRow = true;
+
+        sub.subsubcat.forEach((subsub) => {
+          sampleData.push([
+            firstCategoryRow ? category.name : "",
+            "",
+            firstCategoryRow ? category.categoryId : "",
+            "",
+            firstSubRow ? sub.name : "",
+            "",
+            firstSubRow ? sub.subCategoryId : "",
+            "",
+            subsub.name,
+            "",
+            subsub.subSubCategoryId,
+          ]);
+
+          firstCategoryRow = false;
+          firstSubRow = false;
+        });
+
+        // If subcategory has NO sub-subcategories
+        if (sub.subsubcat.length === 0) {
+          sampleData.push([
+            firstCategoryRow ? category.name : "",
+            "",
+            firstCategoryRow ? category.categoryId : "",
+            "",
+            sub.name,
+            "",
+            sub.subCategoryId,
+            "",
+            "",
+            "",
+            "",
+          ]);
+
+          firstCategoryRow = false;
+        }
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+
+    // Create Workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Categories");
+
+    // Generate & Download File
+    XLSX.writeFile(workbook, "categories-codes.csv"); // or .xlsx
+  };
 
   const handleEntriesChange = (e) => {
     setEntriesToShow(Number(e.target.value));
@@ -107,7 +179,7 @@ function Categories() {
 
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/editCat/${id}`, {
-        method: "PUT", 
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -125,7 +197,6 @@ function Categories() {
       console.error("Error updating status:", error);
     }
   };
-
 
   return (
     <MDBox
@@ -160,19 +231,37 @@ function Categories() {
               <br />
               <span style={{ fontSize: 17 }}>View and manage all Categories</span>
             </div>
-            <Button
-              style={{
-                backgroundColor: "#00c853",
-                height: 45,
-                width: 160,
-                fontSize: 12,
-                color: "white",
-                letterSpacing: "1px",
-              }}
-              onClick={() => navigate("/addCategories")}
-            >
-              + ADD CATEGORY
-            </Button>
+
+            {/* Right Buttons Wrapper */}
+            <div style={{ display: "flex", gap: 15 }}>
+              <Button
+                style={{
+                  backgroundColor: "#1976d2",
+                  height: 45,
+                  width: 160,
+                  fontSize: 12,
+                  color: "white",
+                  letterSpacing: "1px",
+                }}
+                onClick={downloadSampleCSV}
+              >
+                Download Sample CSV
+              </Button>
+
+              <Button
+                style={{
+                  backgroundColor: "#00c853",
+                  height: 45,
+                  width: 160,
+                  fontSize: 12,
+                  color: "white",
+                  letterSpacing: "1px",
+                }}
+                onClick={() => navigate("/addCategories")}
+              >
+                + ADD CATEGORY
+              </Button>
+            </div>
           </div>
 
           {/* Controls */}
@@ -227,6 +316,7 @@ function Categories() {
                 <tr>
                   <th style={{ ...headerCell, width: "10%" }}>Sr. No</th>
                   <th style={headerCell}>Category Name</th>
+                  <th style={{ ...headerCell, width: "15%" }}>Category Code</th>
                   <th style={{ ...headerCell, width: "15%" }}>Sub Categories</th>
                   <th style={headerCell}>Items</th>
                   <th style={headerCell}>Public</th>
@@ -252,6 +342,7 @@ function Categories() {
                         <span>{item.name}</span>
                       </div>
                     </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>{item.categoryId}</td>
                     <td
                       style={{ ...bodyCell, textAlign: "center", cursor: "pointer" }}
                       onClick={() => navigate("/getsubcate", { state: { category: item } })}
@@ -263,8 +354,8 @@ function Categories() {
                         const subCatCount = item.subcat ? item.subcat.length : 0;
                         const subSubCatCount = item.subcat
                           ? item.subcat.reduce((total, subcat) => {
-                            return total + (subcat.subsubcat ? subcat.subsubcat.length : 0);
-                          }, 0)
+                              return total + (subcat.subsubcat ? subcat.subsubcat.length : 0);
+                            }, 0)
                           : 0;
                         return subCatCount + subSubCatCount;
                       })()}
@@ -290,7 +381,9 @@ function Categories() {
                       />
                     </td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <div
+                        style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+                      >
                         <button
                           style={{
                             backgroundColor: "#007BFF",
@@ -301,7 +394,7 @@ function Categories() {
                             cursor: "pointer",
                             marginRight: "10px",
                           }}
-                          onClick={() => navigate('/edit-sub', { state: item })}
+                          onClick={() => navigate("/edit-sub", { state: item })}
                         >
                           Edit
                         </button>

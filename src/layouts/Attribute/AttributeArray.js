@@ -3,6 +3,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import * as XLSX from "xlsx";
 
 const headerCell = {
   padding: "14px 12px",
@@ -26,6 +27,35 @@ function AttributeTable() {
   const navigate = useNavigate();
 
   const [attribute, setAttribute] = useState([]);
+
+  const downloadSampleCSV = () => {
+    const sampleData = [["Attribute Name", "", "Variant Name", "", "Variant Code"]];
+
+    attribute.forEach((attr) => {
+      let firstRow = true;
+
+      attr.varient.forEach((variant) => {
+        sampleData.push([
+          firstRow ? attr.Attribute_name : "", // Only for first row
+          "",
+          variant.name,
+          "",
+          variant.variantId,
+        ]);
+
+        firstRow = false; // Remaining rows will have empty attribute
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+
+    // Create Workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Attributes");
+
+    // Generate & Download File
+    XLSX.writeFile(workbook, "attributes-codes.csv"); // or .xlsx
+  };
 
   useEffect(() => {
     const fetchAttribute = async () => {
@@ -81,9 +111,7 @@ function AttributeTable() {
 
       if (res.status === 200) {
         alert("Attribute deleted successfully");
-        setAttribute((prevAttributes) =>
-          prevAttributes.filter((attr) => attr._id !== attributeId)
-        );
+        setAttribute((prevAttributes) => prevAttributes.filter((attr) => attr._id !== attributeId));
       } else {
         alert("Failed to delete attribute");
       }
@@ -127,19 +155,34 @@ function AttributeTable() {
               <span style={{ fontSize: 17 }}>View and manage all attributes</span>
             </div>
             <div>
-              <Button
-                style={{
-                  backgroundColor: "#00c853",
-                  height: 50,
-                  width: 170,
-                  fontSize: 12,
-                  color: "white",
-                  letterSpacing: "1px",
-                }}
-                onClick={() => navigate("/attribute-value")}
-              >
-                + Add Attribute
-              </Button>
+              <div style={{ display: "flex", gap: 15 }}>
+                <Button
+                  style={{
+                    backgroundColor: "#1976d2",
+                    height: 45,
+                    width: 160,
+                    fontSize: 12,
+                    color: "white",
+                    letterSpacing: "1px",
+                  }}
+                  onClick={downloadSampleCSV}
+                >
+                  Download Sample CSV
+                </Button>
+                <Button
+                  style={{
+                    backgroundColor: "#00c853",
+                    height: 50,
+                    width: 170,
+                    fontSize: 12,
+                    color: "white",
+                    letterSpacing: "1px",
+                  }}
+                  onClick={() => navigate("/attribute-value")}
+                >
+                  + Add Attribute
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -157,6 +200,7 @@ function AttributeTable() {
               <thead>
                 <tr>
                   <th style={headerCell}>Sr. No</th>
+                  <th style={headerCell}>Attribute Code</th>
                   <th style={headerCell}>Item Attribute Name</th>
                   <th style={headerCell}>Item Variants Value</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
@@ -167,6 +211,7 @@ function AttributeTable() {
                   <tr key={item._id}>
                     <td style={bodyCell}>{index + 1}</td>
                     <td style={bodyCell}>{item.Attribute_name}</td>
+                    <td style={bodyCell}>{item.attributeId}</td>
                     <td style={bodyCell}>
                       {item.varient && item.varient.length > 0 ? (
                         item.varient.map((v, i) => (
@@ -211,7 +256,14 @@ function AttributeTable() {
                       )}
                     </td>
                     <td style={bodyCell}>
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
                         <button
                           style={{
                             backgroundColor: "#007bff",
@@ -240,7 +292,7 @@ function AttributeTable() {
                         </button>
                       </div>
                     </td>
-                    </tr>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -254,8 +306,7 @@ function AttributeTable() {
               alignItems: "center",
               flexWrap: "wrap",
             }}
-          >
-          </div>
+          ></div>
         </div>
       </div>
     </MDBox>
