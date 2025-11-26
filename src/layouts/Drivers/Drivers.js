@@ -18,20 +18,20 @@ import {
   Divider,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
 import db from "components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import driverImg from "assets/images/driverFivlia.png";
+import { get, post, put, del } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function Drivers() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const [drivers, setDrivers] = useState([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
@@ -107,26 +107,19 @@ export default function Drivers() {
 
   const handleViewRating = async (driver) => {
     try {
-      dispatch(startLoading());
+      showAlert("loading", "Loading ratings...");
       setSelectedDriver(driver);
       setRatingError("");
       setDriverRatings(null);
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/getDriverRating/${driver.id}`);
-      const data = await response.json();
+      const res = await get(`${ENDPOINTS.GET_DRIVER_RATING}/${driver.id}`);
+      setDriverRatings(res.data);
 
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to fetch driver rating");
-      }
-
-      setDriverRatings(data);
       setRatingModalOpen(true);
     } catch (err) {
       console.error("Error fetching driver ratings:", err);
       setRatingError(err.message || "Failed to load ratings");
       setRatingModalOpen(true);
-    } finally {
-      dispatch(stopLoading());
     }
   };
 
@@ -164,20 +157,16 @@ export default function Drivers() {
 
   const handleViewReferrals = async (driver) => {
     try {
+      showAlert("loading", "Loading referrals...");
+
       setSelectedDriver(driver);
       setReferralError("");
       setReferralMessage("");
       setReferralStores([]);
-      dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/get-driver-referral-seller`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ driverId: driver.driverId }),
+      const res = await post(ENDPOINTS.GET_DRIVER_REFERRALS, {
+        driverId: driver.driverId,
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to fetch referrals");
-      }
+      const data = res.data;
       setReferralMessage(data?.message || "");
       setReferralStores(Array.isArray(data?.stores) ? data.stores : []);
       setReferralModalOpen(true);
@@ -185,8 +174,6 @@ export default function Drivers() {
       console.error("Failed to fetch referrals:", e);
       setReferralError(e.message || "Failed to fetch referrals");
       setReferralModalOpen(true);
-    } finally {
-      dispatch(stopLoading());
     }
   };
 
@@ -194,10 +181,8 @@ export default function Drivers() {
   const fetchWalletBalances = async () => {
     try {
       const promises = drivers.map(async (driver) => {
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/transactionList/${driver.id}`
-        );
-        const data = await response.json();
+        const res = await get(`${ENDPOINTS.GET_DRIVER_TRANSACTIONS}/${driver.id}`);
+        const data = res.data;
         return { driverId: driver.id, totalAmount: data.totalAmount || 0 };
       });
       const balances = await Promise.all(promises);
@@ -216,9 +201,10 @@ export default function Drivers() {
   useEffect(() => {
     const fetchDrivers = async () => {
       try {
-        dispatch(startLoading());
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getDriver`);
-        const data = await response.json();
+        showAlert("loading", "Loading drivers...");
+
+        const res = await get(ENDPOINTS.GET_DRIVERS);
+        const data = res.data;
         if (Array.isArray(data.Driver)) {
           const formattedDrivers = data.Driver.map((driver) => ({
             id: driver._id,
@@ -246,17 +232,16 @@ export default function Drivers() {
       } catch (error) {
         console.error("Failed to fetch drivers:", error);
         setError("Failed to fetch drivers. Please try again.");
-      } finally {
-        dispatch(stopLoading());
       }
     };
 
     // Fetch withdrawal requests
     const fetchWithdrawalRequests = async () => {
       try {
-        dispatch(startLoading());
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest`);
-        const data = await response.json();
+        showAlert("loading", "Loading withdrawal requests...");
+
+        const res = await get(ENDPOINTS.GET_WITHDRAWAL_REQUESTS);
+        const data = res.data;
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
             id: request._id,
@@ -275,14 +260,12 @@ export default function Drivers() {
       } catch (error) {
         console.error("Failed to fetch withdrawal requests:", error);
         setError("Failed to fetch withdrawal requests. Please try again.");
-      } finally {
-        dispatch(stopLoading());
       }
     };
 
     fetchDrivers();
     fetchWithdrawalRequests();
-  }, [dispatch]);
+  }, []);
 
   // Fetch wallet balances when drivers change
   useEffect(() => {
@@ -325,24 +308,13 @@ export default function Drivers() {
     const newStatus = !driverToUpdate.status;
 
     try {
-      dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/editDriver/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update status");
-      }
+      showAlert("loading", "Updating status...");
+      await put(`${ENDPOINTS.EDIT_DRIVER}/${id}`, { status: newStatus });
 
       setDrivers((prev) => prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d)));
     } catch (error) {
       console.error("Error updating status:", error);
-      setError(`Failed to update status: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+      showAlert("error", "Failed to update status");
     }
   };
 
@@ -358,21 +330,9 @@ export default function Drivers() {
     if (!confirmed) return;
 
     try {
-      dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/deleteDriver/${id}`, {
-        method: "DELETE",
-      });
+      showAlert("loading", "Deleting driver...");
 
-      if (!response.ok) {
-        let errorMessage = "Failed to delete driver";
-        try {
-          const errJson = await response.json();
-          if (errJson && errJson.message) errorMessage = errJson.message;
-        } catch (_) {
-          // ignore json parse errors
-        }
-        throw new Error(errorMessage);
-      }
+      await del(`${ENDPOINTS.DELETE_DRIVER}/${id}`);
 
       setDrivers((prev) => prev.filter((d) => d.id !== id));
 
@@ -380,11 +340,10 @@ export default function Drivers() {
         setSelectedDriver(null);
         setModalOpen(false);
       }
-    } catch (error) {
-      console.error("Error deleting driver:", error);
-      setError(`Failed to delete driver: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+      showAlert("success", "Driver deleted");
+    } catch (err) {
+      console.error(err);
+      showAlert("error", "Failed to delete driver");
     }
   };
 
@@ -423,18 +382,11 @@ export default function Drivers() {
     }
 
     try {
-      dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/${selectedDriver.id}`, {
-        method: "PUT",
-        body: formData,
+      const res = await put(`${ENDPOINTS.EDIT_DRIVER}/${selectedDriver.id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update driver");
-      }
-
-      const updated = await response.json();
+      const updated = res.data;
       setDrivers((prev) =>
         prev.map((d) =>
           d.id === updated.edit._id
@@ -471,28 +423,16 @@ export default function Drivers() {
       setError("");
     } catch (error) {
       console.error("Error updating driver:", error);
-      setError(`Failed to update driver: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+      showAlert("error", error.message || "Failed to update driver");
     }
   };
 
   // Handle Accept/Decline Withdrawal Request
   const handleWithdrawalAction = async (requestId, action) => {
     try {
-      dispatch(startLoading());
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      showAlert("loading", "Updating request...");
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
-      }
+      await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}`);
 
       setWithdrawalRequests((prev) =>
         prev.map((req) =>
@@ -501,11 +441,10 @@ export default function Drivers() {
             : req
         )
       );
+      showAlert("success", "Request updated");
     } catch (error) {
       console.error(`Error ${action}ing withdrawal request:`, error);
-      setError(`Failed to ${action} withdrawal request: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+      showAlert("error", "Failed to update request");
     }
   };
 

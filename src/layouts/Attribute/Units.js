@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -30,11 +33,14 @@ function UnitsTable() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
-        const data = await res.json();
-        setUnits(data.Result);
+        showAlert("loading", "Fetching Units...");
+        const res = await get(ENDPOINTS.GET_UNIT);
+        const data = res.data;
+        setUnits(data);
+        showAlert("success", "Units loaded successfully");
       } catch (err) {
         console.error("Error fetching locations:", err);
+        showAlert("error", "Failed to load units");
       }
     };
     fetchUnits();

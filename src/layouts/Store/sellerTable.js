@@ -97,7 +97,7 @@ function SellerTable() {
         const generatedKey = data.accessKey;
 
         showAlert("success", "Access key generated successfully");
-        const redirectUrl = `https://seller.fivlia.in/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
+        const redirectUrl = `${process.env.REACT_APP_SELLER_URL}/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
         window.open(redirectUrl, "_blank");
       } else if (response.status === 403) {
         showAlert("error", "Access denied.");

@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function CityTable() {
   const [controller] = useMaterialUIController();
@@ -33,8 +36,9 @@ export default function CityTable() {
   useEffect(() => {
     const getCity = async () => {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
-        const data = await result.json();
+        showAlert("loading", "Fetching cities...");
+        const result = await get(ENDPOINTS.GET_CITY);
+        const data = result.data;
 
         if (Array.isArray(data)) {
           const citiesWithDetails = data.map((city) => ({
@@ -49,13 +53,15 @@ export default function CityTable() {
             updatedAt: city.updatedAt,
           }));
           setCities(citiesWithDetails);
-
+          showAlert("success", "Cities loaded");
 
         } else {
           console.error("Expected array but got:", data);
+          showAlert("error", "Invalid response from server");
         }
       } catch (err) {
         console.log("Error fetching cities:", err);
+        showAlert("error", "Failed to load cities");
       }
     };
 
@@ -97,16 +103,8 @@ export default function CityTable() {
     const newStatus = !cityToUpdate.status;
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/updateCityStatus/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update status");
+       showAlert("loading", "Updating status...");
+       await put(`${ENDPOINTS.UPDATE_CITY_STATUS}/${id}`,{ status: newStatus });
 
       // Update state only after successful backend update
       setCities((prevCities) =>
@@ -114,8 +112,9 @@ export default function CityTable() {
           city.id === id ? { ...city, status: newStatus } : city
         )
       );
+      showAlert("success", "Status updated successfully");
     } catch (error) {
-      alert("Failed to update status. Please try again.");
+      showAlert("error", "Failed to update status");
       console.error(error);
     }
   };

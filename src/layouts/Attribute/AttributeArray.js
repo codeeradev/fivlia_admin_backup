@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { get, del } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 import * as XLSX from "xlsx";
 
 const headerCell = {
@@ -60,11 +63,15 @@ function AttributeTable() {
   useEffect(() => {
     const fetchAttribute = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
-        setAttribute(data);
+        showAlert("loading", "Fetching attributes...");
+
+        const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+        setAttribute(res.data);
+
+        showAlert("success", "Attributes loaded successfully");
       } catch (err) {
         console.error("Error fetching attributes:", err);
+        showAlert("error", "Failed to load attributes");
       }
     };
     fetchAttribute();
@@ -74,27 +81,20 @@ function AttributeTable() {
     const confirmDelete = window.confirm("Are you sure you want to delete this Variant?");
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`https://node-m8jb.onrender.com/deleteVarient/${variantId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      showAlert("loading", "Deleting variant...");
 
-      if (res.status === 200) {
-        alert("Variant deleted successfully");
-        setAttribute((prevAttributes) =>
-          prevAttributes.map((attr) => ({
-            ...attr,
-            varient: attr.varient.filter((v) => v._id !== variantId),
-          }))
-        );
-      } else {
-        alert("Failed to delete variant");
-      }
+      await del(`${ENDPOINTS.DELETE_VARIANT}/${variantId}`);
+
+      setAttribute((prevAttributes) =>
+        prevAttributes.map((attr) => ({
+          ...attr,
+          varient: attr.varient.filter((v) => v._id !== variantId),
+        }))
+      );
+      showAlert("success", "Variant deleted successfully");
     } catch (error) {
       console.error("Error deleting variant:", error);
-      alert("Failed to delete variant. Please try again.");
+      showAlert("error", "Failed to delete variant");
     }
   };
 
@@ -102,22 +102,16 @@ function AttributeTable() {
     const confirmDelete = window.confirm("Are you sure you want to delete this Attribute?");
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/deleteAttribute/${attributeId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      showAlert("loading", "Deleting attribute...");
 
-      if (res.status === 200) {
-        alert("Attribute deleted successfully");
-        setAttribute((prevAttributes) => prevAttributes.filter((attr) => attr._id !== attributeId));
-      } else {
-        alert("Failed to delete attribute");
-      }
+      await del(`${ENDPOINTS.DELETE_ATTRIBUTE}/${attributeId}`);
+
+      setAttribute((prevAttributes) => prevAttributes.filter((attr) => attr._id !== attributeId));
+
+      showAlert("success", "Attribute deleted successfully");
     } catch (error) {
       console.error("Error deleting attribute:", error);
-      alert("Failed to delete attribute. Please try again.");
+      showAlert("error", "Failed to delete attribute");
     }
   };
 
@@ -200,8 +194,8 @@ function AttributeTable() {
               <thead>
                 <tr>
                   <th style={headerCell}>Sr. No</th>
-                  <th style={headerCell}>Attribute Code</th>
                   <th style={headerCell}>Item Attribute Name</th>
+                  <th style={headerCell}>Attribute Code</th>
                   <th style={headerCell}>Item Variants Value</th>
                   <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
                 </tr>

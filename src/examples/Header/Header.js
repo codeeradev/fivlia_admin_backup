@@ -29,6 +29,9 @@ import { useMaterialUIController, setMiniSidenav } from "context";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 
+import { get, del, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 export default function Header() {
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, darkMode } = controller;
@@ -48,8 +51,8 @@ export default function Header() {
   // fetch notifications from backend
   const fetchOldNotifications = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getNotification?type=admin`);
-      const data = await res.json();
+      const res = await get(`${ENDPOINTS.GET_NOTIFICATION}?type=admin`);
+      const data = res.data;
       if (data && data.notifications) {
         // ensure array sorted by createdAt desc
         const sorted = [...data.notifications].sort(
@@ -67,9 +70,7 @@ export default function Header() {
     setAnchorNotif(e.currentTarget);
 
     try {
-      await fetch(`${process.env.REACT_APP_API_URL}/markAllRead`, {
-        method: "PUT",
-      });
+      await put(ENDPOINTS.MARK_ALL_READ);
 
       // optimistic UI update
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
@@ -95,10 +96,8 @@ const toggleDelete = (id) => {
       // optimistic remove
       setNotifications((prev) => prev.filter((n) => n._id !== id));
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/deleteNotification/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
+      const res = await del(`${ENDPOINTS.DELETE_NOTIFICATION}/${id}`);
+      if (res.status !== 200) {
         console.error("Delete failed, refetching notifications");
         fetchOldNotifications();
       }

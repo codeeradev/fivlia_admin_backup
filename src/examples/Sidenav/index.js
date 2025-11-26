@@ -54,22 +54,41 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
 
   const closeSidenav = () => setMiniSidenav(dispatch, true);
 
-  useEffect(() => {
-    function handleMiniSidenav() {
-      setMiniSidenav(dispatch, window.innerWidth < 1200);
-      setTransparentSidenav(dispatch, window.innerWidth < 1200 ? false : transparentSidenav);
-      setWhiteSidenav(dispatch, window.innerWidth < 1200 ? false : whiteSidenav);
-    }
-    window.addEventListener("resize", handleMiniSidenav);
-    handleMiniSidenav();
-    return () => window.removeEventListener("resize", handleMiniSidenav);
-  }, [dispatch, location]);
+ useEffect(() => {
+  let timeout;
+
+  function handleResize() {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      const isMini = window.innerWidth < 1200;
+
+      setMiniSidenav(dispatch, isMini);
+      setTransparentSidenav(dispatch, isMini ? false : transparentSidenav);
+      setWhiteSidenav(dispatch, isMini ? false : whiteSidenav);
+    }, 150);
+  }
+
+  window.addEventListener("resize", handleResize);
+  handleResize();
+
+  return () => {
+    clearTimeout(timeout);
+    window.removeEventListener("resize", handleResize);
+  };
+}, [dispatch, transparentSidenav, whiteSidenav]);
+
 
   const toggleCollapse = (key) => {
     setOpenCollapse(openCollapse === key ? "" : key);
   };
 
-  const renderRoutes = routes.map(({ type, name, icon, title, noCollapse, key, href, route, collapse }) => {
+  const user = JSON.parse(localStorage.getItem("adminUser"));
+const userPermissions = user?.permissions || [];
+
+const renderRoutes = routes
+  .filter(r => !r.permission || userPermissions.includes(r.permission))
+  .map(({ type, name, icon, title, noCollapse, key, href, route, collapse }) => {
+
   let returnValue;
      
 

@@ -10,6 +10,9 @@ import { startLoading, stopLoading } from "components/loader/appSlice";
 
 import { showAlert } from "components/commonFunction/alertsLoader";
 
+import { get, del, post, put, patch } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 function EditProduct() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -267,9 +270,8 @@ function EditProduct() {
       const responseBody = await result.json();
       if (result.status === 200) {
         alert("Variant Deleted Successfully");
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
-        setAttribute(data);
+        const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+        setAttribute(res.data);
         setAttributeValue((prev) => prev.filter((item) => item.variantName !== variantName));
       } else {
         alert(responseBody.message || `Failed to delete variant (Status: ${result.status})`);
@@ -363,21 +365,17 @@ function EditProduct() {
       return;
     }
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateAt/${category[0]}`, {
-        method: "PATCH",
-        body: JSON.stringify({ attribute: addAttribute }),
-        headers: { "Content-Type": "application/json" },
+      const result = await patch(`${ENDPOINTS.UPDATE_ATTRIBUTE}/${category[0]}`, {
+        attribute: addAttribute,
       });
-      const responseBody = await result.json();
       if (result.status === 200) {
         alert("Attribute Added Successfully");
         setShowPopup(false);
         setAddattribute("");
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
-        setAttribute(data);
+        const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+        setAttribute(res.data);
       } else {
-        alert(responseBody.message || `Failed to add attribute (Status: ${result.status})`);
+        alert(result.data?.message || `Failed to add attribute (Status: ${result.status})`);
       }
     } catch (err) {
       console.error("Error adding attribute:", err);
@@ -405,9 +403,8 @@ function EditProduct() {
         alert("Variant Added Successfully");
         setShowVariantPopup(false);
         setAddVarient("");
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
-        setAttribute(data);
+        const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+        setAttribute(res.data);
       } else {
         alert(responseBody.message || `Failed to add variant (Status: ${result.status})`);
       }
@@ -422,17 +419,12 @@ function EditProduct() {
       return alert("Please Input Unit Name");
     }
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/unit`, {
-        method: "POST",
-        body: JSON.stringify({ unitname: addUnit }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const result = await post(ENDPOINTS.ADD_UNIT, { unitname: addUnit });
       if (result.status === 200) {
         alert("Unit Added Successfully");
         setShowUnitPopup(false);
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
-        const data = await res.json();
-        setUnitsData(data.Result);
+        const res = await get(ENDPOINTS.GET_UNIT);
+        setUnitsData(res.data.Result);
       } else {
         alert("Something Wrong");
       }
@@ -470,10 +462,7 @@ function EditProduct() {
     formData.append("description", des);
     if (brandImage) formData.append("image", brandImage);
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/brand`, {
-        method: "POST",
-        body: formData,
-      });
+      const result = await post(ENDPOINTS.ADD_BRAND, formData);
       if (result.status === 200) {
         alert("Brand Created Successfully");
         setShowbrandPopup(false);
@@ -481,9 +470,8 @@ function EditProduct() {
         setDes("");
         setBrandImage(null);
         if (brandImageInputRef.current) brandImageInputRef.current.value = "";
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-        const data = await res.json();
-        setBrands(data.allBrands);
+        const res = await get(ENDPOINTS.GET_BRANDS);
+        setBrands(res.data.allBrands);
       } else {
         alert("Something went wrong");
       }
@@ -640,8 +628,8 @@ function EditProduct() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_FILTERS);
+        const data = res.data;
         setFilters(data);
       } catch (err) {
         console.error("Error fetching Filters:", err);
@@ -719,274 +707,256 @@ function EditProduct() {
     getsingleCategory();
   }, [selecetdcategory]);
 
-  useEffect(() => {
-    const getCategory = async () => {
-      try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setCategories(res.result);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const getCategory = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_MAIN_CATEGORY);
+      setCategories(res.data.result);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const getActiveCity = async () => {
-      try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setCityData(res);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const getActiveCity = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_ALL_ZONE);
+      setCityData(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const fetchBrands = async () => {
-      try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-        const data = await res.json();
-        if (Array.isArray(data.allBrands)) {
-          setBrands(data.allBrands);
-        } else {
-          console.warn("Expected an array, but received:", data);
-          setBrands([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch brands:", err);
-        setBrands([]);
-      }
-    };
+  const fetchBrands = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_BRANDS);
+      setBrands(res.data.allBrands || []);
+    } catch (err) {
+      console.error("Failed to fetch brands:", err);
+      setBrands([]);
+    }
+  };
 
-    const getTax = async () => {
-      try {
-        const res = await fetch("https://node-m8jb.onrender.com/getTax");
-        const data = await res.json();
-        setTaxData(data.result);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const getTax = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_TAX);
+      setTaxData(res.data.result);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const fetchAttribute = async () => {
-      try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
-        setAttribute(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const fetchAttribute = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+      setAttribute(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const getUnits = async () => {
-      try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setUnitsData(res.Result);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const getUnits = async () => {
+    try {
+      const res = await get(ENDPOINTS.GET_UNIT);
+      setUnitsData(res.data.Result || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const setData = () => {
-      if (!location.state) {
-        alert("No product data provided.");
-        navigate(-1);
-        return;
-      }
-      const data = location.state;
+  const setData = () => {
+    if (!location.state) {
+      alert("No product data provided.");
+      navigate(-1);
+      return;
+    }
+    const data = location.state;
 
-      setId(data._id || "");
-      setName(data.productName || "");
-      setDescription(data.description || "");
-      setRibbon(data.ribbon || "");
-      setMrp(data.mrp || "");
-      setSellingPrice(data.sell_price || "");
-      setStatus(data.online_visible || true);
-      setIsFeatured(data.feature_product || false);
-      setThumbnailImage(data.productThumbnailUrl || null);
-      setPreview(data.productThumbnailUrl || null);
+    setId(data._id || "");
+    setName(data.productName || "");
+    setDescription(data.description || "");
+    setRibbon(data.ribbon || "");
+    setMrp(data.mrp || "");
+    setSellingPrice(data.sell_price || "");
+    setStatus(data.online_visible || true);
+    setIsFeatured(data.feature_product || false);
+    setThumbnailImage(data.productThumbnailUrl || null);
+    setPreview(data.productThumbnailUrl || null);
 
-      setSelectedImages(data.productImageUrl?.map((url) => ({ file: null, newfiles: url })) || []);
+    setSelectedImages(data.productImageUrl?.map((url) => ({ file: null, newfiles: url })) || []);
 
-      const categoryIds = data.category?.map((cat) => cat._id) || [];
-      setCategory(categoryIds);
-      setSelectedcategory(categoryIds[0] || "");
+    const categoryIds = data.category?.map((cat) => cat._id) || [];
+    setCategory(categoryIds);
+    setSelectedcategory(categoryIds[0] || "");
 
-      const allAttributes = data.category
-        ?.flatMap((cat) => cat.attribute || [])
-        .filter((attr, index, self) => attr && self.indexOf(attr) === index);
-      setFilteredAttributes(allAttributes || []);
+    const allAttributes = data.category
+      ?.flatMap((cat) => cat.attribute || [])
+      .filter((attr, index, self) => attr && self.indexOf(attr) === index);
+    setFilteredAttributes(allAttributes || []);
 
-      setSelectedBrand(data.brand_Name || null);
+    setSelectedBrand(data.brand_Name || null);
 
-      const cityMap = new Map();
-      data.location?.forEach((loc) => {
-        const cityArray = Array.isArray(loc.city) ? loc.city : [loc.city].filter(Boolean);
-        cityArray.forEach((cityItem) => {
-          const cityId = cityItem?._id;
-          const cityName = cityItem?.name;
-          const zoneObj = Array.isArray(loc.zone) ? loc.zone : [loc.zone].filter(Boolean);
+    const cityMap = new Map();
+    data.location?.forEach((loc) => {
+      const cityArray = Array.isArray(loc.city) ? loc.city : [loc.city].filter(Boolean);
+      cityArray.forEach((cityItem) => {
+        const cityId = cityItem?._id;
+        const cityName = cityItem?.name;
+        const zoneObj = Array.isArray(loc.zone) ? loc.zone : [loc.zone].filter(Boolean);
 
-          if (cityId && cityName) {
-            if (!cityMap.has(cityId)) {
-              cityMap.set(cityId, {
-                _id: cityId,
-                city: cityName,
-                zones: [],
-              });
-            }
-            const cityEntry = cityMap.get(cityId);
-            zoneObj.forEach((z) => {
-              if (z?._id && z?.name) {
-                cityEntry.zones.push({ _id: z._id, address: z.name });
-              }
+        if (cityId && cityName) {
+          if (!cityMap.has(cityId)) {
+            cityMap.set(cityId, {
+              _id: cityId,
+              city: cityName,
+              zones: [],
             });
           }
-        });
-      });
-
-      const cities = Array.from(cityMap.values()).filter((c) => c.zones.length > 0);
-      const zonesMap = {};
-      cities.forEach((city) => {
-        zonesMap[city._id] = city.zones.map((z) => z.address);
-      });
-
-      setSelectedCities(cities);
-      setCityZones(zonesMap);
-
-      const firstCity = cities[0];
-      if (firstCity) {
-        setCity(firstCity._id || "");
-        setZone(zonesMap[firstCity._id] || []);
-        const selectedCity = citydata.find((item) => item._id === firstCity._id);
-        if (selectedCity) setZones(selectedCity.zones || []);
-      }
-
-      setCgst(data.tax || "");
-      setUnitName(data.unit?.name || "");
-
-      if (Array.isArray(data.variants) && data.variants.length > 0) {
-        const newAttributeValue = data.variants.map((variant) => {
-          const variantValue = variant.variantValue || ""; // safe fallback
-          const [name = "", unit = ""] = variantValue.split(" ");
-
-          return {
-            attributeName: variant.attributeName || "",
-            variantName: name,
-            unit: unit,
-          };
-        });
-
-        setAttributeValue(newAttributeValue);
-
-        const firstatt = newAttributeValue[0];
-        if (firstatt) {
-          setAttributeData(firstatt._id);
-        }
-
-        const newVariantPrices = {};
-        data.variants.forEach((variant) => {
-          const variantValue = variant.variantValue || "";
-          const [name = ""] = variantValue.split(" ");
-
-          newVariantPrices[name] = {
-            mrp: variant.mrp || "",
-            sell_price: variant.sell_price || "",
-          };
-        });
-        setVariantPrices(newVariantPrices);
-
-        // Initialize variantImages with existing variant images
-        const newVariantImages = {};
-        data.variants.forEach((variant, index) => {
-          if (variant.image) {
-            newVariantImages[variant.variantValue.split(" ")[0]] = {
-              file: null,
-              preview: variant.image,
-            };
-          }
-        });
-        setVariantImages(newVariantImages);
-
-        const colorVariants = data.variants.filter(
-          (variant) => (variant.attributeName || "").toLowerCase() === "color" && variant.hexCode
-        );
-        if (colorVariants.length > 0) {
-          const newColorHexCodes = {};
-          const newColors = colorVariants.map((variant) => {
-            const name = ColorNamer(variant.hexCode).ntc[0].name;
-            newColorHexCodes[variant.variantValue.split(" ")[0]] = variant.hexCode;
-            return { hex: variant.hexCode, name };
-          });
-          setColorHexCodes(newColorHexCodes);
-          setColors(newColors);
-        }
-      }
-
-      if (data.filter?.length > 0) {
-        const groupedFilters = {};
-        const selectedByFilter = {};
-
-        const originalFilters = data.filter.map((item) => ({
-          _id: item._id,
-          Filter_name: item.Filter_name,
-          selected: item.selected?.map((s) => ({ _id: s._id, name: s.name })) || [],
-        }));
-        setOriginalFilterData(originalFilters);
-
-        data.filter.forEach((item) => {
-          const filterId = item._id;
-          const filterName = item.Filter_name;
-          const selectedArray = item.selected || [];
-
-          if (!filterId || !filterName) return;
-
-          if (!groupedFilters[filterId]) {
-            groupedFilters[filterId] = {
-              _id: filterId,
-              Filter_name: filterName,
-              values: [],
-            };
-          }
-
-          if (!selectedByFilter[filterId]) {
-            selectedByFilter[filterId] = [];
-          }
-
-          selectedArray.forEach((selected) => {
-            if (selected?._id && selected?.name) {
-              const val = { _id: selected._id, name: selected.name };
-              groupedFilters[filterId].values.push(val);
-              selectedByFilter[filterId].push(val);
+          const cityEntry = cityMap.get(cityId);
+          zoneObj.forEach((z) => {
+            if (z?._id && z?.name) {
+              cityEntry.zones.push({ _id: z._id, address: z.name });
             }
           });
+        }
+      });
+    });
+
+    const cities = Array.from(cityMap.values()).filter((c) => c.zones.length > 0);
+    const zonesMap = {};
+    cities.forEach((city) => {
+      zonesMap[city._id] = city.zones.map((z) => z.address);
+    });
+
+    setSelectedCities(cities);
+    setCityZones(zonesMap);
+
+    const firstCity = cities[0];
+    if (firstCity) {
+      setCity(firstCity._id || "");
+      setZone(zonesMap[firstCity._id] || []);
+      const selectedCity = citydata.find((item) => item._id === firstCity._id);
+      if (selectedCity) setZones(selectedCity.zones || []);
+    }
+
+    setCgst(data.tax || "");
+    setUnitName(data.unit?.name || "");
+
+    if (Array.isArray(data.variants) && data.variants.length > 0) {
+      const newAttributeValue = data.variants.map((variant) => {
+        const variantValue = variant.variantValue || ""; // safe fallback
+        const [name = "", unit = ""] = variantValue.split(" ");
+
+        return {
+          attributeName: variant.attributeName || "",
+          variantName: name,
+          unit: unit,
+        };
+      });
+
+      setAttributeValue(newAttributeValue);
+
+      const firstatt = newAttributeValue[0];
+      if (firstatt) {
+        setAttributeData(firstatt._id);
+      }
+
+      const newVariantPrices = {};
+      data.variants.forEach((variant) => {
+        const variantValue = variant.variantValue || "";
+        const [name = ""] = variantValue.split(" ");
+
+        newVariantPrices[name] = {
+          mrp: variant.mrp || "",
+          sell_price: variant.sell_price || "",
+        };
+      });
+      setVariantPrices(newVariantPrices);
+
+      // Initialize variantImages with existing variant images
+      const newVariantImages = {};
+      data.variants.forEach((variant, index) => {
+        if (variant.image) {
+          newVariantImages[variant.variantValue.split(" ")[0]] = {
+            file: null,
+            preview: variant.image,
+          };
+        }
+      });
+      setVariantImages(newVariantImages);
+
+      const colorVariants = data.variants.filter(
+        (variant) => (variant.attributeName || "").toLowerCase() === "color" && variant.hexCode
+      );
+      if (colorVariants.length > 0) {
+        const newColorHexCodes = {};
+        const newColors = colorVariants.map((variant) => {
+          const name = ColorNamer(variant.hexCode).ntc[0].name;
+          newColorHexCodes[variant.variantValue.split(" ")[0]] = variant.hexCode;
+          return { hex: variant.hexCode, name };
         });
+        setColorHexCodes(newColorHexCodes);
+        setColors(newColors);
+      }
+    }
 
-        const filterArray = Object.values(groupedFilters);
-        setFilters(filterArray);
-        setSelectedValuesByFilter(selectedByFilter);
+    if (data.filter?.length > 0) {
+      const groupedFilters = {};
+      const selectedByFilter = {};
 
-        if (filterArray.length > 0) {
-          const firstFilter = filterArray[0];
-          setFilterTypeName(firstFilter._id);
-          setFilterValues(firstFilter.values || []);
+      const originalFilters = data.filter.map((item) => ({
+        _id: item._id,
+        Filter_name: item.Filter_name,
+        selected: item.selected?.map((s) => ({ _id: s._id, name: s.name })) || [],
+      }));
+      setOriginalFilterData(originalFilters);
 
-          if ((firstFilter.values || []).length > 0) {
-            setSelectedFilterValue(firstFilter.values[0]._id);
-          } else {
-            setSelectedFilterValue("");
+      data.filter.forEach((item) => {
+        const filterId = item._id;
+        const filterName = item.Filter_name;
+        const selectedArray = item.selected || [];
+
+        if (!filterId || !filterName) return;
+
+        if (!groupedFilters[filterId]) {
+          groupedFilters[filterId] = {
+            _id: filterId,
+            Filter_name: filterName,
+            values: [],
+          };
+        }
+
+        if (!selectedByFilter[filterId]) {
+          selectedByFilter[filterId] = [];
+        }
+
+        selectedArray.forEach((selected) => {
+          if (selected?._id && selected?.name) {
+            const val = { _id: selected._id, name: selected.name };
+            groupedFilters[filterId].values.push(val);
+            selectedByFilter[filterId].push(val);
           }
+        });
+      });
+
+      const filterArray = Object.values(groupedFilters);
+      setFilters(filterArray);
+      setSelectedValuesByFilter(selectedByFilter);
+
+      if (filterArray.length > 0) {
+        const firstFilter = filterArray[0];
+        setFilterTypeName(firstFilter._id);
+        setFilterValues(firstFilter.values || []);
+
+        if ((firstFilter.values || []).length > 0) {
+          setSelectedFilterValue(firstFilter.values[0]._id);
+        } else {
+          setSelectedFilterValue("");
         }
       }
-      setSubCategory(data.subCategory?.[0]?._id || "");
-      setSubSubCategory(data.subSubCategory?.[0]?._id || "");
-    };
-
+    }
+    setSubCategory(data.subCategory?.[0]?._id || "");
+    setSubSubCategory(data.subSubCategory?.[0]?._id || "");
+  };
+  useEffect(() => {
     getCategory();
     getActiveCity();
     fetchBrands();
@@ -1021,13 +991,7 @@ function EditProduct() {
     const newformdata1 = new FormData();
     newformdata1.append("filterIds", JSON.stringify(selectedFilterIds));
 
-    const res = await fetch(
-      `${process.env.REACT_APP_API_URL}/addFilterInCategory/${selecetdcategory}`,
-      {
-        method: "PUT",
-        body: newformdata1,
-      }
-    );
+    const res = await put(`${ENDPOINTS.ADD_FILTER_IN_CATEGORY}/${selecetdcategory}`, newformdata1);
     if (res.status === 200) {
       console.log("Success");
     } else {
@@ -1202,11 +1166,8 @@ function EditProduct() {
     }
 
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateProduct/${id}`, {
-        method: "PATCH",
-        body: formData,
-      });
-      const responseBody = await result.json();
+      const result = await patch(`${ENDPOINTS.UPDATE_PRODUCT}/${id}`, formData);
+      const responseBody = result.data;
       if (result.status === 200) {
         showAlert("success", "Product updated successfully");
         navigate(-1);
@@ -1223,18 +1184,9 @@ function EditProduct() {
 
   const handlefiltervalue = async () => {
     try {
-      const newvalue = await fetch(
-        `${process.env.REACT_APP_API_URL}/editFilter/${filterTypeName}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            Filter: [{ name: newFilterValue }],
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    const newvalue = await patch(`${ENDPOINTS.EDIT_FILTER}/${filterTypeName}`, {
+      Filter: [{ name: newFilterValue }],
+    });
       if (newvalue.status === 200) {
         alert("Success");
         const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);

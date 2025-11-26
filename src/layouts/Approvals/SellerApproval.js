@@ -26,7 +26,10 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import EditIcon from "@mui/icons-material/Edit";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import TextField from "@mui/material/TextField";
-import { showAlert } from "components/commonFunction/alertsLoader"
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 export default function ApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -79,34 +82,46 @@ export default function ApprovalRequests() {
   };
 
   // Status to icon mapping
-  const statusToIcon = useMemo(() => ({
-    pending: ScheduleIcon,
-    "pending_admin_approval": ScheduleIcon,
-    "request_brand_approval": LocalOfferIcon,
-    "submit_brand_approval": EditIcon,
-    approved: CheckIcon,
-    rejected: CloseIcon,
-  }), []);
+  const statusToIcon = useMemo(
+    () => ({
+      pending: ScheduleIcon,
+      pending_admin_approval: ScheduleIcon,
+      request_brand_approval: LocalOfferIcon,
+      submit_brand_approval: EditIcon,
+      approved: CheckIcon,
+      rejected: CloseIcon,
+    }),
+    []
+  );
 
   // Status color mapping
-  const statusToColor = useMemo(() => ({
-    approved: "#2e7d32",
-    rejected: "#d32f2f",
-    pending: "#ed6c02",
-    "pending_admin_approval": "#ed6c02",
-    "request_brand_approval": "#0059ffff",
-    "submit_brand_approval": "#ed6c02",
-  }), []);
+  const statusToColor = useMemo(
+    () => ({
+      approved: "#2e7d32",
+      rejected: "#d32f2f",
+      pending: "#ed6c02",
+      pending_admin_approval: "#ed6c02",
+      request_brand_approval: "#0059ffff",
+      submit_brand_approval: "#ed6c02",
+    }),
+    []
+  );
 
   // Row color based on type
   const rowColor = (type) => {
     switch (type) {
-      case "seller": return "#e3f2fd";
-      case "location": return "#e8f5e9";
-      case "image": return "#f3e5f5";
-      case "product": return "#fffde7";
-      case "brand": return "#fce4ec";
-      default: return "#fff";
+      case "seller":
+        return "#e3f2fd";
+      case "location":
+        return "#e8f5e9";
+      case "image":
+        return "#f3e5f5";
+      case "product":
+        return "#fffde7";
+      case "brand":
+        return "#fce4ec";
+      default:
+        return "#fff";
     }
   };
 
@@ -114,15 +129,13 @@ export default function ApprovalRequests() {
   const fetchRequests = async () => {
     try {
       dispatch(startLoading());
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getSellerRequest`);
-      if (!res.ok) throw new Error("Failed to fetch requests");
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_SELLER_REQUEST);
+      const data = res.data;
       setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
       setLocationRequests((data.locationRequests || []).map((r) => ({ ...r, type: "location" })));
       setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
       setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
-      setBrandRequests((data.brandRequest ||
-         []).map((r) => ({ ...r, type: "brand" })));
+      setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
     } catch (e) {
       showAlert("error", "Failed to fetch requests.");
       console.error(e);
@@ -166,24 +179,25 @@ export default function ApprovalRequests() {
         if (note) body.description = note;
       }
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      await put(ENDPOINTS.APPROVAL_UPDATE, body);
 
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.message || `Failed to update status`);
-      }
-
-      const statusLabel = status === "approved" ? "approved" : status === "rejected" ? "rejected" : status.replace(/_/g, " ");
+      const statusLabel =
+        status === "approved"
+          ? "approved"
+          : status === "rejected"
+          ? "rejected"
+          : status.replace(/_/g, " ");
       setSuccess(`Status updated to ${statusLabel} successfully.`);
-      
+
       // Show success popup
       Swal.fire({
         icon: status === "approved" ? "success" : status === "rejected" ? "error" : "info",
-        title: status === "approved" ? "Approved!" : status === "rejected" ? "Rejected!" : "Status Updated!",
+        title:
+          status === "approved"
+            ? "Approved!"
+            : status === "rejected"
+            ? "Rejected!"
+            : "Status Updated!",
         text: `The request has been ${statusLabel} successfully.`,
         timer: 2000,
         showConfirmButton: false,
@@ -193,7 +207,7 @@ export default function ApprovalRequests() {
     } catch (e) {
       console.error(e);
       setError(e.message);
-      
+
       // Show error popup
       Swal.fire({
         icon: "error",
@@ -207,7 +221,13 @@ export default function ApprovalRequests() {
   };
 
   // Combine and filter requests
-  const allRequests = [...sellerRequests, ...locationRequests, ...imageRequests, ...productRequests, ...brandRequests];
+  const allRequests = [
+    ...sellerRequests,
+    ...locationRequests,
+    ...imageRequests,
+    ...productRequests,
+    ...brandRequests,
+  ];
 
   const normalized = (v) => (v || "").toString().toLowerCase();
   const filtered = allRequests.filter((r) => {
@@ -251,14 +271,13 @@ export default function ApprovalRequests() {
     return haystack.map(normalized).join(" ").includes(normalized(searchTerm));
   });
   const statusDisplayMap = {
-  pending: "Pending",
-  pending_admin_approval: "Pending Approval",
-  request_brand_approval: "Brand Approval Needed",
-  submit_brand_approval: "Brand Submitted",
-  approved: "Approved",
-  rejected: "Rejected",
-};
-
+    pending: "Pending",
+    pending_admin_approval: "Pending Approval",
+    request_brand_approval: "Brand Approval Needed",
+    submit_brand_approval: "Brand Submitted",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
 
   const getStatus = (r) => {
     if (r.type === "seller") return r.approveStatus || "pending";
@@ -269,7 +288,12 @@ export default function ApprovalRequests() {
 
   const isPending = (r) => {
     const status = getStatus(r);
-    return ["pending", "pending_admin_approval", "request_brand_approval", "submit_brand_approval"].includes(status);
+    return [
+      "pending",
+      "pending_admin_approval",
+      "request_brand_approval",
+      "submit_brand_approval",
+    ].includes(status);
   };
 
   const getDisplayValue = (r, field) => {
@@ -300,9 +324,7 @@ export default function ApprovalRequests() {
         case "name":
           return r.productName || "-";
         case "owner":
-          return r.type === "brand"
-            ? r.brandApprovelDescription || "-"
-            : r.description || "-";
+          return r.type === "brand" ? r.brandApprovelDescription || "-" : r.description || "-";
         case "mobile":
           return r.sku || "-";
         case "email":
@@ -318,145 +340,163 @@ export default function ApprovalRequests() {
   };
 
   // DataTable columns
-  const columns = useMemo(() => [
-    {
-      name: "#",
-      selector: (row, idx) => filtered.indexOf(row) + 1,
-      width: "80px",
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Type",
-      selector: (row) => row.type.charAt(0).toUpperCase() + row.type.slice(1),
-      width: "120px",
-      style: { justifyContent: "center", fontWeight: "medium" },
-    },
-    {
-      name: "Store/Product",
-      selector: (row) => getDisplayValue(row, "name"),
-      width: "240px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Owner/Desc",
-      selector: (row) => getDisplayValue(row, "owner"),
-      width: "200px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Mobile/SKU",
-      selector: (row) => getDisplayValue(row, "mobile"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Email/Category",
-      selector: (row) => getDisplayValue(row, "email"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "City/SubCategory",
-      selector: (row) => getDisplayValue(row, "city"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "GST/Brand",
-      selector: (row) => getDisplayValue(row, "gst"),
-      width: "150px",
-      wrap: true,
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "Status",
-      cell: (row) => {
-        const status = getStatus(row);
-        const displayStatus = statusDisplayMap[status] || status.replace(/_/g, " ");
-        const color = statusToColor[status] || "#ed6c02";
-        return (      
-          <Tooltip title={displayStatus} arrow>
-            <MDTypography variant="body2" fontWeight="medium" sx={{ color }}>
-              {displayStatus}
-            </MDTypography>
-          </Tooltip>
-        );
+  const columns = useMemo(
+    () => [
+      {
+        name: "#",
+        selector: (row, idx) => filtered.indexOf(row) + 1,
+        width: "80px",
+        style: { justifyContent: "center" },
       },
-      width: "150px",
-      style: {
-        justifyContent: "center",
-        fontWeight: "medium",
+      {
+        name: "Type",
+        selector: (row) => row.type.charAt(0).toUpperCase() + row.type.slice(1),
+        width: "120px",
+        style: { justifyContent: "center", fontWeight: "medium" },
       },
-    },
-    {
-      name: "Action",
-      cell: (row) =>
-        !isPending(row) ? (
-          <Chip
-            label={statusDisplayMap[getStatus(row)] || getStatus(row).replace(/_/g, " ")}
-            color={getStatus(row) === "approved" ? "success" : getStatus(row) === "rejected" ? "error" : "default"}
-            size="small"
-            sx={{ fontWeight: "medium", textTransform: "capitalize" }}
-          />
-        ) : (
-          <MDBox display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-            {statusOptions[row.type].map(({ value, label, icon: Icon }) => {
-              const color = statusToColor[value] || "#ed6c02";
-              return (
-                <Tooltip key={value} title={label} arrow>
-                  <MDBox
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
-                    gap={0.5}
-                    onClick={() => {
-                      setSelectedUpdate({
-                        type: row.type,
-                        id: row._id,
-                        status: value,
-                        note: "",
-                      });
-                      setNoteOpen(true);
-                    }}
-                    sx={{
-                      cursor: "pointer",
-                      p: 1,
-                      borderRadius: 1,
-                      transition: "all 0.2s",
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                      },
-                    }}
-                  >
-                    <Icon sx={{ color, fontSize: "1.75rem" }} />
-                    <MDTypography variant="caption" sx={{ color, fontWeight: "medium", textAlign: "center" }}>
-                      {label}
-                    </MDTypography>
-                  </MDBox>
-                </Tooltip>
-              );
-            })}
-          </MDBox>
+      {
+        name: "Store/Product",
+        selector: (row) => getDisplayValue(row, "name"),
+        width: "240px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "Owner/Desc",
+        selector: (row) => getDisplayValue(row, "owner"),
+        width: "200px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "Mobile/SKU",
+        selector: (row) => getDisplayValue(row, "mobile"),
+        width: "150px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "Email/Category",
+        selector: (row) => getDisplayValue(row, "email"),
+        width: "150px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "City/SubCategory",
+        selector: (row) => getDisplayValue(row, "city"),
+        width: "150px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "GST/Brand",
+        selector: (row) => getDisplayValue(row, "gst"),
+        width: "150px",
+        wrap: true,
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "Status",
+        cell: (row) => {
+          const status = getStatus(row);
+          const displayStatus = statusDisplayMap[status] || status.replace(/_/g, " ");
+          const color = statusToColor[status] || "#ed6c02";
+          return (
+            <Tooltip title={displayStatus} arrow>
+              <MDTypography variant="body2" fontWeight="medium" sx={{ color }}>
+                {displayStatus}
+              </MDTypography>
+            </Tooltip>
+          );
+        },
+        width: "150px",
+        style: {
+          justifyContent: "center",
+          fontWeight: "medium",
+        },
+      },
+      {
+        name: "Action",
+        cell: (row) =>
+          !isPending(row) ? (
+            <Chip
+              label={statusDisplayMap[getStatus(row)] || getStatus(row).replace(/_/g, " ")}
+              color={
+                getStatus(row) === "approved"
+                  ? "success"
+                  : getStatus(row) === "rejected"
+                  ? "error"
+                  : "default"
+              }
+              size="small"
+              sx={{ fontWeight: "medium", textTransform: "capitalize" }}
+            />
+          ) : (
+            <MDBox display="flex" gap={2} justifyContent="center" flexWrap="wrap">
+              {statusOptions[row.type].map(({ value, label, icon: Icon }) => {
+                const color = statusToColor[value] || "#ed6c02";
+                return (
+                  <Tooltip key={value} title={label} arrow>
+                    <MDBox
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      gap={0.5}
+                      onClick={() => {
+                        setSelectedUpdate({
+                          type: row.type,
+                          id: row._id,
+                          status: value,
+                          note: "",
+                        });
+                        setNoteOpen(true);
+                      }}
+                      sx={{
+                        cursor: "pointer",
+                        p: 1,
+                        borderRadius: 1,
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          bgcolor: "action.hover",
+                        },
+                      }}
+                    >
+                      <Icon sx={{ color, fontSize: "1.75rem" }} />
+                      <MDTypography
+                        variant="caption"
+                        sx={{ color, fontWeight: "medium", textAlign: "center" }}
+                      >
+                        {label}
+                      </MDTypography>
+                    </MDBox>
+                  </Tooltip>
+                );
+              })}
+            </MDBox>
+          ),
+        width: "300px",
+        style: { justifyContent: "center" },
+      },
+      {
+        name: "View",
+        cell: (row) => (
+          <IconButton
+            onClick={() => {
+              setSelectedRequest(row);
+              setOpenDialog(true);
+            }}
+            color="primary"
+          >
+            <VisibilityIcon />
+          </IconButton>
         ),
-      width: "300px",
-      style: { justifyContent: "center" },
-    },
-    {
-      name: "View",
-      cell: (row) => (
-        <IconButton onClick={() => { setSelectedRequest(row); setOpenDialog(true); }} color="primary">
-          <VisibilityIcon />
-        </IconButton>
-      ),
-      width: "80px",
-      style: { justifyContent: "center" },
-    },
-  ], [filtered, statusToIcon, statusToColor]);
+        width: "80px",
+        style: { justifyContent: "center" },
+      },
+    ],
+    [filtered, statusToIcon, statusToColor]
+  );
 
   // DataTable custom styles
   const customStyles = {
@@ -509,81 +549,196 @@ export default function ApprovalRequests() {
           <>
             <Grid item xs={12} sm={6}>
               <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Store Information</MDTypography>
+                <MDTypography variant="h6" gutterBottom color="primary">
+                  Store Information
+                </MDTypography>
                 <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Store Name:</strong> {request.storeName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Owner:</strong> {request.ownerName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Email:</strong> {request.email || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Phone:</strong> {request.PhoneNumber || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>GST:</strong> {request.gstNumber || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Address:</strong> {request.fullAddress || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>City:</strong> {request.city?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Coordinates:</strong> {request.Latitude || "-"}, {request.Longitude || "-"}</MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Store Name:</strong> {request.storeName || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Owner:</strong> {request.ownerName || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Email:</strong> {request.email || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Phone:</strong> {request.PhoneNumber || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>GST:</strong> {request.gstNumber || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Address:</strong> {request.fullAddress || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>City:</strong> {request.city?.name || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Coordinates:</strong> {request.Latitude || "-"},{" "}
+                    {request.Longitude || "-"}
+                  </MDTypography>
                 </MDBox>
                 {type === "location" && (
                   <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Location Update</MDTypography>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                      Location Update
+                    </MDTypography>
                     <MDBox display="flex" flexDirection="column" gap={1}>
-                      <MDTypography variant="body2"><strong>New City:</strong> {request.pendingAddressUpdate?.city?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>New Zone:</strong> {request.pendingAddressUpdate?.zone?.[0]?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>New Coordinates:</strong> {request.pendingAddressUpdate?.Latitude || "-"}, {request.pendingAddressUpdate?.Longitude || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Requested On:</strong> {request.pendingAddressUpdate?.requestedAt ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString() : "-"}</MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>New City:</strong> {request.pendingAddressUpdate?.city?.name || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>New Zone:</strong>{" "}
+                        {request.pendingAddressUpdate?.zone?.[0]?.name || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>New Coordinates:</strong>{" "}
+                        {request.pendingAddressUpdate?.Latitude || "-"},{" "}
+                        {request.pendingAddressUpdate?.Longitude || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>Requested On:</strong>{" "}
+                        {request.pendingAddressUpdate?.requestedAt
+                          ? new Date(request.pendingAddressUpdate.requestedAt).toLocaleDateString()
+                          : "-"}
+                      </MDTypography>
                     </MDBox>
                   </>
                 )}
                 {type === "image" && (
                   <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Pending Advertisement Images</MDTypography>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                      Pending Advertisement Images
+                    </MDTypography>
                     <MDBox display="flex" flexWrap="wrap" gap={1}>
                       {request.pendingAdvertisementImages?.image?.map((img, i) => (
-                        <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt={`Pending Image ${i + 1}`} style={{ maxWidth: "150px", borderRadius: "4px" }} />
+                        <img
+                          key={i}
+                          src={`${IMAGE_BASE_URL}${img}`}
+                          alt={`Pending Image ${i + 1}`}
+                          style={{ maxWidth: "150px", borderRadius: "4px" }}
+                        />
                       ))}
                     </MDBox>
-                    <MDTypography variant="body2" sx={{ mt: 1 }}><strong>Status:</strong> <Chip label={request.pendingAdvertisementImages?.status || "Pending"} color={request.pendingAdvertisementImages?.status === "approved" ? "success" : request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
+                    <MDTypography variant="body2" sx={{ mt: 1 }}>
+                      <strong>Status:</strong>{" "}
+                      <Chip
+                        label={request.pendingAdvertisementImages?.status || "Pending"}
+                        color={
+                          request.pendingAdvertisementImages?.status === "approved"
+                            ? "success"
+                            : request.pendingAdvertisementImages?.status === "rejected"
+                            ? "error"
+                            : "warning"
+                        }
+                        size="small"
+                        sx={{ ml: 1 }}
+                      />
+                    </MDTypography>
                   </>
                 )}
               </MDBox>
             </Grid>
             <Grid item xs={12} sm={6}>
               <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Verification Details</MDTypography>
+                <MDTypography variant="h6" gutterBottom color="primary">
+                  Verification Details
+                </MDTypography>
                 <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.approveStatus || request.pendingAdvertisementImages?.status || "Pending"} color={request.approveStatus === "approved" || request.pendingAdvertisementImages?.status === "approved" ? "success" : request.approveStatus === "rejected" || request.pendingAdvertisementImages?.status === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Authorized Store:</strong> {request.Authorized_Store ? "Yes" : "No"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Sell Food:</strong> {request.sellFood ? "Yes" : "No"}</MDTypography>
-                  <MDTypography variant="body2"><strong>FSI Number:</strong> {request.fsiNumber || "-"}</MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Status:</strong>{" "}
+                    <Chip
+                      label={request.status ? "Active" : "Inactive"}
+                      color={request.status ? "success" : "error"}
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Approval Status:</strong>{" "}
+                    <Chip
+                      label={
+                        request.approveStatus ||
+                        request.pendingAdvertisementImages?.status ||
+                        "Pending"
+                      }
+                      color={
+                        request.approveStatus === "approved" ||
+                        request.pendingAdvertisementImages?.status === "approved"
+                          ? "success"
+                          : request.approveStatus === "rejected" ||
+                            request.pendingAdvertisementImages?.status === "rejected"
+                          ? "error"
+                          : "warning"
+                      }
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Authorized Store:</strong> {request.Authorized_Store ? "Yes" : "No"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Sell Food:</strong> {request.sellFood ? "Yes" : "No"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>FSI Number:</strong> {request.fsiNumber || "-"}
+                  </MDTypography>
                 </MDBox>
                 {request.bankDetails && (
                   <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Bank Details</MDTypography>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                      Bank Details
+                    </MDTypography>
                     <MDBox display="flex" flexDirection="column" gap={1}>
-                      <MDTypography variant="body2"><strong>Bank:</strong> {request.bankDetails.bankName || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Holder:</strong> {request.bankDetails.accountHolder || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Account No:</strong> {request.bankDetails.accountNumber || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>IFSC:</strong> {request.bankDetails.ifsc || "-"}</MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>Bank:</strong> {request.bankDetails.bankName || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>Holder:</strong> {request.bankDetails.accountHolder || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>Account No:</strong> {request.bankDetails.accountNumber || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>IFSC:</strong> {request.bankDetails.ifsc || "-"}
+                      </MDTypography>
                     </MDBox>
                   </>
                 )}
               </MDBox>
               {(request.aadharCard?.length > 0 || request.image) && (
                 <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Documents</MDTypography>
+                  <MDTypography variant="h6" gutterBottom color="primary">
+                    Documents
+                  </MDTypography>
                   {request.aadharCard?.length > 0 && (
                     <MDBox mb={2}>
                       <MDTypography variant="body2">Aadhar Card:</MDTypography>
                       <MDBox display="flex" gap={1} flexWrap="wrap">
                         {request.aadharCard.slice(0, 2).map((img, i) => (
-                          <img key={i} src={`${IMAGE_BASE_URL}${img}`} alt="Aadhar" style={{ maxWidth: "100px", borderRadius: "4px" }} />
+                          <img
+                            key={i}
+                            src={`${IMAGE_BASE_URL}${img}`}
+                            alt="Aadhar"
+                            style={{ maxWidth: "100px", borderRadius: "4px" }}
+                          />
                         ))}
-                        {request.aadharCard.length > 2 && <Chip label={`+${request.aadharCard.length - 2}`} size="small" />}
+                        {request.aadharCard.length > 2 && (
+                          <Chip label={`+${request.aadharCard.length - 2}`} size="small" />
+                        )}
                       </MDBox>
                     </MDBox>
                   )}
                   {request.image && (
                     <MDBox>
                       <MDTypography variant="body2">Store Image:</MDTypography>
-                      <img src={`${IMAGE_BASE_URL}${request.image}`} alt="Store" style={{ maxWidth: "150px", borderRadius: "4px" }} />
+                      <img
+                        src={`${IMAGE_BASE_URL}${request.image}`}
+                        alt="Store"
+                        style={{ maxWidth: "150px", borderRadius: "4px" }}
+                      />
                     </MDBox>
                   )}
                 </MDBox>
@@ -594,31 +749,88 @@ export default function ApprovalRequests() {
           <>
             <Grid item xs={12} sm={6}>
               <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Product Details</MDTypography>
+                <MDTypography variant="h6" gutterBottom color="primary">
+                  Product Details
+                </MDTypography>
                 <MDBox display="flex" flexDirection="column" gap={1}>
-                  <MDTypography variant="body2"><strong>Name:</strong> {request.productName || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Description:</strong> {request.description || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>SKU:</strong> {request.sku || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Category:</strong> {request.category?.[0]?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Subcategory:</strong> {request.subCategory?.[0]?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Brand:</strong> {request.brand_Name?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Tax:</strong> {request.tax || "-"}%</MDTypography>
-                  <MDTypography variant="body2"><strong>Unit:</strong> {request.unit?.name || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Status:</strong> <Chip label={request.status ? "Active" : "Inactive"} color={request.status ? "success" : "error"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  <MDTypography variant="body2"><strong>Approval Status:</strong> <Chip label={request.sellerProductStatus || "Pending"} color={request.sellerProductStatus === "approved" ? "success" : request.sellerProductStatus === "rejected" ? "error" : "warning"} size="small" sx={{ ml: 1 }} /></MDTypography>
-                  {request.brandApprovelDescription && <MDTypography variant="body2"><strong>Notes:</strong> {request.brandApprovelDescription}</MDTypography>}
+                  <MDTypography variant="body2">
+                    <strong>Name:</strong> {request.productName || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Description:</strong> {request.description || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>SKU:</strong> {request.sku || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Category:</strong> {request.category?.[0]?.name || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Subcategory:</strong> {request.subCategory?.[0]?.name || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Brand:</strong> {request.brand_Name?.name || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Tax:</strong> {request.tax || "-"}%
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Unit:</strong> {request.unit?.name || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Status:</strong>{" "}
+                    <Chip
+                      label={request.status ? "Active" : "Inactive"}
+                      color={request.status ? "success" : "error"}
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Approval Status:</strong>{" "}
+                    <Chip
+                      label={request.sellerProductStatus || "Pending"}
+                      color={
+                        request.sellerProductStatus === "approved"
+                          ? "success"
+                          : request.sellerProductStatus === "rejected"
+                          ? "error"
+                          : "warning"
+                      }
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  </MDTypography>
+                  {request.brandApprovelDescription && (
+                    <MDTypography variant="body2">
+                      <strong>Notes:</strong> {request.brandApprovelDescription}
+                    </MDTypography>
+                  )}
                 </MDBox>
                 {request.variants && request.variants.length > 0 && (
                   <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Variants</MDTypography>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                      Variants
+                    </MDTypography>
                     <MDBox display="flex" flexDirection="column" gap={1}>
                       {request.variants.slice(0, 2).map((v, i) => (
                         <MDBox key={i} p={1} border="1px solid #eee" borderRadius="sm">
-                          <MDTypography variant="body2"><strong>{v.attributeName}:</strong> {v.variantValue}</MDTypography>
-                          <MDTypography variant="body2"><strong>MRP:</strong> ₹{v.mrp} | <strong>Sell:</strong> ₹{v.sell_price} | <strong>Discount:</strong> {v.discountValue}%</MDTypography>
+                          <MDTypography variant="body2">
+                            <strong>{v.attributeName}:</strong> {v.variantValue}
+                          </MDTypography>
+                          <MDTypography variant="body2">
+                            <strong>MRP:</strong> ₹{v.mrp} | <strong>Sell:</strong> ₹{v.sell_price}{" "}
+                            | <strong>Discount:</strong> {v.discountValue}%
+                          </MDTypography>
                         </MDBox>
                       ))}
-                      {request.variants.length > 2 && <Chip label={`+${request.variants.length - 2} more`} size="small" sx={{ mt: 1 }} />}
+                      {request.variants.length > 2 && (
+                        <Chip
+                          label={`+${request.variants.length - 2} more`}
+                          size="small"
+                          sx={{ mt: 1 }}
+                        />
+                      )}
                     </MDBox>
                   </>
                 )}
@@ -626,50 +838,91 @@ export default function ApprovalRequests() {
             </Grid>
             <Grid item xs={12} sm={6}>
               <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
-                <MDTypography variant="h6" gutterBottom color="primary">Additional Details</MDTypography>
+                <MDTypography variant="h6" gutterBottom color="primary">
+                  Additional Details
+                </MDTypography>
                 <MDBox display="flex" flexDirection="column" gap={1}>
                   {request.location?.[0] && (
                     <>
-                      <MDTypography variant="body2"><strong>City:</strong> {request.location[0].city?.[0]?.name || "-"}</MDTypography>
-                      <MDTypography variant="body2"><strong>Zone:</strong> {request.location[0].zone?.[0]?.name || "-"}</MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>City:</strong> {request.location[0].city?.[0]?.name || "-"}
+                      </MDTypography>
+                      <MDTypography variant="body2">
+                        <strong>Zone:</strong> {request.location[0].zone?.[0]?.name || "-"}
+                      </MDTypography>
                     </>
                   )}
-                  <MDTypography variant="body2"><strong>Return Policy:</strong> {request.returnProduct?.title || "-"}</MDTypography>
-                  <MDTypography variant="body2"><strong>Rating:</strong> {request.rating?.rate || 0} ({request.rating?.users || 0} reviews)</MDTypography>
-                  <MDTypography variant="body2"><strong>Purchases:</strong> {request.purchases || 0}</MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Return Policy:</strong> {request.returnProduct?.title || "-"}
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Rating:</strong> {request.rating?.rate || 0} (
+                    {request.rating?.users || 0} reviews)
+                  </MDTypography>
+                  <MDTypography variant="body2">
+                    <strong>Purchases:</strong> {request.purchases || 0}
+                  </MDTypography>
                   {request.inventory && request.inventory.length > 0 && (
-                    <MDTypography variant="body2"><strong>Stock:</strong> {request.inventory.reduce((sum, inv) => sum + inv.quantity, 0)} units</MDTypography>
+                    <MDTypography variant="body2">
+                      <strong>Stock:</strong>{" "}
+                      {request.inventory.reduce((sum, inv) => sum + inv.quantity, 0)} units
+                    </MDTypography>
                   )}
                 </MDBox>
                 {request.filter && request.filter.length > 0 && (
                   <>
-                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>Filters</MDTypography>
+                    <MDTypography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                      Filters
+                    </MDTypography>
                     <MDBox display="flex" flexWrap="wrap" gap={1}>
-                      {request.filter.flatMap(f => f.selected?.map(s => s.name) || []).slice(0, 4).map((filter, i) => (
-                        <Chip key={i} label={filter} size="small" />
-                      ))}
-                      {request.filter.flatMap(f => f.selected || []).length > 4 && <Chip label={`+${request.filter.flatMap(f => f.selected || []).length - 4}`} size="small" />}
+                      {request.filter
+                        .flatMap((f) => f.selected?.map((s) => s.name) || [])
+                        .slice(0, 4)
+                        .map((filter, i) => (
+                          <Chip key={i} label={filter} size="small" />
+                        ))}
+                      {request.filter.flatMap((f) => f.selected || []).length > 4 && (
+                        <Chip
+                          label={`+${request.filter.flatMap((f) => f.selected || []).length - 4}`}
+                          size="small"
+                        />
+                      )}
                     </MDBox>
                   </>
                 )}
               </MDBox>
               {(request.productThumbnailUrl || request.productImageUrl?.length > 0) && (
                 <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Product Images</MDTypography>
+                  <MDTypography variant="h6" gutterBottom color="primary">
+                    Product Images
+                  </MDTypography>
                   <MDBox display="flex" gap={1} flexWrap="wrap">
                     {request.productThumbnailUrl && (
-                      <img src={`${IMAGE_BASE_URL}${request.productThumbnailUrl}`} alt="Thumbnail" style={{ maxWidth: "80px", borderRadius: "4px" }} />
+                      <img
+                        src={`${IMAGE_BASE_URL}${request.productThumbnailUrl}`}
+                        alt="Thumbnail"
+                        style={{ maxWidth: "80px", borderRadius: "4px" }}
+                      />
                     )}
                     {request.productImageUrl?.slice(0, 2).map((url, i) => (
-                      <img key={i} src={`${IMAGE_BASE_URL}${url}`} alt={`Image ${i}`} style={{ maxWidth: "80px", borderRadius: "4px" }} />
+                      <img
+                        key={i}
+                        src={`${IMAGE_BASE_URL}${url}`}
+                        alt={`Image ${i}`}
+                        style={{ maxWidth: "80px", borderRadius: "4px" }}
+                      />
                     ))}
-                    {request.productImageUrl?.length > 2 && <Chip label={`+${request.productImageUrl.length - 2}`} size="small" />}
+                    {request.productImageUrl?.length > 2 && (
+                      <Chip label={`+${request.productImageUrl.length - 2}`} size="small" />
+                    )}
                   </MDBox>
                 </MDBox>
               )}
               {request.type === "brand" && request.brandApprovalDocument && (
                 <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm" sx={{ mt: 2 }}>
-                  <MDTypography variant="h6" gutterBottom color="primary">Brand Approval Document</MDTypography>
+                  <MDTypography variant="h6" gutterBottom color="primary">
+                    Brand Approval Document
+                  </MDTypography>
                   <MDBox display="flex" gap={1} flexWrap="wrap">
                     <img
                       src={`${IMAGE_BASE_URL}${request.brandApprovalDocument}`}
@@ -706,15 +959,21 @@ export default function ApprovalRequests() {
       <MDBox width="100%" px={3}>
         <MDBox display="flex" justifyContent="space-between" mb={3} alignItems="center">
           <MDBox>
-            <MDTypography variant="h5" fontWeight="bold">Approval Requests</MDTypography>
-            <MDTypography variant="body2" color="textSecondary">Review and manage pending requests</MDTypography>
+            <MDTypography variant="h5" fontWeight="bold">
+              Approval Requests
+            </MDTypography>
+            <MDTypography variant="body2" color="textSecondary">
+              Review and manage pending requests
+            </MDTypography>
           </MDBox>
         </MDBox>
 
         <Card sx={{ p: 3, mb: 3 }}>
           <MDBox display="flex" gap={3} flexWrap="wrap" alignItems="center">
             <MDBox display="flex" alignItems="center" gap={1}>
-              <MDTypography variant="body2" fontWeight="medium">Show Entries:</MDTypography>
+              <MDTypography variant="body2" fontWeight="medium">
+                Show Entries:
+              </MDTypography>
               <FormControl size="medium" sx={{ minWidth: 120 }}>
                 <InputLabel>Entries</InputLabel>
                 <Select
@@ -726,13 +985,17 @@ export default function ApprovalRequests() {
                   }}
                 >
                   {[5, 10, 20, 30].map((num) => (
-                    <MenuItem key={num} value={num}>{num}</MenuItem>
+                    <MenuItem key={num} value={num}>
+                      {num}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </MDBox>
             <MDBox display="flex" alignItems="center" gap={1}>
-              <MDTypography variant="body2" fontWeight="medium">Filter by Type:</MDTypography>
+              <MDTypography variant="body2" fontWeight="medium">
+                Filter by Type:
+              </MDTypography>
               <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel>Type</InputLabel>
                 <Select value={requestType} onChange={handleTypeChange} label="Type">
@@ -760,13 +1023,17 @@ export default function ApprovalRequests() {
 
         {error && (
           <MDBox mb={2} p={2} sx={{ bgcolor: "error.light", borderRadius: 1 }}>
-            <MDTypography variant="body2" color="error">{error}</MDTypography>
+            <MDTypography variant="body2" color="error">
+              {error}
+            </MDTypography>
           </MDBox>
         )}
 
         {success && (
           <MDBox mb={2} p={2} sx={{ bgcolor: "success.light", borderRadius: 1 }}>
-            <MDTypography variant="body2" color="success">{success}</MDTypography>
+            <MDTypography variant="body2" color="success">
+              {success}
+            </MDTypography>
           </MDBox>
         )}
 
@@ -792,7 +1059,9 @@ export default function ApprovalRequests() {
             ]}
             noDataComponent={
               <MDBox display="flex" sx={{ padding: "20px", justifyContent: "center" }}>
-                <MDTypography variant="body2" color="textSecondary">No requests found.</MDTypography>
+                <MDTypography variant="body2" color="textSecondary">
+                  No requests found.
+                </MDTypography>
               </MDBox>
             }
           />
@@ -801,21 +1070,35 @@ export default function ApprovalRequests() {
         {/* View Details Dialog */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
           <DialogTitle>
-            <MDTypography variant="h5">{selectedRequest?.type.charAt(0).toUpperCase() + selectedRequest?.type.slice(1)} Details</MDTypography>
+            <MDTypography variant="h5">
+              {selectedRequest?.type.charAt(0).toUpperCase() + selectedRequest?.type.slice(1)}{" "}
+              Details
+            </MDTypography>
           </DialogTitle>
           <DialogContent>{selectedRequest && renderRequestDetails(selectedRequest)}</DialogContent>
           <DialogActions>
-            <MDButton variant="contained" color="primary" onClick={() => setOpenDialog(false)} sx={{ padding: "6px 12px" }}>Close</MDButton>
+            <MDButton
+              variant="contained"
+              color="primary"
+              onClick={() => setOpenDialog(false)}
+              sx={{ padding: "6px 12px" }}
+            >
+              Close
+            </MDButton>
           </DialogActions>
         </Dialog>
 
         {/* Note Dialog for Status Update */}
         <Dialog open={noteOpen} onClose={() => setNoteOpen(false)}>
           <DialogTitle>
-            <MDTypography variant="h5">Update Status to {selectedUpdate.status.replace(/_/g, " ")}</MDTypography>
+            <MDTypography variant="h5">
+              Update Status to {selectedUpdate.status.replace(/_/g, " ")}
+            </MDTypography>
           </DialogTitle>
           <DialogContent>
-            <MDTypography variant="body2" mb={2}>Add a note (optional):</MDTypography>
+            <MDTypography variant="body2" mb={2}>
+              Add a note (optional):
+            </MDTypography>
             <TextField
               multiline
               rows={3}
@@ -826,7 +1109,9 @@ export default function ApprovalRequests() {
             />
           </DialogContent>
           <DialogActions>
-            <MDButton onClick={() => setNoteOpen(false)} sx={{ padding: "6px 12px" }}>Cancel</MDButton>
+            <MDButton onClick={() => setNoteOpen(false)} sx={{ padding: "6px 12px" }}>
+              Cancel
+            </MDButton>
             <MDButton
               variant="contained"
               color="primary"

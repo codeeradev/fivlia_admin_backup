@@ -3,8 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
-import { startLoading, stopLoading } from "components/loader/appSlice";
-import { useDispatch } from "react-redux";
+import { get, post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function AddBanner() {
   const [controller] = useMaterialUIController();
@@ -29,13 +30,12 @@ function AddBanner() {
   const [selectedCityId, setSelectedCityId] = useState([]);
   const [imageError, setImageError] = useState("");
   const [bannerType, setBannerType] = useState("normal");
-  const dispatch = useDispatch();
 
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_ALL_ZONE);
+        const data = res.data;
         // Handle both old and new API response structures
         const cities = Array.isArray(data) ? data : data.result || data.data || [];
         setLocations(cities);
@@ -46,8 +46,8 @@ function AddBanner() {
 
     const fetchBrands = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_BRANDS);
+        const data = res.data;
         const brandList = Array.isArray(data) ? data : data.allBrands || data.allBrand || [];
         setBrands(brandList);
       } catch (err) {
@@ -59,8 +59,8 @@ function AddBanner() {
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_MAIN_CATEGORY);
+        const data = res.data;
         // Handle both old and new API response structures
         const categories = Array.isArray(data) ? data : data.result || data.data || [];
         setMain(categories);
@@ -79,32 +79,31 @@ function AddBanner() {
   );
 
   useEffect(() => {
-  const selectedCitiesData = locations.filter(loc => selectedCityId.includes(loc._id));
+    const selectedCitiesData = locations.filter((loc) => selectedCityId.includes(loc._id));
 
-  let allZones = [];
-  selectedCitiesData.forEach(city => {
-    if (city.zones) {
-      allZones = [
-        ...allZones,
-        ...city.zones.map(z => ({
-          address: z.address,
-          latitude: z.latitude,
-          longitude: z.longitude,
-          range: z.range
-        }))
-      ];
-    }
-  });
+    let allZones = [];
+    selectedCitiesData.forEach((city) => {
+      if (city.zones) {
+        allZones = [
+          ...allZones,
+          ...city.zones.map((z) => ({
+            address: z.address,
+            latitude: z.latitude,
+            longitude: z.longitude,
+            range: z.range,
+          })),
+        ];
+      }
+    });
 
-  setZones(allZones);
-}, [selectedCityId, locations]);
-
+    setZones(allZones);
+  }, [selectedCityId, locations]);
 
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllStore`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_ALL_STORE);
+        const data = res.data;
         const storeList = Array.isArray(data) ? data : data.stores || [];
         setStores(storeList);
       } catch (err) {
@@ -158,16 +157,15 @@ function AddBanner() {
 
   const handleBanner = async () => {
     if (!name || !imageFile || !selectedCityId || zones.length === 0) {
-      alert("Please fill all required fields.");
+      showAlert("error", "Please fill all required fields");
       return;
     }
     if (imageError) {
-      alert(`Please fix image errors: ${imageError}`);
+      showAlert("error", imageError);
       return;
     }
 
     const formData = new FormData();
-    dispatch(startLoading());
     formData.append("title", name);
     formData.append("type", bannerType);
     formData.append("city", JSON.stringify(selectedCityId));
@@ -176,15 +174,13 @@ function AddBanner() {
 
     if (type === "Brand") {
       if (!selectedBrandId) {
-        dispatch(stopLoading());
-        alert("Please select a brand.");
+        showAlert("error", "Please select a brand");
         return;
       }
       formData.append("brand", selectedBrandId);
     } else if (type === "Store") {
       if (!storeId) {
-        dispatch(stopLoading());
-        alert("Please select a Store.");
+        showAlert("error", "Please select a store");
         return;
       }
       formData.append("storeId", storeId || "");
@@ -198,26 +194,16 @@ function AddBanner() {
     formData.append("zones", JSON.stringify(zones));
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/banner`, {
-        method: "POST",
-        body: formData,
+      showAlert("loading", "Saving banner...");
+      const response = await post(ENDPOINTS.ADD_BANNER, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        dispatch(stopLoading());
-        alert("✅ Banner Added Successfully!");
-        navigate(-1);
-      } else {
-        dispatch(stopLoading());
-        console.error("Response error:", result);
-        alert("Something went wrong: " + (result.message || "Server Error"));
-      }
+      showAlert("success", "Banner added successfully");
+      navigate(-1);
     } catch (error) {
-      dispatch(stopLoading());
       console.error("Network or Server Error:", error);
-      alert("Server Error. Please try again.");
+      showAlert("error", "Failed to add banner");
     }
   };
 
@@ -297,31 +283,30 @@ function AddBanner() {
         )}
 
         {/* City */}
-     <div style={formRowStyle}>
-  <label style={labelStyle}>City</label>
-  <select
-    style={inputStyle}
-    value=""
-    onChange={(e) => {
-      const value = e.target.value;
-      if (!value) return;
+        <div style={formRowStyle}>
+          <label style={labelStyle}>City</label>
+          <select
+            style={inputStyle}
+            value=""
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) return;
 
-      // Add new city without removing old
-      setSelectedCityId((prev) => {
-        if (prev.includes(value)) return prev; // prevent duplicate
-        return [...prev, value];
-      });
-    }}
-  >
-    <option value="">-- Select City --</option>
-    {locations.map((loc) => (
-      <option key={loc._id} value={loc._id}>
-        {loc.city || loc.name || "Unknown City"}
-      </option>
-    ))}
-  </select>
-</div>
-
+              // Add new city without removing old
+              setSelectedCityId((prev) => {
+                if (prev.includes(value)) return prev; // prevent duplicate
+                return [...prev, value];
+              });
+            }}
+          >
+            <option value="">-- Select City --</option>
+            {locations.map((loc) => (
+              <option key={loc._id} value={loc._id}>
+                {loc.city || loc.name || "Unknown City"}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Display Selected Zones */}
         {selectedCity && (

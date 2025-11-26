@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Chip } from "@mui/material";
+import { get, del } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -30,11 +33,15 @@ function Filter() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
-        setFilterData(data);
+        showAlert("loading", "Fetching filters...");
+
+        const res = await get(ENDPOINTS.GET_FILTER);
+        setFilterData(res.data);
+
+        showAlert("success", "Filters loaded successfully");
       } catch (err) {
         console.error("Error fetching Filters:", err);
+        showAlert("error", "Failed to load filters");
       }
     };
     fetchFilters();
@@ -44,23 +51,22 @@ function Filter() {
     const confirmDelete = window.confirm("Are you sure you want to delete this Variant?");
     if (!confirmDelete) return;
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/deleteFilterVal/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (result.status === 200) {
-        alert("Value Deleted Successfully");
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
-        setFilterData(data);
-      } else {
-        alert("Failed to delete filter value");
-      }
+      showAlert("loading", "Deleting value...");
+
+      await del(`${ENDPOINTS.DELETE_FILTER_VALUE}/${id}`);
+
+      // Update UI locally
+      setFilterData((prev) =>
+        prev.map((filter) => ({
+          ...filter,
+          Filter: filter.Filter.filter((item) => item._id !== id),
+        }))
+      );
+
+      showAlert("success", "Value deleted successfully");
     } catch (err) {
       console.error("Error deleting filter value:", err);
-      alert("Failed to delete filter value. Please try again.");
+      showAlert("error", "Failed to delete value");
     }
   };
 
@@ -68,24 +74,16 @@ function Filter() {
     const confirmDelete = window.confirm("Are you sure you want to delete this Filter?");
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/deleteFilter/${filterId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      showAlert("loading", "Deleting filter...");
 
-      if (res.status === 200) {
-        alert("Filter deleted successfully");
-        setFilterData((prevFilters) =>
-          prevFilters.filter((filter) => filter._id !== filterId)
-        );
-      } else {
-        alert("Failed to delete filter");
-      }
+      await del(`${ENDPOINTS.DELETE_FILTER}/${filterId}`);
+
+      setFilterData((prevFilters) => prevFilters.filter((filter) => filter._id !== filterId));
+
+      showAlert("success", "Filter deleted successfully");
     } catch (error) {
       console.error("Error deleting filter:", error);
-      alert("Failed to delete filter. Please try again.");
+      showAlert("error", "Failed to delete filter");
     }
   };
 
@@ -169,7 +167,9 @@ function Filter() {
                             <Chip
                               key={idx}
                               label={filterItem.name}
-                              onDelete={() => handleRemoveFilterValue(filterItem._id, filterItem.name)}
+                              onDelete={() =>
+                                handleRemoveFilterValue(filterItem._id, filterItem.name)
+                              }
                               style={{
                                 backgroundColor: "#e0f7fa",
                                 color: "#00796b",
@@ -178,7 +178,14 @@ function Filter() {
                                 borderRadius: "16px",
                               }}
                               deleteIcon={
-                                <span style={{ fontSize: "16px", color: "red", cursor: "pointer", marginRight: "10px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "16px",
+                                    color: "red",
+                                    cursor: "pointer",
+                                    marginRight: "10px",
+                                  }}
+                                >
                                   ×
                                 </span>
                               }
@@ -190,7 +197,14 @@ function Filter() {
                       </div>
                     </td>
                     <td style={bodyCell}>
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
                         <button
                           style={{
                             backgroundColor: "#007bff",
@@ -233,8 +247,7 @@ function Filter() {
               alignItems: "center",
               flexWrap: "wrap",
             }}
-          >
-          </div>
+          ></div>
         </div>
       </div>
     </MDBox>

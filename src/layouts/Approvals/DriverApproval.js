@@ -28,6 +28,9 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 
 import DataTable from "react-data-table-component";
 
+import { get, del, post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 export default function DriversApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -60,9 +63,8 @@ export default function DriversApprovalRequests() {
   const fetchRequests = async () => {
     try {
       dispatch(startLoading());
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getDriverRequest`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Fetch failed");
+      const res = await get(ENDPOINTS.GET_DRIVER_REQUEST);
+      const data = res.data;
 
       setDriverRequests(Array.isArray(data.requests) ? data.requests : []);
     } catch {
@@ -83,16 +85,9 @@ export default function DriversApprovalRequests() {
     try {
       dispatch(startLoading());
       const body = { type: "driver", approval: action, id };
-      
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/acceptDeclineRequest`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message);
+      const res = await put(ENDPOINTS.DRIVER_APPROVAL, body);
+      const json = res.data;
 
       setDriverRequests((prev) =>
         prev.map((d) => (d._id === id ? { ...d, approveStatus: action } : d))
@@ -150,13 +145,10 @@ export default function DriversApprovalRequests() {
       form.append("drivingLicence", dlFront);
       form.append("drivingLicence", dlBack);
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/editDriver/${uploadDriver._id}`, {
-        method: "PUT",
-        body: form,
+      const res = await put(`${ENDPOINTS.EDIT_DRIVER}/${uploadDriver._id}`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Upload failed");
+      const json = res.data;
 
       Swal.fire("Success", "Documents updated", "success");
 

@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -30,11 +33,14 @@ function Tax() {
   useEffect(() => {
     const fetchAttribute = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
-        const data = await res.json();
-        setAttribute(data.result);
+        showAlert("loading", "Fetching taxes...");
+        const res = await get(ENDPOINTS.GET_TAX);
+        setAttribute(res.data.result);
+
+        showAlert("success", "Taxes loaded successfully");
       } catch (err) {
         console.error("Error fetching locations:", err);
+        showAlert("error", "Failed to load taxes");
       }
     };
     fetchAttribute();
@@ -44,20 +50,20 @@ function Tax() {
     const confirmDelete = window.confirm("Are you sure you want to delete this tax?");
     if (!confirmDelete) return;
     try {
+      showAlert("loading", "Deleting tax...");
       const result = await fetch(`https://node-m8jb.onrender.com/deleteTax/${id}`, {
-        method: "DELETE"
-      })
+        method: "DELETE",
+      });
       if (result.status === 200) {
-        alert('Tax Deleted Successfully')
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
-        const data = await res.json();
-        setAttribute(data.result);
+        showAlert("success", "Tax deleted successfully");
+        const res = await get(ENDPOINTS.GET_TAX);
+        setAttribute(res.data.result);
       }
-    }
-    catch (err) {
+    } catch (err) {
       console.log(err);
+      showAlert("error", "Failed to delete tax");
     }
-  }
+  };
 
   return (
     <MDBox
@@ -133,7 +139,9 @@ function Tax() {
                     <td style={bodyCell}>{index + 1}</td>
                     <td style={bodyCell}>{item.value}</td>
                     <td style={bodyCell}>
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <div
+                        style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+                      >
                         <button
                           style={{
                             backgroundColor: "#007BFF",
@@ -144,7 +152,7 @@ function Tax() {
                             cursor: "pointer",
                             marginRight: "10px",
                           }}
-                          onClick={()=>navigate('/edit-tax',{state:item})}
+                          onClick={() => navigate("/edit-tax", { state: item })}
                         >
                           Edit
                         </button>
@@ -178,8 +186,7 @@ function Tax() {
               alignItems: "center",
               flexWrap: "wrap",
             }}
-          >
-          </div>
+          ></div>
         </div>
       </div>
     </MDBox>

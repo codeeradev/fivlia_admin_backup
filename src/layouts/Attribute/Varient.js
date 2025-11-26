@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -30,11 +33,13 @@ function VarientTabel() {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getUnit`);
-        const data = await res.json();
-        setUnits(data.Result);
+        showAlert("loading", "Fetching Units...");
+        const res = await get(ENDPOINTS.GET_UNIT);
+        const data = res.data;
+        setUnits(data);
       } catch (err) {
         console.error("Error fetching locations:", err);
+        showAlert("error", "Failed to load units");
       }
     };
     fetchUnits();
@@ -112,9 +117,11 @@ function VarientTabel() {
                 {units.map((item, index) => (
                   <tr key={item._id}>
                     <td style={bodyCell}>{index + 1}</td>
-                     <td style={bodyCell}>{item.unitname}</td>
+                    <td style={bodyCell}>{item.unitname}</td>
                     <td style={bodyCell}>
-                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <div
+                        style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+                      >
                         <button
                           style={{
                             backgroundColor: "#007BFF",
@@ -144,8 +151,7 @@ function VarientTabel() {
               alignItems: "center",
               flexWrap: "wrap",
             }}
-          >
-          </div>
+          ></div>
         </div>
       </div>
     </MDBox>

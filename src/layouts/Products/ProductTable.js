@@ -13,6 +13,10 @@ import {
   Modal,
   Box,
 } from "@mui/material";
+
+import { get, del, post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 import InfoIcon from "@mui/icons-material/Info";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useMaterialUIController } from "context";
@@ -20,7 +24,10 @@ import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import ImagePicker from "components/products/imagePicker";
+import ImageUploadPanel from "components/products/imageUpload";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import TaxHeader from "components/tax/fetchTax";
 
 // Styles for table headers and cells
 const headerCell = {
@@ -63,24 +70,33 @@ function ProductTable() {
   const [popoverIndex, setPopoverIndex] = useState(null);
   const [popoverType, setPopoverType] = useState("");
   const [uploadPreview, setUploadPreview] = useState(null);
+  const [imageUploadPreview, setImageUploadPreview] = useState(null);
+  const [taxInfo, setTaxInfo] = useState({
+    header: "Tax",
+    values: [],
+    defaultValue: "",
+  });
+
+  const [openImagePreviewModal, setOpenImagePreviewModal] = useState(false);
   const [openFormatModal, setOpenFormatModal] = useState(false);
   const [csvPreviewRows, setCsvPreviewRows] = useState([]);
   const [openCsvPreviewModal, setOpenCsvPreviewModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [bulkUploadedImages, setBulkUploadedImages] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await fetch(
-          `${
-            process.env.REACT_APP_API_URL
-          }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
-            searchQuery
-          )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
-            selectedCategory
-          )}`
-        );
-        const res = await result.json();
+        const query = `?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
+          searchQuery
+        )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
+          selectedCategory
+        )}`;
+
+        const resp = await get(`${ENDPOINTS.GET_PRODUCTS}${query}`);
+        const res = resp.data;
+
         setData(res.Product || []);
         setTotalItems(res.count || 0);
         setTotalPages(res.totalPages || 1);
@@ -114,29 +130,12 @@ function ProductTable() {
     if (!confirmDelete) return;
 
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/deleteProduct/${id}`, {
-        method: "DELETE",
-      });
+      const result = await del(`${ENDPOINTS.DELETE_PRODUCT}/${id}`);
 
       if (result.status === 200) {
         showAlert("success", "Product deleted successfully");
         // Refetch products with current page and limit
-        const result = await fetch(
-          `${
-            process.env.REACT_APP_API_URL
-          }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(search)}`
-        );
-        const res = await result.json();
-        const products = res.Product || [];
-        setData(products);
-        setTotalItems(res.count || 0);
-        setTotalPages(res.totalPages || 1);
-
-        const updatedStatus = products.reduce((acc, cur) => {
-          acc[cur._id] = cur.status === true;
-          return acc;
-        }, {});
-        setPublicStatus(updatedStatus);
+        fetchProducts();
       } else {
         showAlert("error", "Failed to delete product");
       }
@@ -171,16 +170,13 @@ function ProductTable() {
 
   const fetchProducts = async () => {
     try {
-      const result = await fetch(
-        `${
-          process.env.REACT_APP_API_URL
-        }/adminProducts?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
-          search
-        )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
-          selectedCategory
-        )}`
-      );
-      const res = await result.json();
+      const query = `?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
+        searchQuery
+      )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(selectedCategory)}`;
+
+      const resp = await get(`${ENDPOINTS.GET_PRODUCTS}${query}`);
+      const res = resp.data;
+
       setData(res.Product || []);
       setTotalItems(res.count || 0);
       setTotalPages(res.totalPages || 1);
@@ -334,6 +330,7 @@ function ProductTable() {
         "Description",
         "Mrp",
         "Price",
+        taxInfo.header,
         "Feature Product (0 = false, 1 = true)",
         "Category (CAT = (Main Category Id), SUB = (Sub Category Id), SUBB = (Sub Sub Category Id))",
         "Brand",
@@ -343,87 +340,18 @@ function ProductTable() {
       ],
 
       [
-        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
+        "image1.jpg",
         "Burger",
         "Deluxe burger",
         "150",
         "120",
+        "5",
         "1",
         "CAT01",
         "BRD01",
         "VAR03",
         "0",
         "2",
-      ],
-
-      [
-        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
-        "Chowmein",
-        "Chowmein from china",
-        "80",
-        "60",
-        "1",
-        "SUBB01",
-        "BRD01",
-        "VAR01",
-        "0",
-        "1",
-      ],
-
-      [
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
-        "Shoes",
-        "Nike shoes brand new",
-        "300",
-        "250",
-        "0",
-        "SUB01",
-        "BRD01",
-        "VAR01",
-        "0",
-        "0",
-      ],
-
-      [
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
-        "Laptop Bag",
-        "HP laptop bag",
-        "350",
-        "300",
-        "0",
-        "CAT01",
-        "BRD01",
-        "VAR01",
-        "0",
-        "0",
-      ],
-
-      [
-        "https://images.unsplash.com/photo-1503602642458-232111445657?w=800",
-        "Shirt",
-        "Balenciaga shirt white",
-        "70",
-        "50",
-        "1",
-        "SUBB01",
-        "BRD01",
-        "VAR01",
-        "0",
-        "0",
-      ],
-
-      [
-        "https://images.unsplash.com/photo--232111445657?w=800",
-        "Maggi",
-        "Nestle Maggi",
-        "120",
-        "100",
-        "0",
-        "SUB01",
-        "BRD02",
-        "VAR02",
-        "0",
-        "1",
       ],
     ];
 
@@ -468,6 +396,7 @@ function ProductTable() {
 
       setCsvPreviewRows(rows);
       showAlert("close");
+      fetchProducts();
       setOpenCsvPreviewModal(true);
     };
 
@@ -482,6 +411,7 @@ function ProductTable() {
         transition: "margin-left 0.3s ease",
       }}
     >
+      <TaxHeader onReady={(tax) => setTaxInfo(tax)} />
       <div style={{ borderRadius: 15, padding: 20, overflowX: "auto" }}>
         {/* Header */}
         <div
@@ -574,19 +504,23 @@ function ProductTable() {
               <option value={1000}>1000</option>
             </select>
           </div>
-          <Button
-            style={{
-              backgroundColor: "#0288d1",
-              height: 45,
-              width: 200,
-              fontSize: 13,
-              color: "white",
-              letterSpacing: "1px",
-            }}
-            onClick={() => setOpenFormatModal(true)}
-          >
-            CSV Format Guide
-          </Button>
+          <div style={{ display: "flex", gap: 15 }}>
+            <Button
+              style={{
+                backgroundColor: "#0288d1",
+                height: 45,
+                width: 200,
+                fontSize: 13,
+                color: "white",
+                letterSpacing: "1px",
+              }}
+              onClick={() => setOpenFormatModal(true)}
+            >
+              CSV Format Guide
+            </Button>
+
+            <ImagePicker onSelect={(files) => setSelectedImages((prev) => [...prev, ...files])} />
+          </div>
 
           <div style={{ display: "flex", gap: 30 }}>
             <div>
@@ -679,6 +613,81 @@ function ProductTable() {
             </div>
           </div>
         </div>
+        <ImageUploadPanel
+          images={selectedImages}
+          clearImages={(newArr = []) => setSelectedImages(newArr)}
+          onUploaded={(result) => {
+            setImageUploadPreview(result);
+            setOpenImagePreviewModal(true);
+            setBulkUploadedImages(result.images); // <-- perfectly isolated preview
+            fetchProducts();
+          }}
+        />
+        {bulkUploadedImages && (
+          <div
+            style={{
+              marginTop: 25,
+              padding: 25,
+              borderRadius: 12,
+              background: "#fff",
+              border: "1px solid #ddd",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 15,
+                fontSize: 20,
+                fontWeight: 700,
+                borderBottom: "2px solid #6a1b9a",
+                paddingBottom: 8,
+                width: "fit-content",
+              }}
+            >
+              Uploaded Images (API Response)
+            </h3>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                gap: 18,
+              }}
+            >
+              {bulkUploadedImages.map((img, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: "1px solid #eee",
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "#fafafa",
+                  }}
+                >
+                  <img
+                    src={img.url}
+                    alt={img.fileName}
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      marginBottom: 8,
+                    }}
+                  />
+
+                  <div style={{ fontSize: 12 }}>
+                    <b>{img.fileName}</b>
+                    <br />
+                    {img.sizeInKB} KB
+                    <br />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* CSV Preview Panel */}
         {uploadPreview && (
@@ -709,7 +718,6 @@ function ProductTable() {
             </h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
-
               {/* INVALID IMAGES */}
               {uploadPreview.invalidImages.length > 0 && (
                 <div
@@ -1325,7 +1333,7 @@ function ProductTable() {
                       >
                         {col.toLowerCase() === "image" ? (
                           <img
-                            src={row[col]}
+                            src={`${process.env.REACT_APP_IMAGE_LINK}/ProductImages/${row[col]}`}
                             alt="preview"
                             style={{
                               width: 60,
@@ -1387,12 +1395,9 @@ function ProductTable() {
                 const formData = new FormData();
                 formData.append("file", csvFile);
 
-                const res = await fetch(`${process.env.REACT_APP_API_URL}/Product/bulk`, {
-                  method: "POST",
-                  body: formData,
-                });
+                const res = await post(ENDPOINTS.BULK_UPLOAD, formData);
 
-                const result = await res.json();
+                const result = res.data;
                 if (res.status === 201) {
                   showAlert("success", `Uploaded Successfully`);
                   setUploadPreview(result.preview);

@@ -1,7 +1,12 @@
+import { get } from 'api/apiClient';
+import { ENDPOINTS } from 'api/endPoints';
+
 export const getEnvFromApi = async () => {
   try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getSmsType`);
-    const data = await res.json();
+    // GET_SMS_TYPE
+    const res = await get(ENDPOINTS.GET_SMS_TYPE);
+
+    const data = res.data;
 
     return {
       REACT_APP_GOOGLE_MAPS_API_KEY: data.Map_Api?.[0]?.google?.api_key || "",

@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { Button, Modal, Box } from "@mui/material";
 import { useMaterialUIController } from "context";
 
+import { get, post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 const modalStyle = {
   position: "absolute",
   top: "50%",
@@ -42,9 +45,8 @@ function Charity() {
   }, []);
 
   const fetchCharities = async () => {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getCharity`);
-    const data = await res.json();
-    setCharities(data.data);
+    const res = await get(ENDPOINTS.GET_CHARITY);
+    setCharities(res.data.data);
   };
 
   const openAddModal = () => {
@@ -72,9 +74,8 @@ function Charity() {
     formData.append("content", content);
     if (image) formData.append("image", image);
 
-    await fetch(`${process.env.REACT_APP_API_URL}/addCharity`, {
-      method: "POST",
-      body: formData,
+    await post(ENDPOINTS.ADD_CHARITY, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     setOpenModal(false);
@@ -214,9 +215,7 @@ function Charity() {
               onChange={(e) => setContent(e.target.value)}
             />
 
-            <label style={{ fontSize: 14, fontWeight: "bold" }}>
-              Upload Image
-            </label>
+            <label style={{ fontSize: 14, fontWeight: "bold" }}>Upload Image</label>
             <input
               type="file"
               style={{ marginBottom: 20 }}
