@@ -5,6 +5,10 @@ import Modal from "@mui/material/Modal";
 import { FaSortUp, FaSortDown, FaMapMarkerAlt, FaUser, FaPhoneAlt } from "react-icons/fa";
 import { CSVLink } from "react-csv";
 import { io } from "socket.io-client";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { getAllZones } from "components/commonApi/commonApi";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const Orders = ({ showHeader = true, isDashboard = false }) => {
   const [controller] = useMaterialUIController();
@@ -24,8 +28,8 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState("");
+  // const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -37,125 +41,111 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   const restrictedStatuses = ["Going to Pickup", "Picked Up", "On The Way", "Delivered"];
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    showAlert("loading", "Loading orders...");
+
     try {
       const [ordersRes, storesRes, zonesRes, driversRes, statusesRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_API_URL}/orders`),
-        fetch(`${process.env.REACT_APP_API_URL}/getStore`),
-        fetch(`${process.env.REACT_APP_API_URL}/getAllZone`),
-        fetch(`${process.env.REACT_APP_API_URL}/getDriver`),
-        fetch(`${process.env.REACT_APP_API_URL}/getdeliveryStatus`),
+        get(ENDPOINTS.GET_ORDERS),
+        get(ENDPOINTS.GET_STORE),
+        getAllZones(), // common API
+        get(ENDPOINTS.GET_DRIVERS),
+        get(ENDPOINTS.GET_DELIVERY_STATUS),
       ]);
       // Handle Orders
-      const ordersData = await ordersRes.json();
+      const ordersData = ordersRes.data;
+      const storesData = storesRes.data;
+      const zonesData = zonesRes.data;
+      const driversData = driversRes.data;
+      const statusesData = statusesRes.data;
+
       // console.log("Orders API response:", ordersData);
-      if (ordersData.orders && Array.isArray(ordersData.orders)) {
-        setOrders(ordersData.orders);
-      } else {
-        setError("Failed to load orders: Invalid data format");
-      }
+      if (ordersData?.orders) setOrders(ordersData.orders);
 
       // Handle Stores
-      const storesData = await storesRes.json();
       // console.log("Stores API response:", storesData);
-      if (storesData.stores && Array.isArray(storesData.stores)) {
-        const mappedStores = storesData.stores.map((s) => ({
-          id: s._id.$oid || s._id,
-          name: s.storeName || "Unknown",
-          address: s.Latitude && s.Longitude ? `${s.Latitude}, ${s.Longitude}` : s.city?.name || "Unknown",
-          zones: Array.isArray(s.zone) ? s.zone.map((z) => ({ id: z._id.$oid || z._id, title: z.title || "Unknown" })) : [],
-        }));
-        setStores(mappedStores);
-        // console.log("Mapped stores:", mappedStores);
-      } else {
-        setError((prev) => prev + (prev ? ", " : "") + "Failed to load stores: Invalid data format");
+      if (storesData?.stores) {
+        setStores(
+          storesData.stores.map((s) => ({
+            id: s._id?.$oid || s._id,
+            name: s.storeName,
+            address:
+              s.Latitude && s.Longitude
+                ? `${s.Latitude}, ${s.Longitude}`
+                : s.city?.name || "Unknown",
+            zones: Array.isArray(s.zone)
+              ? s.zone.map((z) => ({
+                  id: z._id?.$oid || z._id,
+                  title: z.title || "Unknown",
+                }))
+              : [],
+          }))
+        );
       }
 
-      // Handle Zones
-      const zonesData = await zonesRes.json();
       // console.log("Zones API response:", zonesData);
       if (Array.isArray(zonesData)) {
-        const zoneList = zonesData.reduce((acc, city) => {
-          if (city?.zones && Array.isArray(city.zones)) {
-            return [
-              ...acc,
-              ...city.zones.map((zone) => ({
-                id: zone._id.$oid || zone._id,
+        setZones(
+          zonesData.flatMap(
+            (city) =>
+              city?.zones?.map((zone) => ({
+                id: zone._id?.$oid || zone._id,
                 title: zone.zoneTitle || "Unknown",
                 city: city.city || "Unknown",
-              })),
-            ];
-          }
-          return acc;
-        }, []);
-        setZones(zoneList);
-      } else {
-        setError((prev) => prev + (prev ? ", " : "") + "Failed to load zones");
+              })) || []
+          )
+        );
+      }
+      if (driversData?.Driver) {
+        setDrivers(
+          driversData.Driver.map((d) => ({
+            id: d._id,
+            driverId: d.driverId,
+            name: d.driverName,
+          }))
+        );
       }
 
-      // Handle Drivers
-      const driversData = await driversRes.json();
-      // console.log("Drivers API response:", driversData);
-      if (driversData.Driver && Array.isArray(driversData.Driver)) {
-        const mappedDrivers = driversData.Driver.map((d) => ({
-          id: d._id,
-          driverId: d.driverId,
-          name: d.driverName || "Unknown",
-        }));
-        setDrivers(mappedDrivers);
-        // console.log("Mapped drivers:", mappedDrivers);
-      } else {
-        console.error("Invalid drivers data format:", driversData);
-        setError((prev) => prev + (prev ? ", " : "") + "Failed to load drivers: Invalid data format");
-      }
-
-      // Handle Delivery Statuses
-      const statusesData = await statusesRes.json();
-      // console.log("Delivery Statuses API response:", statusesData);
-      if (statusesData.Status && Array.isArray(statusesData.Status)) {
-        const mappedStatuses = statusesData.Status
-          .map(status => (status.statusTitle || status.status || status.name || "").trim())
-          .filter(status => status);
-        const uniqueStatuses = [...new Set(mappedStatuses)]
-          .map(status => status.charAt(0).toUpperCase() + status.slice(1))
+      // Delivery statuses
+      if (statusesData?.Status) {
+        const unique = [
+          ...new Set(
+            statusesData.Status.map((s) => (s.statusTitle || s.status || s.name || "").trim())
+          ),
+        ]
+          .filter(Boolean)
+          .map((s) => s[0].toUpperCase() + s.slice(1))
           .sort();
-        setDeliveryStatuses(uniqueStatuses);
-        // console.log("Mapped delivery statuses:", uniqueStatuses);
-      } else {
-        console.error("Invalid delivery statuses data format:", statusesData);
-        setError((prev) => prev + (prev ? ", " : "") + "Failed to load delivery statuses: Invalid data format");
-        setDeliveryStatuses([]);
+
+        setDeliveryStatuses(unique);
       }
+
+      showAlert("success", "Orders loaded");
     } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Failed to load data. Please try again.");
-      setDeliveryStatuses([]);
-    } finally {
-      setLoading(false);
+      console.error(err);
+      showAlert("error", "Failed to load data");
     }
   }, []);
 
   useEffect(() => {
-  const newSocket = io(process.env.REACT_APP_API_URL, {
-    transports: ["websocket"],
-  });
+    const newSocket = io(process.env.REACT_APP_API_URL, {
+      transports: ["websocket"],
+    });
 
-  setSocket(newSocket);
+    setSocket(newSocket);
 
-  // Join admin room
-  newSocket.emit("joinAdmin");
+    // Join admin room
+    newSocket.emit("joinAdmin");
 
-  // Listen for new orders
-  newSocket.on("storeOrder",(data) => {
-    console.log("🟢 New order received for admin:", data);
+    // Listen for new orders
+    newSocket.on("storeOrder", (data) => {
+      console.log("🟢 New order received for admin:", data);
 
-    fetchData();
-  })
-  return () => {
-    newSocket.disconnect();
-  };
-}, [fetchData]);
+      fetchData();
+    });
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -190,7 +180,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   };
 
   const handleStatusChange = (orderId, newStatus) => {
-    const order = orders.find(o => o._id === orderId);
+    const order = orders.find((o) => o._id === orderId);
     if (restrictedStatuses.includes(newStatus) && !order.driver?.driverId && !order.driverId) {
       setPendingOrderId(orderId);
       setPendingStatus(newStatus);
@@ -201,7 +191,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   };
 
   const handleDriverSelection = async (mongoId) => {
-    console.log('mongoId', mongoId)
+    console.log("mongoId", mongoId);
     if (!mongoId) {
       setShowDriverModal(false);
       return;
@@ -215,64 +205,50 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   const handleOrderUpdate = async (id, status, driverId) => {
     setStatusUpdating(true);
     setDriverUpdating(true);
+    showAlert("loading", "Updating order...");
     try {
       const body = {};
       if (status) body.status = status;
       if (driverId) body.driverId = driverId;
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/orderStatus/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        const updatedOrder = await res.json();
-        setOrders((prev) =>
-          prev.map((order) =>
-            order._id === id
-              ? {
-                ...order,
-                orderStatus: updatedOrder.update.orderStatus || order.orderStatus,
-                driver: updatedOrder.update.driver || order.driver,
-              }
-              : order
-          )
-        );
-        setSelectedOrder((prev) =>
-          prev?._id === id
+      const res = await put(`${ENDPOINTS.UPDATE_ORDER_STATUS}/${id}`, body);
+      const updated = res.data.update;
+
+      if (!updated) {
+        showAlert("error", "Failed to update order");
+        return;
+      }
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === id
             ? {
+                ...order,
+                orderStatus: updated.orderStatus,
+                driver: updated.driver,
+              }
+            : order
+        )
+      );
+      setSelectedOrder((prev) =>
+        prev?._id === id
+          ? {
               ...prev,
-              orderStatus: updatedOrder.update.orderStatus || prev.orderStatus,
-              driver: updatedOrder.update.driver || prev.driver,
+              orderStatus: updated.orderStatus,
+              driver: updated.driver,
             }
-            : prev
-        );
-        if (status === "Delivered") {
-        const order = orders.find((o) => o._id === id);
-        if (!order || !order.orderId) {
-          setError("Order ID not found");
-          return;
-        }
+          : prev
+      );
+
+      if (status === "Delivered" && updated.orderId) {
         try {
-          const walletRes = await fetch(`${process.env.REACT_APP_API_URL}/driverWallet/${order.orderId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (!walletRes.ok) {
-            console.error("Failed to update driver wallet:", await walletRes.json());
-            setError("Failed to update driver wallet");
-          } else {
-            console.log("Driver wallet updated successfully");
-          }
-        } catch (walletError) {
-          console.error("Error updating driver wallet:", walletError);
-          setError("Error updating driver wallet");
+          await put(`${ENDPOINTS.DRIVER_WALLET}/${updated.orderId}`, {});
+        } catch (e) {
+          showAlert("error", "Driver wallet update failed");
         }
       }
-      } else {
-        setError("Failed to update order");
-      }
-    } catch (err) {
-      setError("Error updating order");
+
+      showAlert("success", "Order updated");
+    } catch (e) {
+      showAlert("error", "Error updating order");
     } finally {
       setStatusUpdating(false);
       setDriverUpdating(false);
@@ -281,7 +257,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
   const handleInvoiceDownload = async (orderId) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/thermal-invoice/${orderId}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}${ENDPOINTS.INVOICE}/${orderId}`, {
         method: "GET", // Or POST, depending on route
       });
 
@@ -313,8 +289,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
     const matchesStore = !selectedStore || String(order.storeId?._id) === String(selectedStore);
     const matchesZone =
-      !selectedZone ||
-      zones.some((zone) => zone.id === selectedZone && zone.city === order.city);
+      !selectedZone || zones.some((zone) => zone.id === selectedZone && zone.city === order.city);
     const matchesStatus = !selectedStatus || order.orderStatus === selectedStatus;
 
     return matchesSearch && matchesStore && matchesZone && matchesStatus;
@@ -329,7 +304,10 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
     OrderID: order.orderId,
     Item: order.items?.[0]?.name || "-",
     Address: order.addressId?.fullAddress || "-",
-    Driver: order.driver?.name || drivers.find((d) => d.id === String(order.driver?.driverId || order.driverId))?.name || "-",
+    Driver:
+      order.driver?.name ||
+      drivers.find((d) => d.id === String(order.driver?.driverId || order.driverId))?.name ||
+      "-",
     Store: order.storeId?.storeName || "-",
     PaymentStatus: order.cashOnDelivery ? "Cash" : `Online (${order.paymentStatus || "-"})`,
     Status: order.orderStatus || "-",
@@ -699,29 +677,6 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
           .modal-button.cancel:hover {
             background: #c82333;
           }
-          .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            border-radius: 12px;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          .error-message {
-            color: #dc3545;
-            font-size: 14px;
-            margin-bottom: 16px;
-            text-align: center;
-          }
           @media (max-width: 768px) {
             .order-container {
               padding: 16px;
@@ -780,14 +735,13 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
       <MDBox
         p={3}
         style={{
-          marginLeft: isDashboard ? 0 : (miniSidenav ? "90px" : "280px"),
+          marginLeft: isDashboard ? 0 : miniSidenav ? "90px" : "280px",
           transition: "margin-left 0.3s ease",
           position: "relative",
         }}
       >
         <div className="order-container">
-          <div className="order-box" >
-            {error && <div className="error-message">{error}</div>}
+          <div className="order-box">
             <div className="header">
               <div>
                 {showHeader && (
@@ -795,10 +749,12 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                     {isDashboard ? "Recent Orders" : "Order Management"}
                   </h2>
                 )}
-                <p style={{ fontSize: "16px", color: "#7b809a", marginTop: "8px" }}>View and manage all orders</p>
+                <p style={{ fontSize: "16px", color: "#7b809a", marginTop: "8px" }}>
+                  View and manage all orders
+                </p>
               </div>
               <div style={{ display: "flex", gap: "16px" }}>
-                <button className="refresh-button" onClick={fetchData} disabled={loading}>
+                <button className="refresh-button" onClick={fetchData}>
                   Refresh
                 </button>
                 <CSVLink data={csvData} filename={"orders.csv"} className="export-button">
@@ -827,28 +783,52 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
               <div className="control-item">
                 <label>Store</label>
-                <select value={selectedStore} onChange={(e) => { setSelectedStore(e.target.value); setCurrentPage(1); }}>
+                <select
+                  value={selectedStore}
+                  onChange={(e) => {
+                    setSelectedStore(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
                   <option value="">All Stores</option>
                   {stores.map((store) => (
-                    <option key={store.id} value={store.id}>{store.name}</option>
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="control-item">
                 <label>Zone</label>
-                <select value={selectedZone} onChange={(e) => { setSelectedZone(e.target.value); setCurrentPage(1); }}>
+                <select
+                  value={selectedZone}
+                  onChange={(e) => {
+                    setSelectedZone(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
                   <option value="">All Zones</option>
                   {zones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>{zone.title}</option>
+                    <option key={zone.id} value={zone.id}>
+                      {zone.title}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="control-item">
                 <label>Status</label>
-                <select value={selectedStatus} onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
                   <option value="">All Statuses</option>
                   {deliveryStatuses.map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -857,7 +837,10 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Search by Order ID, Item, Address, Status..."
                   className="search-input"
                 />
@@ -865,31 +848,56 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
             </div>
 
             <div className="table-container">
-              {loading && (
-                <div className="loading-overlay">
-                  <div style={{ border: "5px solid #f3f3f3", borderTop: "5px solid #007bff", borderRadius: "50%", width: "32px", height: "32px", animation: "spin 1s linear infinite" }}></div>
-                </div>
-              )}
               <table className="orders-table">
                 <thead>
                   <tr>
-                    <th className="header-cell" onClick={() => handleSort("index")} style={{ width: "80px" }}>
-                      Sr No {sortConfig.key === "index" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("index")}
+                      style={{ width: "80px" }}
+                    >
+                      Sr No{" "}
+                      {sortConfig.key === "index" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
-                    <th className="header-cell" onClick={() => handleSort("orderId")} style={{ width: "120px" }}>
-                      Order ID {sortConfig.key === "orderId" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("orderId")}
+                      style={{ width: "120px" }}
+                    >
+                      Order ID{" "}
+                      {sortConfig.key === "orderId" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
-                    <th className="header-cell" onClick={() => handleSort("items[0].name")} style={{ width: "220px" }}>
-                      Order Details {sortConfig.key === "items[0].name" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("items[0].name")}
+                      style={{ width: "220px" }}
+                    >
+                      Order Details{" "}
+                      {sortConfig.key === "items[0].name" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
-                    <th className="header-cell" onClick={() => handleSort("addressId.fullAddress")} style={{ width: "200px" }}>
-                      Fullname/Address {sortConfig.key === "addressId.fullAddress" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("addressId.fullAddress")}
+                      style={{ width: "200px" }}
+                    >
+                      Fullname/Address{" "}
+                      {sortConfig.key === "addressId.fullAddress" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
                     <th className="header-cell" style={{ width: "160px" }}>
                       Driver
                     </th>
-                    <th className="header-cell" onClick={() => handleSort("storeId.storeName")} style={{ width: "200px" }}>
-                      Store {sortConfig.key === "storeId.storeName" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("storeId.storeName")}
+                      style={{ width: "200px" }}
+                    >
+                      Store{" "}
+                      {sortConfig.key === "storeId.storeName" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
                     <th className="header-cell" style={{ width: "120px" }}>
                       Invoice
@@ -897,8 +905,14 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                     <th className="header-cell" style={{ width: "160px" }}>
                       Payment Status
                     </th>
-                    <th className="header-cell" onClick={() => handleSort("orderStatus")} style={{ width: "140px" }}>
-                      Status {sortConfig.key === "orderStatus" && (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
+                    <th
+                      className="header-cell"
+                      onClick={() => handleSort("orderStatus")}
+                      style={{ width: "140px" }}
+                    >
+                      Status{" "}
+                      {sortConfig.key === "orderStatus" &&
+                        (sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />)}
                     </th>
                   </tr>
                 </thead>
@@ -906,9 +920,15 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                   {currentOrders.length > 0 ? (
                     currentOrders.map((order, index) => {
                       const item = order.items?.[0];
-                      const store = stores.find((s) => s.id === (order.storeId?._id?.$oid || order.storeId?._id));
-                      const variant = variants[order.items?.[0]?.productId?.$oid || item?.productId]?.find(
-                        (v) => (v._id?.$oid || v._id) === (order.items?.[0]?.varientId?.$oid || order.items?.[0]?.varientId)
+                      const store = stores.find(
+                        (s) => s.id === (order.storeId?._id?.$oid || order.storeId?._id)
+                      );
+                      const variant = variants[
+                        order.items?.[0]?.productId?.$oid || item?.productId
+                      ]?.find(
+                        (v) =>
+                          (v._id?.$oid || v._id) ===
+                          (order.items?.[0]?.varientId?.$oid || order.items?.[0]?.varientId)
                       );
                       return (
                         <tr key={order.orderId}>
@@ -936,35 +956,50 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                               onClick={() => setSelectedAddress(order.addressId)}
                               title={order.addressId?.fullAddress}
                             >
-                              {order.addressId?.fullName ? (
-                                order.addressId.fullName.length > 20
+                              {order.addressId?.fullName
+                                ? order.addressId.fullName.length > 20
                                   ? `${order.addressId.fullName.substring(0, 20)}...`
                                   : order.addressId.fullName
-                              ) : "-"}
+                                : "-"}
                             </span>
-                            <span style={{ display: "block", color: "#7b809a", fontSize: "12px", marginTop: "4px" }}>
-                              {order.addressId?.fullAddress ? (
-                                order.addressId.fullAddress.length > 25
+                            <span
+                              style={{
+                                display: "block",
+                                color: "#7b809a",
+                                fontSize: "12px",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {order.addressId?.fullAddress
+                                ? order.addressId.fullAddress.length > 25
                                   ? `${order.addressId.fullAddress.substring(0, 25)}...`
                                   : order.addressId.fullAddress
-                              ) : "-"}
+                                : "-"}
                             </span>
                           </td>
                           <td className="body-cell">
                             <select
                               className="driver-select"
                               value={order.driver?.driverId || order.driverId || ""}
-                              onChange={(e) => handleOrderUpdate(order._id, undefined, e.target.value)}
+                              onChange={(e) =>
+                                handleOrderUpdate(order._id, undefined, e.target.value)
+                              }
                               disabled={driverUpdating || !drivers.length}
                             >
                               <option value="">Unassigned</option>
                               {drivers.map((driver) => (
-                                <option key={driver.id} value={driver.id}>{driver.name}</option>
+                                <option key={driver.id} value={driver.id}>
+                                  {driver.name}
+                                </option>
                               ))}
                             </select>
                           </td>
                           <td className="body-cell store-cell">
-                            {order.storeId?.storeName ? `${order.storeId.storeName} (${store?.zones.map((z) => z.title).join(", ") || "Unknown"})` : "-"}
+                            {order.storeId?.storeName
+                              ? `${order.storeId.storeName} (${
+                                  store?.zones.map((z) => z.title).join(", ") || "Unknown"
+                                })`
+                              : "-"}
                           </td>
                           <td className="body-cell">
                             <button
@@ -976,12 +1011,12 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                           </td>
                           <td className="body-cell">
                             <span className={`payment-${order.cashOnDelivery ? "cash" : "online"}`}>
-                              {order.cashOnDelivery ? "Cash" : `Online (${order.paymentStatus || "-"})`}
+                              {order.cashOnDelivery
+                                ? "Cash"
+                                : `Online (${order.paymentStatus || "-"})`}
                             </span>
                             {!order.cashOnDelivery && order.transactionId && (
-                              <span className="transaction-id">
-                                Txn ID: {order.transactionId}
-                              </span>
+                              <span className="transaction-id">Txn ID: {order.transactionId}</span>
                             )}
                           </td>
                           <td className="body-cell">
@@ -992,7 +1027,9 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                               disabled={statusUpdating || !deliveryStatuses.length}
                             >
                               {deliveryStatuses.map((status) => (
-                                <option key={status} value={status}>{status}</option>
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
                               ))}
                             </select>
                           </td>
@@ -1001,7 +1038,11 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="9" className="body-cell" style={{ textAlign: "center", color: "#7b809a", fontSize: "14px" }}>
+                      <td
+                        colSpan="9"
+                        className="body-cell"
+                        style={{ textAlign: "center", color: "#7b809a", fontSize: "14px" }}
+                      >
                         No orders found
                       </td>
                     </tr>
@@ -1013,10 +1054,15 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
             {!isDashboard && (
               <div className="pagination">
                 <span style={{ fontSize: "14px", color: "#7b809a" }}>
-                  Showing {startIndex + 1} to {Math.min(startIndex + entriesToShow, filteredOrders.length)} of {filteredOrders.length} orders
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(startIndex + entriesToShow, filteredOrders.length)} of{" "}
+                  {filteredOrders.length} orders
                 </span>
                 <div style={{ display: "flex", gap: "12px" }}>
-                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
                     Previous
                   </button>
                   <button
@@ -1028,16 +1074,24 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                 </div>
               </div>
             )}
-
           </div>
         </div>
 
         <Modal open={!!selectedOrder} onClose={() => setSelectedOrder(null)}>
           <div className="modal-content">
-            <span className="modal-close" onClick={() => setSelectedOrder(null)}>×</span>
+            <span className="modal-close" onClick={() => setSelectedOrder(null)}>
+              ×
+            </span>
             {selectedOrder && (
               <>
-                <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "24px",
+                    color: "#344767",
+                    marginBottom: "24px",
+                  }}
+                >
                   Order Details - {selectedOrder.orderId}
                 </h3>
                 <div style={{ marginBottom: "16px", fontSize: "14px", color: "#344767" }}>
@@ -1068,19 +1122,28 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                           <tr key={item._id?.$oid || item._id}>
                             <td style={{ fontSize: "14px", padding: "16px" }}>{index + 1}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
-                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.quantity || 0}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>
+                              {item.quantity || 0}
+                            </td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>
                               <img
                                 src={`${process.env.REACT_APP_IMAGE_LINK}${item.image}`}
                                 alt={item.name}
-                                style={{ width: 48, height: 48, objectFit: "cover", marginRight: 12 }}
+                                style={{
+                                  width: 48,
+                                  height: 48,
+                                  objectFit: "cover",
+                                  marginRight: 12,
+                                }}
                               />
                               <span className="item-link" title={item.name}>
                                 {item.name || "-"}
                               </span>
                             </td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>{item.sku || ""}</td>
-                            <td style={{ fontSize: "14px", padding: "16px" }}>{item.variantName || "-"}</td>
+                            <td style={{ fontSize: "14px", padding: "16px" }}>
+                              {item.variantName || "-"}
+                            </td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{price}</td>
                             <td style={{ fontSize: "14px", padding: "16px" }}>₹{subtotal}</td>
                           </tr>
@@ -1089,54 +1152,108 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                        <td
+                          colSpan="6"
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 600,
+                            padding: "16px",
+                            fontSize: "14px",
+                          }}
+                        >
                           Subtotal (Incl. GST):
                         </td>
                         <td style={{ fontSize: "14px", padding: "16px" }}>
-                          ₹{selectedOrder.items.reduce((sum, item) =>
-                            sum + (item.quantity * (item.price || 0)), 0)}
+                          ₹
+                          {selectedOrder.items.reduce(
+                            (sum, item) => sum + item.quantity * (item.price || 0),
+                            0
+                          )}
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                        <td
+                          colSpan="6"
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 600,
+                            padding: "16px",
+                            fontSize: "14px",
+                          }}
+                        >
                           GST Breakdown ({selectedOrder.items[0]?.gst || "0%"}):
                         </td>
                         <td style={{ fontSize: "14px", padding: "16px" }}>
-                          ₹{selectedOrder.items.reduce((sum, item) => {
-                            const price = item.quantity * (item.variantPrice || item.price || 0);
-                            const gstRate = parseFloat(item.gst || "0") / 100;
-                            return sum + price * gstRate;
-                          }, 0).toFixed(2)} <br />
-                          <small style={{ color: "#7b809a", fontSize: "12px" }}>(Already included in prices)</small>
+                          ₹
+                          {selectedOrder.items
+                            .reduce((sum, item) => {
+                              const price = item.quantity * (item.variantPrice || item.price || 0);
+                              const gstRate = parseFloat(item.gst || "0") / 100;
+                              return sum + price * gstRate;
+                            }, 0)
+                            .toFixed(2)}{" "}
+                          <br />
+                          <small style={{ color: "#7b809a", fontSize: "12px" }}>
+                            (Already included in prices)
+                          </small>
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                        <td
+                          colSpan="6"
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 600,
+                            padding: "16px",
+                            fontSize: "14px",
+                          }}
+                        >
                           Delivery Charges:
                         </td>
-                        <td style={{ fontSize: "14px", padding: "16px" }}>₹{selectedOrder.deliveryCharges || 0}</td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>
+                          ₹{selectedOrder.deliveryCharges || 0}
+                        </td>
                       </tr>
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 600, padding: "16px", fontSize: "14px" }}>
+                        <td
+                          colSpan="6"
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 600,
+                            padding: "16px",
+                            fontSize: "14px",
+                          }}
+                        >
                           Platform Fee(%):
                         </td>
-                        <td style={{ fontSize: "14px", padding: "16px" }}>{selectedOrder.platformFee || 0}</td>
+                        <td style={{ fontSize: "14px", padding: "16px" }}>
+                          {selectedOrder.platformFee || 0}
+                        </td>
                       </tr>
                       <tr style={{ borderTop: "2px solid #d2d6da" }}>
-                        <td colSpan="6" style={{ textAlign: "right", fontWeight: 700, padding: "16px", fontSize: "15px" }}>
+                        <td
+                          colSpan="6"
+                          style={{
+                            textAlign: "right",
+                            fontWeight: 700,
+                            padding: "16px",
+                            fontSize: "15px",
+                          }}
+                        >
                           Total Payable Amount:
                         </td>
                         <td style={{ fontSize: "15px", padding: "16px" }}>
-                          ₹{selectedOrder.totalPrice?.toFixed(2) || (
+                          ₹
+                          {selectedOrder.totalPrice?.toFixed(2) ||
                             (
                               selectedOrder.items.reduce((sum, item) => {
-                                const price = item.quantity * (item.variantPrice || item.price || 0);
+                                const price =
+                                  item.quantity * (item.variantPrice || item.price || 0);
                                 return sum + price;
                               }, 0) +
                               (selectedOrder.deliveryCharges || 0) +
                               (selectedOrder.platformFee || 0)
-                            ).toFixed(2)
-                          )}
+                            ).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>
@@ -1152,10 +1269,19 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
         <Modal open={!!selectedAddress} onClose={() => setSelectedAddress(null)}>
           <div className="address-modal-content">
-            <span className="modal-close" onClick={() => setSelectedAddress(null)}>×</span>
+            <span className="modal-close" onClick={() => setSelectedAddress(null)}>
+              ×
+            </span>
             {selectedAddress && (
               <>
-                <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "24px",
+                    color: "#344767",
+                    marginBottom: "24px",
+                  }}
+                >
                   Address Details
                 </h3>
                 <div className="address-card">
@@ -1167,12 +1293,16 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                   <div className="address-field">
                     <FaMapMarkerAlt className="address-field-icon" />
                     <span className="address-field-label">Address</span>
-                    <span className="address-field-value">{selectedAddress.fullAddress || "-"}</span>
+                    <span className="address-field-value">
+                      {selectedAddress.fullAddress || "-"}
+                    </span>
                   </div>
                   <div className="address-field">
                     <FaPhoneAlt className="address-field-icon" />
                     <span className="address-field-label">Mobile Number</span>
-                    <span className="address-field-value">{selectedAddress.moibleNumber || "-"}</span>
+                    <span className="address-field-value">
+                      {selectedAddress.moibleNumber || "-"}
+                    </span>
                   </div>
                 </div>
               </>
@@ -1182,8 +1312,12 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
         <Modal open={showDriverModal} onClose={() => setShowDriverModal(false)}>
           <div className="driver-modal-content">
-            <span className="modal-close" onClick={() => setShowDriverModal(false)}>×</span>
-            <h3 style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}>
+            <span className="modal-close" onClick={() => setShowDriverModal(false)}>
+              ×
+            </span>
+            <h3
+              style={{ fontWeight: 700, fontSize: "24px", color: "#344767", marginBottom: "24px" }}
+            >
               Select Delivery Driver
             </h3>
             <p style={{ fontSize: "14px", color: "#7b809a", marginBottom: "16px" }}>
@@ -1196,17 +1330,18 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                 onChange={(e) => handleDriverSelection(e.target.value)}
                 defaultValue=""
               >
-                <option value="" disabled>Select a driver</option>
+                <option value="" disabled>
+                  Select a driver
+                </option>
                 {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>{driver.name}</option>
+                  <option key={driver.id} value={driver.id}>
+                    {driver.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div style={{ display: "flex", gap: "16px", justifyContent: "flex-end" }}>
-              <button
-                className="modal-button cancel"
-                onClick={() => setShowDriverModal(false)}
-              >
+              <button className="modal-button cancel" onClick={() => setShowDriverModal(false)}>
                 Cancel
               </button>
               <button

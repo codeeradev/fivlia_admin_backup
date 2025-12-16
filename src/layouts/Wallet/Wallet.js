@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import "./Wallet.css";
 import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
-import axios from "axios";
 import { showAlert } from "components/commonFunction/alertsLoader";
 import { useMaterialUIController } from "context";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
@@ -16,10 +17,10 @@ export default function Wallet() {
     const fetchData = async () => {
       try {
         showAlert("loading", "Fetching Wallet data...");
-        const walletRes = await axios.get(`${process.env.REACT_APP_API_URL}/walletAdmin`);
+        const walletRes = await get(ENDPOINTS.WALLET_ADMIN);
         setWallet(walletRes.data);
         // Transactions
-        const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/adminTranaction`);
+        const txnRes = await get(ENDPOINTS.ADMIN_TRANSACTION);
         const sortedTxns = txnRes.data.transactions
           .filter((txn) => txn.createdAt) // ignore incomplete entries
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

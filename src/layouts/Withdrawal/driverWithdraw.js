@@ -1,20 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useMaterialUIController } from "context";
-import { Button, TextField, Typography } from "@mui/material";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
 import MDBox from "components/MDBox";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function DriversWithdrawal() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
-  const dispatch = useDispatch();
 
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-  const [error, setError] = useState("");
 
   const headerCell = {
     padding: "14px 12px",
@@ -36,9 +34,9 @@ export default function DriversWithdrawal() {
   useEffect(() => {
     const fetchWithdrawalRequests = async () => {
       try {
-        dispatch(startLoading());
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest`);
-        const data = await response.json();
+        showAlert("loading", "Loading Requests....");
+        const response = await get(ENDPOINTS.GET_WITHDRAWAL_REQUESTS);
+        const data = response.data;
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
             id: request._id,
@@ -51,32 +49,23 @@ export default function DriversWithdrawal() {
             updatedAt: request.updatedAt,
           }));
           setWithdrawalRequests(formattedRequests);
+          showAlert("info","", 1);
         } else {
-          setError("Invalid withdrawal requests data format");
+          showAlert("error", "Invalid withdrawal requests data format");
         }
       } catch (error) {
         console.error("Failed to fetch withdrawal requests:", error);
-        setError("Failed to fetch withdrawal requests. Please try again.");
-      } finally {
-        dispatch(stopLoading());
+        showAlert("error", "Failed to fetch withdrawal requests. Please try again.");
       }
     };
     fetchWithdrawalRequests();
-  }, [dispatch]);
+  }, []);
 
   // Handle Accept/Decline Withdrawal Request
   const handleWithdrawalAction = async (requestId, action) => {
     try {
-      dispatch(startLoading());
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
-      }
+      showAlert("loading", "Processing....");
+      await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}`);
 
       setWithdrawalRequests((prev) =>
         prev.map((req) =>
@@ -85,9 +74,7 @@ export default function DriversWithdrawal() {
       );
     } catch (error) {
       console.error(`Error ${action}ing withdrawal request:`, error);
-      setError(`Failed to ${action} withdrawal request: ${error.message}`);
-    } finally {
-      dispatch(stopLoading());
+      showAlert("error", `Failed to ${action} withdrawal request: ${error.message}`);
     }
   };
 
@@ -169,10 +156,6 @@ export default function DriversWithdrawal() {
             />
           </div>
         </div>
-
-        {error && (
-          <div style={{ color: "red", textAlign: "center", margin: "10px 0" }}>{error}</div>
-        )}
 
         <table
           style={{

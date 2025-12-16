@@ -1,6 +1,8 @@
 // components/ImageUploadPanel.js
 import React, { useState } from "react";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { post } from "../../api/apiClient";
+import { ENDPOINTS } from "../../api/endPoints";
 
 export default function ImageUploadPanel({ images, clearImages, onUploaded }) {
   const [uploading, setUploading] = useState(false);
@@ -18,12 +20,9 @@ export default function ImageUploadPanel({ images, clearImages, onUploaded }) {
     images.forEach((img) => formData.append("ProductImages", img));
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/bulkImageUpload`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await post(ENDPOINTS.BULK_IMAGE_UPLOAD);
 
-      const result = await res.json();
+      const result = res.data;
       if (res.status === 200) {
         showAlert("success", "Images uploaded successfully");
         onUploaded(result);

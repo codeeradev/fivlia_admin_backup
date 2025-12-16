@@ -11,6 +11,9 @@ import { useMaterialUIController } from "context";
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import { Autocomplete as GooglePlacesAutocomplete } from "@react-google-maps/api";
+import { showAlert } from "components/commonFunction/alertsLoader"
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const mapContainerStyle = {
   width: "100%",
@@ -53,8 +56,8 @@ function AddServiceArea() {
   useEffect(() => {
     async function fetchCities() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAviableCity`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_AVIABLE_CITY);
+        const data = await res.data;
         if (data && data.length > 0) {
           setCities(data);
           const firstCity = data[0];
@@ -66,7 +69,7 @@ function AddServiceArea() {
         }
       } catch (err) {
         console.error("Failed to fetch cities", err);
-        alert("Failed to load cities from API.");
+        showAlert("error", "Failed to load cities from API.");
       }
     }
     fetchCities();

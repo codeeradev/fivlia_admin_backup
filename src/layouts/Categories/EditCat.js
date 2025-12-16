@@ -5,8 +5,14 @@ import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@mui/material";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
+
+import { showAlert } from "components/commonFunction/alertsLoader";
+
+// common API helpers (from your provided common file)
+import { getAllFilters, getAllAttributes, getAllBrands } from "components/commonApi/commonApi";
+// put and ENDPOINTS for editing since product.api doesn't export editMainCategory
+import { put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const EditCategory = () => {
   const [name, setCategoryName] = useState("");
@@ -26,7 +32,6 @@ const EditCategory = () => {
   const [allBrands, setAllBrands] = useState([]);
   const [allAttributes, setAllAttributes] = useState([]);
   const [selectedAttributes, setSelectedAttributes] = useState([]);
-  const dispatch = useDispatch();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,28 +52,24 @@ const EditCategory = () => {
   useEffect(() => {
     const getFilters = async () => {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setAllFilters(res);
-        }
+        const result = await getAllFilters();
+        const res = result.data;
+        setAllFilters(res);
       } catch (err) {
         console.log(err);
-        toast.error("Error fetching filters");
+        showAlert("error", "Error fetching filters");
       }
     };
     getFilters();
 
     const getAttributes = async () => {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        if (result.status === 200) {
-          const res = await result.json();
-          setAllAttributes(res);
-        }
+        const result = await getAllAttributes();
+        const res = result.data;
+        setAllAttributes(res);
       } catch (err) {
         console.log(err);
-        toast.error("Error fetching attributes");
+        showAlert("error", "Error fetching attributes");
       }
     };
     getAttributes();
@@ -77,9 +78,9 @@ const EditCategory = () => {
   useEffect(() => {
     const getBrands = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`); // Adjust if your route is different
+        const res = await getAllBrands(); // Adjust if your route is different
         if (res.status === 200) {
-          const data = await res.json();
+          const data = res.data;
           setAllBrands(data.allBrands);
           setAllFilters((prev) => [
             ...prev,
@@ -159,56 +160,40 @@ const EditCategory = () => {
 
   const handleFilter = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
-        method: "POST",
-        body: JSON.stringify({ Filter_name: filterName }),
-        headers: { "Content-type": "application/json" },
-      });
-      if (result.status === 200) {
-        toast.success("Filter Added Successfully");
-        setFilterPopup(false);
-        setFilterName("");
-        const res = await result.json();
-        setAllFilters((prev) => [...prev, res]);
-      } else {
-        toast.error("Something went wrong");
-      }
+      const result = await put(ENDPOINTS.ADD_FILTER, { Filter_name: filterName });
+      showAlert("success", "Filter Added Successfully");
+      setFilterPopup(false);
+      setFilterName("");
+      const res = result.data;
+      setAllFilters((prev) => [...prev, res]);
     } catch (err) {
       console.log(err);
-      toast.error("Error adding filter");
+      showAlert("error", "Error adding filter");
     }
   };
 
   const handleFilterType = async () => {
     if (!selectedFilter || !addFilterValue.trim()) {
-      toast.error("Please select a filter and enter a value");
+      showAlert("error", "Please select a filter and enter a value");
       return;
     }
 
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
-        method: "POST",
-        body: JSON.stringify({
-          _id: selectedFilter,
-          Filter: [{ name: addFilterValue }],
-        }),
-        headers: { "Content-Type": "application/json" },
+const result = await put(ENDPOINTS?.ADD_FILTER, {
+        _id: selectedFilter,
+        Filter: [{ name: addFilterValue }],
       });
-      if (result.status === 200) {
-        toast.success("Filter Value Added Successfully");
+      showAlert("success", "Filter Value Added Successfully");
         setShowFilterDropdown(false);
         setAddFilterValue("");
-        const updatedFilter = await result.json();
+        const updatedFilter = await result.data;
         setAllFilters((prev) =>
           prev.map((f) => (f._id === selectedFilter ? { ...f, Filter: updatedFilter.Filter } : f))
         );
         setFilterValues(updatedFilter.Filter);
-      } else {
-        toast.error("Something went wrong");
-      }
     } catch (err) {
       console.log(err);
-      toast.error("Error adding filter value");
+      showAlert("error", "Error adding filter value");
     }
   };
 
@@ -229,12 +214,11 @@ const EditCategory = () => {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      toast.error("Please enter a valid name.");
+      showAlert("error", "Please enter a valid name.");
       return;
     }
 
     const formData = new FormData();
-    dispatch(startLoading());
     formData.append("id", id);
     formData.append("name", name);
     formData.append("description", description);
@@ -263,24 +247,22 @@ const EditCategory = () => {
     formData.append("attribute", JSON.stringify(selectedAttributes));
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/editMainCategory`, {
-        method: "PUT",
-        body: formData,
-      });
+      showAlert("loading", "Updating category...");
+      const res = await put(ENDPOINTS.EDIT_CATEGORY, formData);
+      const data = res?.data ?? res;
 
-      if (response.status === 200) {
-        dispatch(stopLoading());
-        toast.success("Category updated successfully!");
+      // success detection: if your API wraps responses differently adapt this check
+      if (res && (res.status === 200 || data?.success || data?.message)) {
+        showAlert("success", "Category updated successfully!");
         navigate(-1);
       } else {
-        dispatch(stopLoading());
-        const errorData = await response.json();
-        toast.error(errorData.message || `Failed to update category (Status: ${response.status})`);
+        const errMsg = data?.message || `Failed to update category`;
+        showAlert("error", errMsg);
       }
+
     } catch (err) {
-      dispatch(stopLoading());
       console.error("Error updating category:", err);
-      toast.error("Error updating category: " + err.message);
+      showAlert("error", "Error updating category");
     }
   };
 

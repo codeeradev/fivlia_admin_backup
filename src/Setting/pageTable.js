@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
+import { ENDPOINTS } from "api/endPoints";
+import { put, get } from "api/apiClient";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function PagesTable() {
   const [controller] = useMaterialUIController();
@@ -33,8 +36,8 @@ export default function PagesTable() {
   useEffect(() => {
     const getPage = async () => {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/getPage`);
-        const data = await result.json();
+        const result = await get(ENDPOINTS.GET_PAGE);
+        const data = result.data;
         if (Array.isArray(data.getPage)) {
           const pagesWithDetails = data.getPage.map((page) => ({
             id: page._id,
@@ -90,16 +93,7 @@ export default function PagesTable() {
     const newStatus = !pageToUpdate.status;
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/updatePageStatus/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update status");
+      await put(`${ENDPOINTS.UPDATE_PAGE_STATUS}/${id}`,{ status: newStatus });
 
       // Update state only after successful backend update
       setPages((prevPages) =>
@@ -108,7 +102,7 @@ export default function PagesTable() {
         )
       );
     } catch (error) {
-      alert("Failed to update status. Please try again.");
+      showAlert("error","Failed to update status. Please try again.");
       // console.error(error);
     }
   };

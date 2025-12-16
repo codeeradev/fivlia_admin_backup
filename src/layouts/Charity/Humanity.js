@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import MDBox from "components/MDBox";
 import { Button, Modal, Box, Switch } from "@mui/material";
 import { useMaterialUIController } from "context";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const modalStyle = {
   position: "absolute",
@@ -56,22 +59,36 @@ function CharityContent() {
 
   // FETCH CATEGORY
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/getCharity`)
-      .then((res) => res.json())
-      .then((data) => setCategories(data.data || []));
+    const fetchCategories = async () => {
+      try {
+        const res = await get(ENDPOINTS.GET_CHARITY_CATEGORY);
+        setCategories(res.data?.data || []);
+      } catch (err) {
+        showAlert("error", "Failed to load categories");
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // FETCH CONTENT
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/getCharityContent`)
-      .then((res) => res.json())
-      .then((data) => {
-        const filtered = data.data.filter((item) =>
+    const fetchContent = async () => {
+      try {
+        const res = await get(ENDPOINTS.GET_CHARITY_CONTENT);
+
+        const filtered = res.data.data.filter((item) =>
           item.title?.toLowerCase().includes(searchTerm.toLowerCase())
         );
+
         setContentList(filtered.slice((page - 1) * limit, page * limit));
         setTotalPages(Math.ceil(filtered.length / limit));
-      });
+      } catch (err) {
+        showAlert("error", "Failed to load content");
+      }
+    };
+
+    fetchContent();
   }, [page, searchTerm]);
 
   // OPEN ADD
@@ -104,13 +121,9 @@ function CharityContent() {
     setStatus(item.status);
 
     // OLD PREVIEWS
-    setImagePreview(
-      item.image ? `${process.env.REACT_APP_IMAGE_LINK}${item.image}` : null
-    );
+    setImagePreview(item.image ? `${process.env.REACT_APP_IMAGE_LINK}${item.image}` : null);
 
-    setGalleryPreview(
-      (item.gallery || []).map((g) => `${process.env.REACT_APP_IMAGE_LINK}${g}`)
-    );
+    setGalleryPreview((item.gallery || []).map((g) => `${process.env.REACT_APP_IMAGE_LINK}${g}`));
 
     setImage(null);
     setGallery([]);
@@ -150,33 +163,35 @@ function CharityContent() {
     gallery.forEach((file) => formData.append("MultipleImage", file));
 
     const url = editData
-      ? `${process.env.REACT_APP_API_URL}/updateCharityContent/${editData._id}`
-      : `${process.env.REACT_APP_API_URL}/createCharityContent`;
+      ? `${ENDPOINTS.UPDATE_CHARITY_CONTENT}/${editData._id}`
+      : ENDPOINTS.CREATE_CHARITY_CONTENT;
 
-    await fetch(url, {
-      method: editData ? "PUT" : "POST",
-      body: formData,
-    });
+    try {
+      showAlert("loading", editData ? "Updating..." : "Creating...");
 
-    setOpenModal(false);
-    window.location.reload();
+      const apiCall = editData ? put(url, formData, true) : post(url, formData, true);
+
+      await apiCall;
+
+      showAlert("success", editData ? "Updated Successfully" : "Created Successfully");
+
+      setOpenModal(false);
+      window.location.reload();
+    } catch (err) {
+      showAlert("error", "Failed to save");
+    }
   };
 
   // STATUS UPDATE IN TABLE
   const toggleStatus = async (id, currentStatus) => {
-    await fetch(
-      `${process.env.REACT_APP_API_URL}/updateCharityContent/${id}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: !currentStatus }),
-      }
-    );
+    showAlert("loading", "Updating status...");
+
+    await put(`${ENDPOINTS.UPDATE_CHARITY_CONTENT}/${id}`, {
+      status: !currentStatus,
+    });
 
     setContentList((prev) =>
-      prev.map((item) =>
-        item._id === id ? { ...item, status: !currentStatus } : item
-      )
+      prev.map((item) => (item._id === id ? { ...item, status: !currentStatus } : item))
     );
   };
 
@@ -192,10 +207,7 @@ function CharityContent() {
       <div style={{ borderRadius: 15, padding: 20, backgroundColor: "#fafafa" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>Charity Content List</h2>
-          <Button
-            style={{ backgroundColor: "#00c853", color: "white" }}
-            onClick={openAddModal}
-          >
+          <Button style={{ backgroundColor: "#00c853", color: "white" }} onClick={openAddModal}>
             + ADD CONTENT
           </Button>
         </div>

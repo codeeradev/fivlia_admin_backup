@@ -13,6 +13,9 @@ import {
 } from "@mui/material";
 import DataTable from "react-data-table-component";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post, put } from "api/apiClient";   // axios wrapper
+import { ENDPOINTS } from "api/endPoints";
+
 
 function Expenses() {
   const [controller] = useMaterialUIController();
@@ -39,8 +42,8 @@ function Expenses() {
   // Fetch Expense Types
   const fetchTypes = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getExpenseType`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_EXPENSE_TYPE);
+      const data = res.data;
       setTypes(data.expenseType || []);
     } catch (err) {
       showAlert("error", "Failed to load expense types");
@@ -50,8 +53,8 @@ function Expenses() {
   // Fetch Expenses
   const fetchExpenses = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getExpenses`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_EXPENSES);
+      const data = res.data
       setExpenses(data.expenses || []);
     } catch (err) {
       showAlert("error", "Failed to load expenses");
@@ -84,7 +87,7 @@ function Expenses() {
   const saveExpense = async () => {
     if (!title.trim()) return showAlert("warning", "Title is required");
     if (!type) return showAlert("warning", "Select expense type");
-    if (!amount.trim() || isNaN(amount)) return showAlert("warning", "Amount must be a number");
+    if (!amount || isNaN(amount)) return showAlert("warning", "Amount must be a number");
     if (!fromDate || !toDate) return showAlert("warning", "Select date range");
 
     const payload = {
@@ -97,18 +100,15 @@ function Expenses() {
     try {
       showAlert("loading", editId ? "Updating expense..." : "Adding expense...");
 
-      const url = editId
-        ? `${process.env.REACT_APP_API_URL}/editExpenses/${editId}`
-        : `${process.env.REACT_APP_API_URL}/addExpenses`;
-
-      const res = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (editId) {
+        showAlert("loading", "Updating expense...");
+        await put(ENDPOINTS.EDIT_EXPENSES(editId), payload);
+        showAlert("success", "Expense updated successfully");
+      } else {
+        showAlert("loading", "Adding expense...");
+        await post(ENDPOINTS.ADD_EXPENSES, payload);
+        showAlert("success", "Expense added successfully");
+      }
 
       showAlert("success", editId ? "Expense Updated" : "Expense Added");
       setOpenModal(false);

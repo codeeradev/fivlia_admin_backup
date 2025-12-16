@@ -4,6 +4,8 @@ import { useMaterialUIController } from "context";
 import { Button, Modal, Box, TextField } from "@mui/material";
 import { showAlert } from "components/commonFunction/alertsLoader";
 import DataTable from "react-data-table-component";
+import { get, post, put } from "api/apiClient"; // axios wrapper
+import { ENDPOINTS } from "api/endPoints";
 
 function ExpenseTypeList() {
   const [controller] = useMaterialUIController();
@@ -23,8 +25,8 @@ function ExpenseTypeList() {
 
   const fetchExpenseTypes = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getExpenseType`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_EXPENSE_TYPE);
+      const data = res.data;
       setTypes(data.expenseType || []);
     } catch (err) {
       showAlert("error", "Failed to load expense types");
@@ -51,19 +53,12 @@ function ExpenseTypeList() {
       showAlert("loading", editId ? "Updating expense type..." : "Adding expense type...");
 
       const url = editId
-        ? `${process.env.REACT_APP_API_URL}/addExpenseType?id=${editId}` // update
-        : `${process.env.REACT_APP_API_URL}/addExpenseType`; // new
+        ? `${ENDPOINTS.ADD_EXPENSE_TYPE}?id=${editId}`
+        : ENDPOINTS.ADD_EXPENSE_TYPE;
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
-      });
+      await post(url, { title: newTitle });
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
+      
       showAlert("success", editId ? "Expense Type Updated" : "Expense Type Added");
 
       setOpenModal(false);

@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
+import { getAllZones } from "components/commonApi/commonApi";
+import { put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const headerCell = {
   padding: "14px 12px",
@@ -34,8 +37,8 @@ function Table() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        const data = await res.json();
+        const res = await getAllZones();
+        const data = await res.data;
 
         const allZones = (data || []).flatMap(cityObj => {
           if (!Array.isArray(cityObj.zones) || cityObj.zones.length === 0) return [];
@@ -125,24 +128,14 @@ function Table() {
   // }
   const updateZone = async (id, updatedFields) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/updateZoneStatus/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedFields),
-      });
+      await put(`${ENDPOINTS.UPDATE_ZONE_STATUS}/${id}`, updatedFields);
 
-      if (res.ok) {
-        const result = await res.json();
         setLocations((prev) =>
           prev.map((zone) =>
             zone._id === id ? { ...zone, ...updatedFields } : zone
           )
         );
-      } else {
-        alert("Failed to update zone");
-      }
+
     } catch (error) {
       console.error("Error updating zone:", error);
     }

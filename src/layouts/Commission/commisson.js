@@ -14,7 +14,10 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { showAlert } from "components/commonFunction/alertsLoader"; 
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { getAllZones, getMainCategories } from "components/commonApi/commonApi";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 export default function SetCommission() {
   const [controller] = useMaterialUIController();
@@ -26,8 +29,7 @@ export default function SetCommission() {
   const [openRows, setOpenRows] = useState({});
   const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
-  const showSnack = (message, severity = "success") =>
-    setSnack({ open: true, message, severity });
+  const showSnack = (message, severity = "success") => setSnack({ open: true, message, severity });
   const closeSnack = () => setSnack((s) => ({ ...s, open: false }));
 
   // Fetch main categories
@@ -35,12 +37,10 @@ export default function SetCommission() {
     (async () => {
       try {
         showAlert("loading", "Fetching categories...");
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory?page=1`);
-        if (res.ok) {
-          const result = await res.json();
-          setMainCategories(result.result || []);
-          showAlert("info", "", 1);
-        }
+        const res = await getMainCategories();
+
+        setMainCategories(res.data.result || []);
+        showAlert("info", "", 1);
       } catch (e) {
         showAlert("error", "Error fetching categories.");
         console.error(e);
@@ -52,9 +52,8 @@ export default function SetCommission() {
   const fetchSubCategories = async (mainCatId) => {
     try {
       showAlert("loading", "Loading subcategories...");
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/categories?id=${mainCatId}`);
-      if (!res.ok) return showAlert("error", "Failed to fetch subcategories.");
-      const result = await res.json();
+      const res = await get(`${ENDPOINTS.GET_CATEGORIES}?id=${mainCatId}`);
+      const result = res.data;
 
       const subs = (result.category?.subCategories || []).map((sub) => {
         const subId = sub._id || sub.id || sub.subCategoryId || sub.subcategoryId;
@@ -63,17 +62,20 @@ export default function SetCommission() {
           name: sub.name,
           status: sub.status ?? true,
           commission: Number(sub.commison) || 0,
-          subSubCategories: (sub.subSubCategories || sub.subsubcategories || sub.subSubCat || []).map(
-            (ssc) => {
-              const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
-              console.log('Sub-sub category ID found:', sscId, 'from ssc:', ssc);
-              return {
-                _id: sscId,
-                name: ssc.name,
-                commission: Number(ssc.commison) || 0,
-              };
-            }
-          ),
+          subSubCategories: (
+            sub.subSubCategories ||
+            sub.subsubcategories ||
+            sub.subSubCat ||
+            []
+          ).map((ssc) => {
+            const sscId = ssc._id || ssc.id || ssc.subSubCategoryId || ssc.subsubcategoryId;
+            console.log("Sub-sub category ID found:", sscId, "from ssc:", ssc);
+            return {
+              _id: sscId,
+              name: ssc.name,
+              commission: Number(ssc.commison) || 0,
+            };
+          }),
         };
       });
 
@@ -89,29 +91,27 @@ export default function SetCommission() {
   // Toggle public/private status
   const handleToggle = useCallback((subId) => {
     setSubCategories((prev) => {
-      const updated = prev.map((s) =>
-        s._id === subId ? { ...s, status: !s.status } : s
-      );
+      const updated = prev.map((s) => (s._id === subId ? { ...s, status: !s.status } : s));
       const toggled = updated.find((s) => s._id === subId);
 
       (async () => {
         try {
-          const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: subId, commison: toggled.status ? 1 : 0, level: "sub" }),
+          const res = await put(ENDPOINTS.SET_COMMISSION, {
+            id: subId,
+            commison: toggled.status ? 1 : 0,
+            level: "sub",
           });
-          if (res.ok) {
-            const result = await res.json();
-            console.log('Status updated successfully:', result);
+
+          if (res && (res.status === 200 || res.status === 201)) {
+            // server response body in res.data
+            console.log("Status updated successfully:", res.data);
             showAlert("success", "Status updated successfully!");
           } else {
-            const error = await res.json();
-            console.error('Failed to update status:', error);
+            console.error("Failed to update status, response:", res);
             showAlert("error", "Failed to update status.");
           }
         } catch (e) {
-          console.error('Error updating status:', e);
+          console.error("Error updating status:", e);
           showAlert("error", "Error updating status.");
         }
       })();
@@ -123,9 +123,7 @@ export default function SetCommission() {
   // Change commission for sub-category
   const handleSubCommissionChange = useCallback((subId, value) => {
     setSubCategories((prev) =>
-      prev.map((s) =>
-        s._id === subId ? { ...s, commission: Math.max(0, Number(value) || 0) } : s
-      )
+      prev.map((s) => (s._id === subId ? { ...s, commission: Math.max(0, Number(value) || 0) } : s))
     );
   }, []);
 
@@ -138,9 +136,7 @@ export default function SetCommission() {
           : {
               ...s,
               subSubCategories: s.subSubCategories.map((ssc) =>
-                ssc._id === sscId
-                  ? { ...ssc, commission: Math.max(0, Number(value) || 0) }
-                  : ssc
+                ssc._id === sscId ? { ...ssc, commission: Math.max(0, Number(value) || 0) } : ssc
               ),
             }
       )
@@ -150,23 +146,21 @@ export default function SetCommission() {
   // Save commission (sub or sub-sub)
   const saveCommission = async (id, commission, level) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/setCommison`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, commison: commission, level }),
+      const res = await put(ENDPOINTS.SET_COMMISSION, {
+        id,
+        commison: commission,
+        level,
       });
-      if (res.ok) {
-        const result = await res.json();
-        console.log('Commission saved successfully:', result);
+
+      if (res && (res.status === 200 || res.status === 201)) {
+        console.log("Commission saved successfully:", res.data);
         showAlert("success", "Commission updated successfully!");
       } else {
-        const error = await res.json();
-        console.error('Failed to save commission:', error);
-        console.error('Response headers:', res.headers);
+        console.error("Failed to save commission, response:", res);
         showAlert("error", "Failed to update commission.");
       }
     } catch (e) {
-      console.error('Error saving commission:', e);
+      console.error("Error saving commission:", e);
       showAlert("error", "Error while saving commission.");
     }
   };
@@ -276,7 +270,13 @@ export default function SetCommission() {
 
                   {/* Commission input */}
                   <Box sx={{ padding: "12px 16px", textAlign: "center", verticalAlign: "top" }}>
-                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ maxWidth: "200px", margin: "0 auto" }}>
+                    <Box
+                      display="flex"
+                      justifyContent="center"
+                      alignItems="center"
+                      gap={1}
+                      sx={{ maxWidth: "200px", margin: "0 auto" }}
+                    >
                       <TextField
                         type="number"
                         value={sub.commission}
@@ -380,18 +380,33 @@ export default function SetCommission() {
                           }}
                         >
                           <Box sx={{ padding: "8px 16px" }}></Box>
-                          <Box sx={{ padding: "8px 16px", textAlign: "left", verticalAlign: "top" }}>
-                            <Typography variant="body2" sx={{ fontWeight: "500", color: "#333", fontSize: "13px" }}>
+                          <Box
+                            sx={{ padding: "8px 16px", textAlign: "left", verticalAlign: "top" }}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: "500", color: "#333", fontSize: "13px" }}
+                            >
                               {ssc.name}
                             </Typography>
                           </Box>
-                          <Box sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}>
-                            <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ maxWidth: "200px", margin: "0 auto" }}>
+                          <Box
+                            sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}
+                          >
+                            <Box
+                              display="flex"
+                              justifyContent="center"
+                              alignItems="center"
+                              gap={1}
+                              sx={{ maxWidth: "200px", margin: "0 auto" }}
+                            >
                               <TextField
                                 type="number"
                                 size="small"
                                 value={ssc.commission}
-                                onChange={(e) => handleSSCCommissionChange(sub._id, ssc._id, e.target.value)}
+                                onChange={(e) =>
+                                  handleSSCCommissionChange(sub._id, ssc._id, e.target.value)
+                                }
                                 sx={{
                                   width: 90,
                                   "& .MuiOutlinedInput-root": {
@@ -410,7 +425,9 @@ export default function SetCommission() {
                               />
                             </Box>
                           </Box>
-                          <Box sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}>
+                          <Box
+                            sx={{ padding: "8px 16px", textAlign: "center", verticalAlign: "top" }}
+                          >
                             <Button
                               size="small"
                               variant="contained"
@@ -425,9 +442,9 @@ export default function SetCommission() {
                                 minWidth: "50px",
                               }}
                               onClick={() => {
-                                console.log('Sub-sub category data:', ssc);
-                                console.log('Sub-sub category ID:', ssc._id);
-                                console.log('Sub-sub category commission:', ssc.commission);
+                                console.log("Sub-sub category data:", ssc);
+                                console.log("Sub-sub category ID:", ssc._id);
+                                console.log("Sub-sub category commission:", ssc.commission);
                                 saveCommission(ssc._id, ssc.commission, "subsub");
                               }}
                             >

@@ -11,14 +11,15 @@ import {
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
+
+import { post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function AddBlog() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { state } = useLocation();
 
   const [form, setForm] = useState({
@@ -49,29 +50,25 @@ function AddBlog() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      dispatch(startLoading());
+    showAlert("loading", state?._id ? "Updating blog..." : "Adding blog...");
       const formData = new FormData();
       for (let key in form) formData.append(key, form[key]);
 
-      const method = state?._id ? "PUT" : "POST";
-      const url = state?._id
-        ? `${process.env.REACT_APP_API_URL}/editBlog/${state._id}`
-        : `${process.env.REACT_APP_API_URL}/addBlog`;
+    let response;
 
-      const res = await fetch(url, { method, body: formData });
-
-      if (res.ok) {
-        alert(`Blog ${state ? "updated" : "added"} successfully!`);
-        navigate("/blog");
-      } else {
-        alert("Error saving blog!");
-      }
-    } catch (err) {
-      console.error("Error saving blog:", err);
-      alert("Error saving blog. Please try again.");
+    if (state?._id) {
+      // UPDATE BLOG
+      response = await put(`${ENDPOINTS.EDIT_BLOG}/${state._id}`, formData);
+    } else {
+      // ADD BLOG
+      response = await post(ENDPOINTS.ADD_BLOG, formData);
     }
-    finally{
-      dispatch(stopLoading());
+
+    showAlert("success", state?._id ? "Blog updated successfully" : "Blog added successfully");
+    navigate("/blog");
+    } catch (err) {
+    console.error(err);
+    showAlert("error", "Failed to save blog");
     }
   };
 

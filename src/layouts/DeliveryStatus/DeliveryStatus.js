@@ -11,6 +11,9 @@ import {
   DialogActions,
   TextField,
 } from "@mui/material";
+import { get, post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 export default function StatusManagement() {
   const [controller] = useMaterialUIController();
@@ -50,22 +53,25 @@ export default function StatusManagement() {
   useEffect(() => {
     const fetchStatuses = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getdeliveryStatus`);
-        const data = await response.json();
-        if (response.ok && Array.isArray(data.Status)) {
-          setStatuses(data.Status.map((s) => ({
+        showAlert("loading", "Loading statuses...");
+
+        const res = await get(ENDPOINTS.GET_DELIVERY_STATUS);
+        const data = res.data;
+
+        setStatuses(
+          data.Status.map((s) => ({
             id: s._id,
             statusCode: s.statusCode || "",
             statusTitle: s.statusTitle || "",
             isActive: s.status || false,
             image: s.image || "",
-          })));
-        } else {
-          throw new Error(data.message || "Failed to fetch statuses");
-        }
+          }))
+        );
+
+        showAlert("info", "", 1);
       } catch (error) {
         console.error("Failed to fetch statuses:", error);
-        alert("Failed to fetch statuses. Try again.");
+        showAlert("error", "Failed to load statuses.");
       }
     };
     fetchStatuses();
@@ -78,19 +84,14 @@ export default function StatusManagement() {
     const newStatus = !statusToUpdate.isActive;
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/updatedeliveryStatus/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+      await put(`${ENDPOINTS.UPDATE_DELIVERY_STATUS}/${id}`, {
+        status: newStatus,
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to update status");
 
-      setStatuses((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, isActive: newStatus } : s))
-      );
+      setStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, isActive: newStatus } : s)));
+      showAlert("success", "Status updated");
     } catch (error) {
-      alert("Failed to update status. Try again.");
+      showAlert("error", "Failed to update status");
       console.error("Toggle status error:", error);
     }
   };
@@ -108,13 +109,9 @@ export default function StatusManagement() {
       formData.append("status", "true");
       if (newImage) formData.append("image", newImage);
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/deliveryStatus`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await post(ENDPOINTS.DELIVERY_STATUS, formData);
+      const data = res.data;
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to add status");
       setStatuses((prev) => [
         ...prev,
         {
@@ -130,9 +127,10 @@ export default function StatusManagement() {
       setNewStatusCode("");
       setNewStatusTitle("");
       setNewImage(null);
+      showAlert("success", "Status added");
     } catch (error) {
-      alert("Failed to add status. Try again.");
       console.error("Add status error:", error);
+      showAlert("error", "Failed to add status");
     }
   };
 
@@ -146,7 +144,8 @@ export default function StatusManagement() {
 
   const handleEditSave = async () => {
     if (!newStatusCode || !newStatusTitle) {
-      alert("Please fill in all fields");
+      showAlert("error", "Please fill in all fields");
+
       return;
     }
 
@@ -157,16 +156,9 @@ export default function StatusManagement() {
       formData.append("status", selectedStatus.isActive);
       if (editImage) formData.append("image", editImage);
 
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/updatedeliveryStatus/${selectedStatus.id}`,
-        {
-          method: "PUT",
-          body: formData,
-        }
-      );
+      const res = await put(`${ENDPOINTS.UPDATE_DELIVERY_STATUS}/${selectedStatus.id}`, formData);
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to update status");
+      const data = res.data;
 
       setStatuses((prev) =>
         prev.map((s) =>
@@ -186,9 +178,10 @@ export default function StatusManagement() {
       setNewStatusCode("");
       setNewStatusTitle("");
       setEditImage(null);
+      showAlert("success", "Status updated");
     } catch (error) {
-      alert("Failed to update status. Try again.");
       console.error("Update status error:", error);
+      showAlert("error", "Failed to update status");
     }
   };
 
@@ -210,9 +203,10 @@ export default function StatusManagement() {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  const filteredStatuses = statuses.filter((s) =>
-    s.statusCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.statusTitle.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStatuses = statuses.filter(
+    (s) =>
+      s.statusCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.statusTitle.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredStatuses.length / entriesToShow);
@@ -225,22 +219,18 @@ export default function StatusManagement() {
       <div style={{ width: "100%", padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>
-              Status Management
-            </h2>
-            <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>
-              Manage order statuses
-            </p>
+            <h2 style={{ margin: 0, fontSize: "30px", fontWeight: "bold" }}>Status Management</h2>
+            <p style={{ margin: 0, fontSize: "18px", color: "#555" }}>Manage order statuses</p>
           </div>
           <Button
             variant="contained"
- ominantColor
+            ominantColor
             onClick={() => setModalOpen(true)}
             style={{
               backgroundColor: "#007BFF",
               color: "white",
-              height:"60px",
-              width:"150px",
+              height: "60px",
+              width: "150px",
               borderRadius: "6px",
             }}
           >
@@ -248,7 +238,7 @@ export default function StatusManagement() {
           </Button>
         </div>
 
-        <div style={{display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div>
             <label style={{ fontSize: 17 }}>Show Entries </label>
             <select
@@ -269,34 +259,36 @@ export default function StatusManagement() {
             </select>
           </div>
           <div style={{ width: "100%" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search statuses..."
-              style={{
-                padding: "8px 34px",
-                borderRadius: "8px",
-                height: "42px",
-                width: "220px",
-                border: "1px solid #ccc",
-                fontSize: 16,
-                outline: "none",
-              }}
-            />
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Search statuses..."
+                style={{
+                  padding: "8px 34px",
+                  borderRadius: "8px",
+                  height: "42px",
+                  width: "220px",
+                  border: "1px solid #ccc",
+                  fontSize: 16,
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
         </div>
-</div>
-        <table style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          fontFamily: '"Urbanist", sans-serif',
-          fontSize: "17px",
-          border: "1px solid #007BFF",
-          marginTop: "20px",
-        }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontFamily: '"Urbanist", sans-serif',
+            fontSize: "17px",
+            border: "1px solid #007BFF",
+            marginTop: "20px",
+          }}
+        >
           <thead>
             <tr>
               <th style={headerCell}>Sr No</th>
@@ -310,7 +302,13 @@ export default function StatusManagement() {
           <tbody>
             {currentStatuses.length > 0 ? (
               currentStatuses.map((status, index) => (
-                <tr key={status.id} style={{ backgroundColor: selectedStatus?.id === status.id ? "#f1f1f1" : "white", cursor: "pointer" }}>
+                <tr
+                  key={status.id}
+                  style={{
+                    backgroundColor: selectedStatus?.id === status.id ? "#f1f1f1" : "white",
+                    cursor: "pointer",
+                  }}
+                >
                   <td style={bodyCell}>{startIndex + index + 1}</td>
                   <td style={bodyCell}>
                     {status.image ? (
@@ -370,8 +368,7 @@ export default function StatusManagement() {
 
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
           <div>
-            Showing {startIndex + 1} to{" "}
-            {Math.min(endIndex, filteredStatuses.length)} of{" "}
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredStatuses.length)} of{" "}
             {filteredStatuses.length} entries
           </div>
           <div>

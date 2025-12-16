@@ -3,8 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@mui/material";
-import { startLoading, stopLoading } from "components/loader/appSlice";
-import { useDispatch } from "react-redux";
+import { get, patch } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function EditBanner() {
   const [controller] = useMaterialUIController();
@@ -15,7 +16,7 @@ function EditBanner() {
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null);
   const [zones, setZones] = useState([]);
   const [locations, setLocations] = useState([]);
   const [main, setMain] = useState([]);
@@ -28,22 +29,20 @@ function EditBanner() {
   const [subId, setSubId] = useState("");
   const [subsubId, setSubsubId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
-  const dispatch = useDispatch();
   // Load initial data from location.state and fetch locations & categories
   useEffect(() => {
     const data = location.state;
     if (data) {
-      
       setId(data._id);
       setName(data.title);
-      setSelectedCityId(Array.isArray(data.city) ? data.city.map(c => c._id) : [data.city?._id]);
+      setSelectedCityId(Array.isArray(data.city) ? data.city.map((c) => c._id) : [data.city?._id]);
       if (Array.isArray(data.zones)) {
         setZones(
           data.zones.map((z) => ({
             address: z.address,
             latitude: z.latitude,
             longitude: z.longitude,
-            range: z.range
+            range: z.range,
           }))
         );
       }
@@ -82,44 +81,45 @@ function EditBanner() {
       if (data.image) {
         setImage(data.image);
         setImagePreview(`${process.env.REACT_APP_IMAGE_LINK}${data.image}`);
-
       } else {
         setImage(null);
-        setImagePreview(null)
+        setImagePreview(null);
       }
     }
 
     const fetchBrands = async () => {
-  try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-    const data = await res.json();
-    setBrands(data.allBrands || []);
-  } catch (err) {
-    console.error("Error fetching brands:", err);
-  }
-};
+      try {
+        const res = await get(ENDPOINTS.GET_BRANDS);
+        const data = res.data;
+        setBrands(data.allBrands || []);
+      } catch (err) {
+        console.error("Error fetching brands:", err);
+        showAlert("error", "Error fetching locations");
+      }
+    };
 
-fetchBrands();
-
+    fetchBrands();
 
     const fetchLocations = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        const data = await res.json();
-        const cities = Array.isArray(data) ? data : (data.result || data.data || []);
+        const res = await get(ENDPOINTS.GET_ALL_ZONE);
+        const data = res.data;
+        const cities = Array.isArray(data) ? data : data.result || data.data || [];
         setLocations(cities);
       } catch (err) {
         console.error("Error fetching locations:", err);
+        showAlert("error", "Error fetching locations");
       }
     };
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_MAIN_CATEGORY);
+        setMain(res.data.result || []);
         setMain(data.result || []);
       } catch (err) {
         console.error("Error fetching categories:", err);
+        showAlert("error", "Error fetching categories");
       }
     };
 
@@ -128,44 +128,43 @@ fetchBrands();
   }, [location.state]);
 
   useEffect(() => {
-  const selectedCitiesData = locations.filter(loc => selectedCityId.includes(loc._id));
+    const selectedCitiesData = locations.filter((loc) => selectedCityId.includes(loc._id));
 
-  let allZones = [];
-  selectedCitiesData.forEach(city => {
-    if (city.zones) {
-      allZones = [
-        ...allZones,
-        ...city.zones.map(z => ({
-          address: z.address,
-          latitude: z.latitude,
-          longitude: z.longitude,
-          range: z.range
-        }))
-      ];
-    }
-  });
+    let allZones = [];
+    selectedCitiesData.forEach((city) => {
+      if (city.zones) {
+        allZones = [
+          ...allZones,
+          ...city.zones.map((z) => ({
+            address: z.address,
+            latitude: z.latitude,
+            longitude: z.longitude,
+            range: z.range,
+          })),
+        ];
+      }
+    });
 
-  setZones(allZones);
-}, [selectedCityId, locations]);
-
+    setZones(allZones);
+  }, [selectedCityId, locations]);
 
   // Fetch stores when zones change
-useEffect(() => {
-  const fetchStores = async () => {
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllStore`);
-      const data = await res.json();
-      const storeList = Array.isArray(data) ? data : data.stores || [];
-      setStores(storeList);
-    } catch (err) {
-      console.error("Error fetching stores:", err);
-      setStores([]);
-    }
-  };
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const res = await get(ENDPOINTS.GET_ALL_STORE);
+        const data = res.data;
+        const storeList = Array.isArray(data) ? data : data.stores || [];
+        setStores(storeList);
+      } catch (err) {
+        console.error("Error fetching stores:", err);
+        showAlert("error", "Error fetching stores");
+        setStores([]);
+      }
+    };
 
-  fetchStores();
-}, []);
-
+    fetchStores();
+  }, []);
 
   // Image preview handler
   const ImagePreview = (e) => {
@@ -190,85 +189,65 @@ useEffect(() => {
 
   // Handle banner save
   const handleBanner = async () => {
-  if (!name || !type || !selectedCityId || zones.length === 0) {
-    alert("Please fill all required fields.");
-    return;
-  }
+    if (!name || !type || !selectedCityId || zones.length === 0) {
+      showAlert("error", "Please fill all required fields.");
+      return;
+    }
 
-  // Get the file input element and selected file
-  const imageFile = document.querySelector('input[type="file"]').files[0];
+    // Get the file input element and selected file
+    const imageFile = document.querySelector('input[type="file"]').files[0];
 
-  // If no new image file selected and no existing image, alert
-  if (!imageFile && !image) {
-    alert("Please select an image file.");
-    return;
-  }
+    // If no new image file selected and no existing image, alert
+    if (!imageFile && !image) {
+      showAlert("error", "Please select an image.");
+      return;
+    }
 
-  const formData = new FormData();
-  dispatch(startLoading());
-  formData.append("title", name);
-  formData.append("city", JSON.stringify(selectedCityId));
-  formData.append("type", type);
-  formData.append("type2", type); 
+    const formData = new FormData();
+    formData.append("title", name);
+    formData.append("city", JSON.stringify(selectedCityId));
+    formData.append("type", type);
+    formData.append("type2", type);
     if (type === "Brand") {
-    if (!brandId) {
-      alert("Please select a brand for Brand type banners.");
-      dispatch(stopLoading());
-      return;
+      if (!brandId) return showAlert("error", "Please select a brand for Brand type banners.");
+      formData.append("brand", brandId);
+    } else if (type === "Store") {
+      if (!storeId) return showAlert("error", "Please select a Store for Store type banners..");
+      formData.append("storeId", storeId);
+    } else {
+      if (mainId) formData.append("mainCategory", mainId);
+      if (subId) formData.append("subCategory", subId);
+      if (subsubId) formData.append("subSubCategory", subsubId);
     }
-    formData.append("brand", brandId);
-  } else if (type === "Store") {
-    if (!storeId) {
-      alert("Please select a Store for Store type banners.");
-      dispatch(stopLoading());
-      return;
-    }
-    formData.append("storeId", storeId);
-  } else {
-    if (mainId) formData.append("mainCategory", mainId);
-    if (subId) formData.append("subCategory", subId);
-    if (subsubId) formData.append("subSubCategory", subsubId);
-  }
-  formData.append("storeId", storeId || "");
- zones.forEach((zone, index) => {
-  formData.append(`zones[${index}][address]`, zone.address);
-  formData.append(`zones[${index}][latitude]`, zone.latitude);
-  formData.append(`zones[${index}][longitude]`, zone.longitude);
-  if (zone.range) {
-    formData.append(`zones[${index}][range]`, zone.range);
-  }
-});
-
-  // If new image selected, append the new file
-  if (imageFile) {
-    formData.append("image", imageFile);
-  } else if (image && typeof image === "string") {
-    formData.append("existingImage", image);
-  }
-
-  try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/banner/${id}/status`, {
-      method: "PATCH",
-      body: formData,
+    formData.append("storeId", storeId || "");
+    zones.forEach((zone, index) => {
+      formData.append(`zones[${index}][address]`, zone.address);
+      formData.append(`zones[${index}][latitude]`, zone.latitude);
+      formData.append(`zones[${index}][longitude]`, zone.longitude);
+      if (zone.range) {
+        formData.append(`zones[${index}][range]`, zone.range);
+      }
     });
 
-    const result = await response.json();
-
-    if (response.ok) {
-      dispatch(stopLoading());
-      alert("✅ Banner Updated Successfully!");
-      navigate(-1);
-    } else {
-      dispatch(stopLoading());
-      console.error("Response error:", result);
-      alert("Something went wrong: " + (result.message || "Server Error"));
+    // If new image selected, append the new file
+    if (imageFile) {
+      formData.append("image", imageFile);
+    } else if (image && typeof image === "string") {
+      formData.append("existingImage", image);
     }
-  } catch (error) {
-    dispatch(stopLoading());
-    console.error("Network or Server Error:", error);
-    alert("Server Error. Please try again.");
-  }
-};
+
+    try {
+      showAlert("loading", "Updating banner...");
+
+      await patch(`${ENDPOINTS.UPDATE_BANNER}/${id}/status`, formData);
+
+      showAlert("success", "Banner updated successfully");
+
+      navigate(-1);
+    } catch (error) {
+      showAlert("error", "Failed to update banner");
+    }
+  };
 
   return (
     <MDBox
@@ -336,27 +315,26 @@ useEffect(() => {
         </div>
 
         {/* City */}
-<div style={formRowStyle}>
-  <label style={labelStyle}>City</label>
-  <select
-    style={inputStyle}
-    value=""
-    onChange={(e) => {
-      const value = e.target.value;
-      if (!value) return;
+        <div style={formRowStyle}>
+          <label style={labelStyle}>City</label>
+          <select
+            style={inputStyle}
+            value=""
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) return;
 
-      setSelectedCityId(prev => prev.includes(value) ? prev : [...prev, value]);
-    }}
-  >
-    <option value="">-- Select City --</option>
-    {locations.map((loc) => (
-      <option key={loc._id} value={loc._id}>
-        {loc.city || loc.name || "Unknown City"}
-      </option>
-    ))}
-  </select>
-</div>
-
+              setSelectedCityId((prev) => (prev.includes(value) ? prev : [...prev, value]));
+            }}
+          >
+            <option value="">-- Select City --</option>
+            {locations.map((loc) => (
+              <option key={loc._id} value={loc._id}>
+                {loc.city || loc.name || "Unknown City"}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Display Selected Zones */}
         {selectedCityId && (
@@ -396,9 +374,7 @@ useEffect(() => {
                   ))}
                 </div>
               ) : (
-                <span style={{ color: "gray" }}>
-                  No zones available for this city.
-                </span>
+                <span style={{ color: "gray" }}>No zones available for this city.</span>
               )}
             </div>
           </div>
@@ -427,41 +403,33 @@ useEffect(() => {
           </select>
         </div>
 
-   {type === "Store" && (
+        {type === "Store" && (
           <div style={formRowStyle}>
-  <label style={labelStyle}>Store/Seller</label>
-  <select
-    style={inputStyle}
-    value={storeId}
-    onChange={(e) => setStoreId(e.target.value)}
-  >
-    <option value="">--Select Store--</option>
-    {stores.map((store) => (
-      <option key={store._id} value={store._id}>
-        {store.storeName} ({store.city?.name || "Unknown City"})
-      </option>
-    ))}
-  </select>
-</div>
+            <label style={labelStyle}>Store/Seller</label>
+            <select style={inputStyle} value={storeId} onChange={(e) => setStoreId(e.target.value)}>
+              <option value="">--Select Store--</option>
+              {stores.map((store) => (
+                <option key={store._id} value={store._id}>
+                  {store.storeName} ({store.city?.name || "Unknown City"})
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
-{type === "Brand" && (
-  <div style={formRowStyle}>
-    <label style={labelStyle}>Select Brand</label>
-    <select
-      style={inputStyle}
-      value={brandId}
-      onChange={(e) => setBrandId(e.target.value)}
-    >
-      <option value="">--Select Brand--</option>
-      {brands.map((brand) => (
-        <option key={brand._id} value={brand._id}>
-          {brand.brandName}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
+        {type === "Brand" && (
+          <div style={formRowStyle}>
+            <label style={labelStyle}>Select Brand</label>
+            <select style={inputStyle} value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+              <option value="">--Select Brand--</option>
+              {brands.map((brand) => (
+                <option key={brand._id} value={brand._id}>
+                  {brand.brandName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Category / SubCategory / SubSubCategory */}
         {type === "Category" && (
@@ -512,13 +480,11 @@ useEffect(() => {
                   onChange={(e) => setSubId(e.target.value)}
                 >
                   <option value="">--Select Sub Category--</option>
-                  {(main.find((cat) => cat._id === mainId)?.subcat || []).map(
-                    (sub) => (
-                      <option key={sub._id} value={sub._id}>
-                        {sub.name}
-                      </option>
-                    )
-                  )}
+                  {(main.find((cat) => cat._id === mainId)?.subcat || []).map((sub) => (
+                    <option key={sub._id} value={sub._id}>
+                      {sub.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -555,13 +521,11 @@ useEffect(() => {
                   onChange={(e) => setSubId(e.target.value)}
                 >
                   <option value="">--Select Sub Category--</option>
-                  {(main.find((cat) => cat._id === mainId)?.subcat || []).map(
-                    (sub) => (
-                      <option key={sub._id} value={sub._id}>
-                        {sub.name}
-                      </option>
-                    )
-                  )}
+                  {(main.find((cat) => cat._id === mainId)?.subcat || []).map((sub) => (
+                    <option key={sub._id} value={sub._id}>
+                      {sub.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -576,9 +540,8 @@ useEffect(() => {
                 >
                   <option value="">--Select Sub Sub Category--</option>
                   {(
-                    main
-                      .find((cat) => cat._id === mainId)
-                      ?.subcat.find((sub) => sub._id === subId)?.subsubcat || []
+                    main.find((cat) => cat._id === mainId)?.subcat.find((sub) => sub._id === subId)
+                      ?.subsubcat || []
                   ).map((subsub) => (
                     <option key={subsub._id} value={subsub._id}>
                       {subsub.name}

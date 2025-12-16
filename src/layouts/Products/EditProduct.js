@@ -747,6 +747,7 @@ function EditProduct() {
   const fetchAttribute = async () => {
     try {
       const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+      console.log(res)
       setAttribute(res.data);
     } catch (err) {
       console.error(err);

@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { get, put, del } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -33,20 +36,23 @@ function UserTable() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/users`);
-        const data = await res.json();
-        setUsers(data || []);
+        showAlert("loading", "Fetching users…");
+        const res = await get(ENDPOINTS.GET_USERS);
+        setUsers(res.data || []);
+        showAlert("success", "Users loaded");
       } catch (err) {
         console.error("Error fetching users:", err);
+        showAlert("error", "Failed to load users");
       }
     };
 
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter((user) =>
-    (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredUsers.length / entriesToShow);
@@ -68,9 +74,7 @@ function UserTable() {
 
       if (res.status === 200) {
         setUsers((prev) =>
-          prev.map((user) =>
-            user._id === id ? { ...user, isBlocked: !currentStatus } : user
-          )
+          prev.map((user) => (user._id === id ? { ...user, isBlocked: !currentStatus } : user))
         );
         alert(`User ${action}ed successfully!`);
       }
@@ -138,7 +142,7 @@ function UserTable() {
                   color: "white",
                   letterSpacing: "1px",
                 }}
-                onClick={() => navigate("/add-user")}
+                onClick={() => navigate("/user-create")}
               >
                 + ADD USER
               </Button>
@@ -155,7 +159,10 @@ function UserTable() {
           >
             <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 16 }}>Show Entries</span> 
-              <select value={entriesToShow} onChange={(e) => setEntriesToShow(Number(e.target.value))}>
+              <select
+                value={entriesToShow}
+                onChange={(e) => setEntriesToShow(Number(e.target.value))}
+              >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -212,7 +219,9 @@ function UserTable() {
                     <td style={bodyCell}>{startIndex + index + 1}</td>
                     <td style={bodyCell}>{item.mobileNumber || item.phone || "-"}</td>
                     <td style={bodyCell}>{item.name || "-"}</td>
-                    <td style={bodyCell}>{item?.location?.city || "-"}/{item?.location?.zone || "-"}</td>
+                    <td style={bodyCell}>
+                      {item?.location?.city || "-"}/{item?.location?.zone || "-"}
+                    </td>
                     <td style={bodyCell}>{item.email || "-"}</td>
                     <td style={bodyCell}>{item.totalOrders || 0}</td>
                     <td style={bodyCell}>₹{item.wallet || 0}</td>
@@ -277,8 +286,8 @@ function UserTable() {
             }}
           >
             <span>
-              Showing {startIndex + 1}-
-              {Math.min(startIndex + entriesToShow, filteredUsers.length)} of {filteredUsers.length} users
+              Showing {startIndex + 1}-{Math.min(startIndex + entriesToShow, filteredUsers.length)}{" "}
+              of {filteredUsers.length} users
             </span>
             <div>
               <button

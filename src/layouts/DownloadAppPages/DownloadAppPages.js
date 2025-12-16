@@ -1,5 +1,5 @@
 // DownloadAppPages.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import {
@@ -10,8 +10,10 @@ import {
   DialogActions,
   TextField,
 } from "@mui/material";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, del, post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
-const API = process.env.REACT_APP_API_URL;
 const IMAGE_PREFIX = process.env.REACT_APP_IMAGE_LINK || "";
 
 const headerCell = {
@@ -54,23 +56,22 @@ export default function DownloadAppPages() {
     existingImage: "",
   });
 
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Fetch all items
-  const fetchApps = async () => {
-    setLoading(true);
+  const fetchApps = async () => {    
     try {
-      const res = await fetch(`${API}/getDownloadAppPages`);
-      const data = await res.json();
+      showAlert("loading","Loading app list");
+      const res = await get(ENDPOINTS.GET_DOWNLOAD_APP_PAGES);
+      const data = res.data;
 
       const arr = Array.isArray(data) ? data : [];
       setAllApps(arr);
       applyFilters(arr);
+      showAlert("info","", 0);
     } catch (err) {
       console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
+      showAlert("error", "Failed to load app list");
     }
   };
 
@@ -140,21 +141,21 @@ export default function DownloadAppPages() {
       formData.append("appLink", form.appLink);
       formData.append("description", form.description);
 
-      const url = editingId
-        ? `${API}/updateDownloadApp/${editingId}`
-        : `${API}/addDownloadAppPages`;
-
-      const method = editingId ? "PUT" : "POST";
-
-      const res = await fetch(url, { method, body: formData });
-      if (!res.ok) throw new Error("Save failed");
+      let res;
+      if (editingId) {
+        res = await post(ENDPOINTS.UPDATE_DOWNLOAD_APP(editingId), formData);
+        showAlert("success", "App Page Updated Successfully");
+      } else {
+        res = await post(ENDPOINTS.ADD_DOWNLOAD_APP, formData);
+        showAlert("success", "App Page Added Successfully",);
+      }
 
       await fetchApps();
       setModalOpen(false);
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Failed to save app");
+      showAlert("error", "Failed to save app");
     } finally {
       setSaving(false);
     }
@@ -163,8 +164,14 @@ export default function DownloadAppPages() {
   const deleteApp = async (id) => {
     if (!window.confirm("Delete this app page?")) return;
 
-    await fetch(`${API}/deleteDownloadApp/${id}`, { method: "DELETE" });
-    fetchApps();
+    try {
+      await del(ENDPOINTS.DELETE_DOWNLOAD_APP(id));
+      showAlert("success", "App Page Deleted Successfully");
+      fetchApps();
+    } catch (err) {
+      console.error(err);
+      showAlert("error", "Failed to delete app");
+    }
   };
 
   const resolveImage = (img) => {
@@ -201,9 +208,7 @@ export default function DownloadAppPages() {
         >
           <div>
             <h2 style={{ margin: 0 }}>Download App Pages</h2>
-            <p style={{ fontSize: 16, color: "#666" }}>
-              Manage downloadable app pages
-            </p>
+            <p style={{ fontSize: 16, color: "#666" }}>Manage downloadable app pages</p>
           </div>
 
           <Button
@@ -232,9 +237,7 @@ export default function DownloadAppPages() {
           }}
         >
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 16, marginRight: 10 }}>
-              Show Entries
-            </label>
+            <label style={{ fontSize: 16, marginRight: 10 }}>Show Entries</label>
             <select
               value={entriesToShow}
               onChange={(e) => {
@@ -289,18 +292,14 @@ export default function DownloadAppPages() {
                 <th style={headerCell}>Platform</th>
                 <th style={headerCell}>Link</th>
                 <th style={headerCell}>Description</th>
-                <th style={{ ...headerCell, textAlign: "center" }}>
-                  Action
-                </th>
+                <th style={{ ...headerCell, textAlign: "center" }}>Action</th>
               </tr>
             </thead>
 
             <tbody>
               {apps.map((app, index) => (
                 <tr key={app._id}>
-                  <td style={bodyCell}>
-                    {(currentPage - 1) * entriesToShow + index + 1}
-                  </td>
+                  <td style={bodyCell}>{(currentPage - 1) * entriesToShow + index + 1}</td>
 
                   <td style={bodyCell}>
                     <img
@@ -358,10 +357,7 @@ export default function DownloadAppPages() {
 
               {apps.length === 0 && (
                 <tr>
-                  <td
-                    colSpan="7"
-                    style={{ ...bodyCell, textAlign: "center", color: "#999" }}
-                  >
+                  <td colSpan="7" style={{ ...bodyCell, textAlign: "center", color: "#999" }}>
                     No apps found
                   </td>
                 </tr>
@@ -382,12 +378,10 @@ export default function DownloadAppPages() {
         >
           <span>
             Showing {(currentPage - 1) * entriesToShow + 1}-
-            {Math.min(currentPage * entriesToShow, totalPages * entriesToShow)}{" "}
-            of{" "}
+            {Math.min(currentPage * entriesToShow, totalPages * entriesToShow)} of{" "}
             {
-              allApps.filter((a) =>
-                a.appName.toLowerCase().includes(searchTerm.toLowerCase())
-              ).length
+              allApps.filter((a) => a.appName.toLowerCase().includes(searchTerm.toLowerCase()))
+                .length
             }{" "}
             apps
           </span>
@@ -406,9 +400,7 @@ export default function DownloadAppPages() {
             </span>
 
             <button
-              onClick={() =>
-                currentPage < totalPages && setCurrentPage(currentPage + 1)
-              }
+              onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               style={{ padding: "8px 16px", borderRadius: 10 }}
             >
@@ -419,15 +411,8 @@ export default function DownloadAppPages() {
       </div>
 
       {/* Dialog - Add/Edit */}
-      <Dialog
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingId ? "Edit App Page" : "Add App Page"}
-        </DialogTitle>
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingId ? "Edit App Page" : "Add App Page"}</DialogTitle>
 
         <DialogContent dividers>
           <TextField
@@ -440,14 +425,10 @@ export default function DownloadAppPages() {
 
           {/* PLATFORM DROPDOWN */}
           <div style={{ marginTop: 16 }}>
-            <label style={{ fontSize: 16, fontWeight: "bold" }}>
-              Platform
-            </label>
+            <label style={{ fontSize: 16, fontWeight: "bold" }}>Platform</label>
             <select
               value={form.platform}
-              onChange={(e) =>
-                setForm({ ...form, platform: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, platform: e.target.value })}
               style={{
                 width: "100%",
                 padding: "12px",
@@ -481,15 +462,11 @@ export default function DownloadAppPages() {
           />
 
           <div style={{ marginTop: 16 }}>
-            <label style={{ fontSize: 16, fontWeight: "bold" }}>
-              Upload Image
-            </label>
+            <label style={{ fontSize: 16, fontWeight: "bold" }}>Upload Image</label>
             <input
               type="file"
               accept="image/*"
-              onChange={(e) =>
-                setForm({ ...form, appImage: e.target.files[0] })
-              }
+              onChange={(e) => setForm({ ...form, appImage: e.target.files[0] })}
               style={{ marginTop: 8 }}
             />
           </div>

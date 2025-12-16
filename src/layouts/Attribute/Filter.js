@@ -35,7 +35,7 @@ function Filter() {
       try {
         showAlert("loading", "Fetching filters...");
 
-        const res = await get(ENDPOINTS.GET_FILTER);
+        const res = await get(ENDPOINTS.GET_FILTERS);
         setFilterData(res.data);
 
         showAlert("success", "Filters loaded successfully");

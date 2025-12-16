@@ -5,6 +5,9 @@ import "react-quill/dist/quill.snow.css";
 import { Button } from "@mui/material";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
+import { ENDPOINTS } from "api/endPoints";
+import { put, post } from "api/apiClient";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function AddPageForm() {
   const [title, setTitle] = useState("");
@@ -31,26 +34,17 @@ function AddPageForm() {
       pageContent : content,
     };
     try {
-      const url = location.state ? `${process.env.REACT_APP_API_URL}/editPage/${location.state.id}` : `${process.env.REACT_APP_API_URL}/addPage`;
-      const method = location.state ? "PUT" : "POST";
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const url = location.state ? `${ENDPOINTS.EDIT_PAGE}/${location.state.id}` : ENDPOINTS.ADD_PAGE;
+      const method = location.state ? put : post;
+      const response = await method(url, data);
 
-      if (!response.ok) {
-        throw new Error("Failed to save the page");
-      }
-      const result = await response.json();
+      const result = response.data;
       console.log("Page saved:", result);
-      alert("Page Saved!");
+      showAlert("success", "Page Saved!");
       navigate(-1);
     } catch (error) {
       console.error("Error saving page:", error);
-      alert("Failed to save page.");
+      showAlert("error", "Failed to save page.");
     }
   };
 

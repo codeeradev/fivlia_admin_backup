@@ -19,6 +19,10 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DataTable from "react-data-table-component";
 import moment from "moment";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { getAllZones, getMainCategories } from "components/commonApi/commonApi";
 
 export default function SalesReport() {
   const [controller] = useMaterialUIController();
@@ -50,39 +54,45 @@ export default function SalesReport() {
 
   const fetchReport = async () => {
     try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedCategory) params.append("category", selectedCategory._id);
-      if (selectedCity) params.append("city", selectedCity._id);
-      if (selectedZone) params.append("zone", selectedZone);
+      showAlert("loading", "Fetching report...");
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/get-seller-report?${params}`);
-      const data = await res.json();
-      setReports(data.data || []);
+      const response = await get(ENDPOINTS.GET_SELLER_REPORT, {
+        params: {
+          category: selectedCategory?._id || "",
+          city: selectedCity?._id || "",
+          zone: selectedZone || "",
+        },
+      });
+
+      setReports(response.data.data || []);
+      showAlert("success", "Report loaded");
     } catch (err) {
       console.error("Error fetching report:", err);
-    } finally {
-      setLoading(false);
+      showAlert("error", "Failed to load report");
     }
   };
 
   const getCategories = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-      const data = await res.json();
-      setCategories(data.result || []);
+      showAlert("loading", "Loading categories...");
+      const res = await getMainCategories();
+      setCategories(res.data.result || []);
+      showAlert("success", "Categories loaded");
     } catch (err) {
       console.error("Error fetching categories:", err);
+      showAlert("error", "Failed to load categories");
     }
   };
 
   const getCities = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-      const data = await res.json();
-      setCityData(data || []);
+      showAlert("loading", "Loading cities...");
+      const res = await getAllZones();
+      setCityData(res.data || []);
+      showAlert("success", "Cities loaded");
     } catch (err) {
       console.error("Error fetching cities:", err);
+      showAlert("error", "Failed to load cities");
     }
   };
 
@@ -139,8 +149,7 @@ export default function SalesReport() {
     { name: "Zone", selector: (row) => row.zone || "-", sortable: true, minWidth: "140px" },
     {
       name: "Order At",
-      selector: (row) =>
-        row.createdAt ? moment(row.createdAt).format("DD MMM YYYY") : "-",
+      selector: (row) => (row.createdAt ? moment(row.createdAt).format("DD MMM YYYY") : "-"),
       minWidth: "100px",
     },
     {

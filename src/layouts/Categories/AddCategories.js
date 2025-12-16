@@ -5,6 +5,8 @@ import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post } from "../../api/apiClient";
+import { ENDPOINTS } from "../../api/endPoints";
 
 const AddCategories = () => {
   const [name, setCategoryName] = useState("");
@@ -17,7 +19,7 @@ const AddCategories = () => {
   const [subCategory, setSubCategory] = useState("");
   const [subCategories, setSubCategories] = useState([]);
   const [attribute, setAttribute] = useState([]);
-  const [brands, setBrands] = useState([])
+  const [brands, setBrands] = useState([]);
   const [attributeArray, setAttributeArray] = useState([]);
   const [filterType, setFilterType] = useState("");
   const [filterData, setFilterData] = useState([]);
@@ -41,8 +43,8 @@ const AddCategories = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_FILTERS);
+        const data = res.data;
         setFilterTypes(data);
       } catch (err) {
         console.error("Error fetching Filters:", err);
@@ -51,66 +53,59 @@ const AddCategories = () => {
     fetchFilters();
   }, []);
 
-const handleFilterChange = (e) => {
-  const filterId = e.target.value;
-  setSelectedFilter(filterId);
+  const handleFilterChange = (e) => {
+    const filterId = e.target.value;
+    setSelectedFilter(filterId);
 
-const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
+    const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
 
-if (selectedFilterObj?.Filter_name === "Brand") {
-  setFilterValues(brands.map(b => ({ _id: b._id, name: b.brandName })));
-} else {
-  setFilterValues(selectedFilterObj?.Filter || []);
-}
-
-};
-
-
-const handleFilterValueToggle = (filterId, valueId) => {
-  setAllFilters((prev) => {
-    const existingFilter = prev.find((f) => f._id === filterId);
-
-    if (existingFilter) {
-      const alreadySelected = existingFilter.selected.includes(valueId);
-
-      const updatedSelected = alreadySelected
-        ? existingFilter.selected.filter((id) => id !== valueId)
-        : [...existingFilter.selected, valueId];
-
-      return prev.map((f) =>
-        f._id === filterId
-          ? { ...f, selected: updatedSelected }
-          : f
-      );
+    if (selectedFilterObj?.Filter_name === "Brand") {
+      setFilterValues(brands.map((b) => ({ _id: b._id, name: b.brandName })));
     } else {
-      const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
-      return [
-        ...prev,
-        {
-          _id: filterId,
-          Filter_name: selectedFilterObj?.Filter_name || "Unnamed",
-          selected: [valueId],
-        },
-      ];
+      setFilterValues(selectedFilterObj?.Filter || []);
     }
-  });
-};
+  };
+
+  const handleFilterValueToggle = (filterId, valueId) => {
+    setAllFilters((prev) => {
+      const existingFilter = prev.find((f) => f._id === filterId);
+
+      if (existingFilter) {
+        const alreadySelected = existingFilter.selected.includes(valueId);
+
+        const updatedSelected = alreadySelected
+          ? existingFilter.selected.filter((id) => id !== valueId)
+          : [...existingFilter.selected, valueId];
+
+        return prev.map((f) => (f._id === filterId ? { ...f, selected: updatedSelected } : f));
+      } else {
+        const selectedFilterObj = filterTypes.find((f) => f._id === filterId);
+        return [
+          ...prev,
+          {
+            _id: filterId,
+            Filter_name: selectedFilterObj?.Filter_name || "Unnamed",
+            selected: [valueId],
+          },
+        ];
+      }
+    });
+  };
 
   // Add new filter
   const handleFilter = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
-        method: "POST",
-        body: JSON.stringify({ Filter_name: filterName }),
-        headers: { "Content-Type": "application/json" },
+      const result = await post(ENDPOINTS.ADD_FILTER, {
+        Filter_name: filterName,
       });
+
       if (result.status === 200) {
         showAlert("success", "Filter Added Successfully");
         setFilterPopup(false);
         setFilterName("");
         // Refresh filter types
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_FILTERS);
+        const data = res.data;
         setFilterTypes(data);
       } else {
         showAlert("error", "Something went wrong");
@@ -128,21 +123,18 @@ const handleFilterValueToggle = (filterId, valueId) => {
     }
 
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/addFilter`, {
-        method: "POST",
-        body: JSON.stringify({
-          _id: selectedFilter,
-          Filter: [{ name: addFilterValue }],
-        }),
-        headers: { "Content-Type": "application/json" },
+      const result = await post(ENDPOINTS.ADD_FILTER, {
+        _id: selectedFilter,
+        Filter: [{ name: addFilterValue }],
       });
+
       if (result.status === 200) {
         showAlert("success", "Filter Value Added Successfully");
         setShowFilterDropdown(false);
         setAddFilterValue("");
         // Refresh filter values
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getFilter`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_FILTERS);
+        const data = res.data;
         setFilterTypes(data);
         const selectedFilterObj = data.find((f) => f._id === selectedFilter);
         setFilterValues(selectedFilterObj?.Filter || []);
@@ -163,15 +155,12 @@ const handleFilterValueToggle = (filterId, valueId) => {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        if (data.status === 200) {
-          const result = await data.json();
-          setMainCategories(result.result);
-          const allSubCategories = result.result.flatMap((cat) => cat.subcat || []);
-          setSubCategories(allSubCategories);
-        } else {
-          console.log("Something Wrong");
-        }
+        const data = await get(ENDPOINTS.GET_MAIN_CATEGORY);
+        const result = data.data;
+
+        setMainCategories(result.result);
+        const allSubCategories = result.result.flatMap((cat) => cat.subcat || []);
+        setSubCategories(allSubCategories);
       } catch (err) {
         console.log(err);
       }
@@ -180,8 +169,8 @@ const handleFilterValueToggle = (filterId, valueId) => {
 
     const fetchAttribute = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAttributes`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_ATTRIBUTES);
+        const data = res.data;
         setAttribute(data);
       } catch (err) {
         console.error("Error fetching attributes:", err);
@@ -190,32 +179,30 @@ const handleFilterValueToggle = (filterId, valueId) => {
     fetchAttribute();
   }, []);
 
-useEffect(()=>{
-  const fetchBrands = async () => {
-  try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-    if (res.status === 200) {
-      const data = await res.json();
-    setBrands(data.allBrands);
-    setFilterTypes((prev) => [
-          ...prev.filter(f => f.Filter_name !== "Brand"),
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const res = await get(ENDPOINTS.GET_BRANDS);
+        const data = res.data;
+        setBrands(data.allBrands);
+        setFilterTypes((prev) => [
+          ...prev.filter((f) => f.Filter_name !== "Brand"),
           {
             _id: "brand-filter",
             Filter_name: "Brand",
             Filter: data.allBrands.map((b) => ({
               _id: b._id,
-              name: b.brandName
+              name: b.brandName,
             })),
           },
         ]);
+      } catch (err) {
+        console.error("Error fetching brands:", err);
       }
-  } catch (err) {
-    console.error("Error fetching brands:", err);
-  }
-};
-fetchBrands();
-},[])
-// Set attributes for Main Category
+    };
+    fetchBrands();
+  }, []);
+  // Set attributes for Main Category
   useEffect(() => {
     if (type === "Main Category") {
       const allAttributeNames = attribute.map((item) => item._id); // Use _id instead of Attribute_name
@@ -269,18 +256,13 @@ fetchBrands();
     // Main Category Add
     if (type === "Main Category") {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/addMainCategory`, {
-          method: "POST",
-          body: formData,
-        });
-
-        const result = await response.json();
+        const response = await post(ENDPOINTS.ADD_MAIN_CATEGORY, formData)
         if (response.status === 201) {
           showAlert("success", "Category Added Successfully");
           navigate("/categories");
         } else {
           showAlert("error", "Something went wrong");
-          console.error("Server response:", result);
+          console.error("Server response:", response.data);
         }
       } catch (err) {
         console.error("Error while submitting:", err);
@@ -289,10 +271,7 @@ fetchBrands();
     // Add Sub Category
     else if (type === "Sub Category") {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/addSubCategory`, {
-          method: "POST",
-          body: formData,
-        });
+        const result = await post(ENDPOINTS.ADD_SUB_CATEGORY, formData);
         if (result.status === 200) {
           showAlert("success", "Sub Category Added Successfully");
           navigate("/categories");
@@ -306,10 +285,7 @@ fetchBrands();
     // Add Sub Sub-Category
     else {
       try {
-        const result = await fetch(`${process.env.REACT_APP_API_URL}/addSubSubCategory`, {
-          method: "POST",
-          body: formData,
-        });
+        const result = await post(ENDPOINTS.ADD_SUBSUB_CATEGORY, formData);
         if (result.status === 201) {
           showAlert("success", "Category Added Successfully");
           navigate("/categories");
@@ -570,7 +546,6 @@ fetchBrands();
                   value={selectedFilter}
                   onChange={handleFilterChange}
                 >
-                  
                   <option value="">--Select Filter--</option>
                   {filterTypes.map((filter) => (
                     <option key={filter._id} value={filter._id}>
@@ -697,8 +672,7 @@ fetchBrands();
                     }}
                     onClick={() => setFilterDropdown(!filterDropdown)}
                   >
-                    {allFilters
-                      .find((f) => f._id === selectedFilter)?.selected.length > 0
+                    {allFilters.find((f) => f._id === selectedFilter)?.selected.length > 0
                       ? `${
                           allFilters.find((f) => f._id === selectedFilter).selected.length
                         } value(s) selected`
@@ -815,32 +789,37 @@ fetchBrands();
                 marginBottom: "20px",
               }}
             >
-    {allFilters.map((filter) =>
-  (filter.selected || []).map((valueId, index) => {
-    const filterObj = filterTypes.find((f) => f._id === filter._id);
-    const isBrandFilter = filterObj?.Filter_name === "Brand";
+              {allFilters.map((filter) =>
+                (filter.selected || []).map((valueId, index) => {
+                  const filterObj = filterTypes.find((f) => f._id === filter._id);
+                  const isBrandFilter = filterObj?.Filter_name === "Brand";
 
-    const value = isBrandFilter
-      ? brands.find(b => b._id === valueId)
-      : (filterObj?.Filter || []).find(f => f._id === valueId);
+                  const value = isBrandFilter
+                    ? brands.find((b) => b._id === valueId)
+                    : (filterObj?.Filter || []).find((f) => f._id === valueId);
 
-    return value ? (
-      <div key={`${filter._id}-${valueId}-${index}`} style={{ /* styling */ }}>
-        <span>
-          {filterObj?.Filter_name || "Unnamed"}: {value?.name || value?.brandName}
-        </span>
-        <span
-          style={{ cursor: "pointer", marginLeft: "5px" }}
-          onClick={() => handleFilterValueToggle(filter._id, valueId)}
-        >
-          ×
-        </span>
-      </div>
-    ) : null;
-  })
-)}
-
-
+                  return value ? (
+                    <div
+                      key={`${filter._id}-${valueId}-${index}`}
+                      style={
+                        {
+                          /* styling */
+                        }
+                      }
+                    >
+                      <span>
+                        {filterObj?.Filter_name || "Unnamed"}: {value?.name || value?.brandName}
+                      </span>
+                      <span
+                        style={{ cursor: "pointer", marginLeft: "5px" }}
+                        onClick={() => handleFilterValueToggle(filter._id, valueId)}
+                      >
+                        ×
+                      </span>
+                    </div>
+                  ) : null;
+                })
+              )}
             </div>
           </div>
         )}

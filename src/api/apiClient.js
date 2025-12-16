@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { API_BASE_URL } from './endPoints.js';
+import { API_BASE_URL } from 'api/endPoints.js';
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 // Create axios instance
 const apiClient = axios.create({
@@ -75,6 +76,21 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    const message = error.response?.data?.message;
+
+        if (message === "Permission denied") {
+      showAlert("error", "You do not have permission to perform this action.");
+      return Promise.reject(error);
+    }
+
+    // ⭐ Token-related auth failure
+    if (message === "Token missing" || message === "Invalid Token") {
+      localStorage.removeItem("token");
+      showAlert("error", "Session expired. Please login again.");
+      return Promise.reject(error);
+    }
+
+
     // console.log('API Client: Error response for:', error.config?.url);
     // console.log('API Client: Error status:', error.response?.status);
     // console.log('API Client: Request headers that were sent:', error.config?.headers);

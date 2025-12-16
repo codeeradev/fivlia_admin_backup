@@ -20,6 +20,10 @@ import {
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
+import { getCities } from "components/commonApi/commonApi";
+import { put, get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -50,54 +54,52 @@ function StoreTabel() {
   const [selectedStore, setSelectedStore] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-const [selectedCity, setSelectedCity] = useState("");
-const [statusFilter, setStatusFilter] = useState("");
-const [cityOptions, setCityOptions] = useState([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [cityOptions, setCityOptions] = useState([]);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     getAllStores();
     getWalletBalances();
-     getAllCities();
+    getAllCities();
   }, []);
 
   const getAllCities = async () => {
-  try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
-    const data = await res.json();
-    if (res.ok && data) {
-      setCityOptions(data.map((c) => c.city));
+    try {
+      const res = await getCities();
+      const data = await res.data;
+      if (data) {
+        setCityOptions(data.map((c) => c.city));
+      }
+    } catch (err) {
+      console.error("Failed to load cities:", err);
     }
-  } catch (err) {
-    console.error("Failed to load cities:", err);
-  }
-};
+  };
 
-useEffect(() => {
-  const filtered = stores.filter((store) => {
-    const matchesSearch =
-      store.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.ownerName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCity = selectedCity ? store.city?.name === selectedCity : true;
-    const matchesStatus =
-      statusFilter === "" ? true : store.status?.toString() === statusFilter;
-    return matchesSearch && matchesCity && matchesStatus;
-  });
-  setFilteredStores(filtered);
-}, [searchTerm, selectedCity, statusFilter, stores]);
+  useEffect(() => {
+    const filtered = stores.filter((store) => {
+      const matchesSearch =
+        store.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        store.ownerName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCity = selectedCity ? store.city?.name === selectedCity : true;
+      const matchesStatus = statusFilter === "" ? true : store.status?.toString() === statusFilter;
+      return matchesSearch && matchesCity && matchesStatus;
+    });
+    setFilteredStores(filtered);
+  }, [searchTerm, selectedCity, statusFilter, stores]);
 
-const [filteredStores, setFilteredStores] = useState([]);
+  const [filteredStores, setFilteredStores] = useState([]);
 
   const getAllStores = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/getStore`);
-      if (result.status === 200) {
-        const res = await result.json();
-        setStores(res.stores);
-      } else {
-        console.log("Something went wrong");
-      }
+      showAlert("loading", "Loading Stores....")
+      const result = await get(ENDPOINTS.GET_STORE);
+
+      const res = await result.data;
+      setStores(res.stores);
+      showAlert("info","", 1)
     } catch (err) {
       console.log(err);
     }
@@ -105,13 +107,9 @@ const [filteredStores, setFilteredStores] = useState([]);
 
   const getWalletBalances = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/walletAdmin`);
-      if (result.status === 200) {
-        const res = await result.json();
-        setWalletBalances(res.storeTotals);
-      } else {
-        console.log("Failed to fetch wallet balances");
-      }
+      const result = await get(ENDPOINTS.WALLET_ADMIN);
+      const res = await result.data;
+      setWalletBalances(res.storeTotals);
     } catch (err) {
       console.log(err);
     }
@@ -144,23 +142,16 @@ const [filteredStores, setFilteredStores] = useState([]);
 
   const handleStatusToggle = async (storeId, newStatus) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
+      await put(`${ENDPOINTS.EDIT_STORE}/${storeId}`, {
+        status: newStatus,
       });
-      if (response.ok) {
         setStores((prevStores) =>
           prevStores.map((s) => (s._id === storeId ? { ...s, status: newStatus } : s))
         );
-      } else {
-        alert("Failed to update status.");
-      }
+
     } catch (err) {
       console.error(err);
-      alert("Something went wrong while updating status.");
+      showAlert("error", "Something went wrong while updating status.");
     }
   };
 
@@ -213,104 +204,104 @@ const [filteredStores, setFilteredStores] = useState([]);
             </div>
           </div>
           <div
-  style={{
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: "15px",
-    marginBottom: "20px",
-    background: "#f9f9f9",
-    padding: "16px 20px",
-    borderRadius: "12px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  }}
->
-  {/* 🔍 Search Box */}
-  <div style={{ position: "relative", flex: "1 1 280px" }}>
-    <input
-      type="text"
-      placeholder="🔍 Search by Store or Owner"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      style={{
-        width: "100%",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        border: "1px solid #ccc",
-        fontSize: "16px",
-        outline: "none",
-      }}
-    />
-  </div>
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "15px",
+              marginBottom: "20px",
+              background: "#f9f9f9",
+              padding: "16px 20px",
+              borderRadius: "12px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            }}
+          >
+            {/* 🔍 Search Box */}
+            <div style={{ position: "relative", flex: "1 1 280px" }}>
+              <input
+                type="text"
+                placeholder="🔍 Search by Store or Owner"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  fontSize: "16px",
+                  outline: "none",
+                }}
+              />
+            </div>
 
-  {/* 🏙️ City Filter */}
-  <div style={{ flex: "1 1 200px", position: "relative" }}>
-    <select
-      value={selectedCity}
-      onChange={(e) => setSelectedCity(e.target.value)}
-      style={{
-        width: "100%",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        border: "1px solid #ccc",
-        fontSize: "16px",
-        color: selectedCity ? "#000" : "#555",
-        backgroundColor: "#fff",
-        cursor: "pointer",
-      }}
-    >
-      <option value="">🏙️ All Cities</option>
-      {cityOptions.map((city) => (
-        <option key={city} value={city}>
-          {city}
-        </option>
-      ))}
-    </select>
-  </div>
+            {/* 🏙️ City Filter */}
+            <div style={{ flex: "1 1 200px", position: "relative" }}>
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  fontSize: "16px",
+                  color: selectedCity ? "#000" : "#555",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">🏙️ All Cities</option>
+                {cityOptions.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-  {/* 🌐 Status Filter */}
-  <div style={{ flex: "1 1 200px", position: "relative" }}>
-    <select
-      value={statusFilter}
-      onChange={(e) => setStatusFilter(e.target.value)}
-      style={{
-        width: "100%",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        border: "1px solid #ccc",
-        fontSize: "16px",
-        color: statusFilter ? "#000" : "#555",
-        backgroundColor: "#fff",
-        cursor: "pointer",
-      }}
-    >
-      <option value="">🌐 All Status</option>
-      <option value="true">🟢 Active</option>
-      <option value="false">🔴 Inactive</option>
-    </select>
-  </div>
+            {/* 🌐 Status Filter */}
+            <div style={{ flex: "1 1 200px", position: "relative" }}>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  fontSize: "16px",
+                  color: statusFilter ? "#000" : "#555",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">🌐 All Status</option>
+                <option value="true">🟢 Active</option>
+                <option value="false">🔴 Inactive</option>
+              </select>
+            </div>
 
-  {/* Reset Filters Button */}
-  {(searchTerm || selectedCity || statusFilter) && (
-    <Button
-      onClick={() => {
-        setSearchTerm("");
-        setSelectedCity("");
-        setStatusFilter("");
-      }}
-      style={{
-        backgroundColor: "#f44336",
-        color: "white",
-        textTransform: "none",
-        fontWeight: "bold",
-        borderRadius: "8px",
-        padding: "10px 18px",
-      }}
-    >
-      Reset
-    </Button>
-  )}
-</div>
+            {/* Reset Filters Button */}
+            {(searchTerm || selectedCity || statusFilter) && (
+              <Button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedCity("");
+                  setStatusFilter("");
+                }}
+                style={{
+                  backgroundColor: "#f44336",
+                  color: "white",
+                  textTransform: "none",
+                  fontWeight: "bold",
+                  borderRadius: "8px",
+                  padding: "10px 18px",
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
 
           <div style={{ width: "100%", overflowX: "auto", maxWidth: "100%" }}>
             <table
@@ -492,7 +483,12 @@ const [filteredStores, setFilteredStores] = useState([]);
           </div>
         </div>
         {/* Owner Info Modal */}
-        <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Owner Info</DialogTitle>
           <DialogContent dividers>
             {selectedStore && (

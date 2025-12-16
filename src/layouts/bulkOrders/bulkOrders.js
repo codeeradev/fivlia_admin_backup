@@ -2,7 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useMaterialUIController } from "context";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 import MDBox from "components/MDBox";
+import { put } from "api/apiClient";
 
 export default function BulkOrders() {
   const [controller] = useMaterialUIController();
@@ -18,36 +22,60 @@ export default function BulkOrders() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // === Fetch Bulk Orders ===
-  useEffect(() => {
     const fetchOrders = async () => {
       try {
-        dispatch(startLoading());
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBulkOrders`);
-        const data = await res.json();
+        showAlert("loading", "Loading bulk orders...");
+
+        const res = await get(ENDPOINTS.GET_BULK_ORDERS);
+        const data = res.data;
 
         if (Array.isArray(data.orders)) {
           setOrders(data.orders);
+          showAlert("success", "Bulk orders loaded");
         } else {
           setError("Invalid response format from server.");
+          showAlert("error", "Invalid response from server");
         }
       } catch (err) {
-        console.error("❌ Failed to fetch bulk orders:", err);
+        console.error("Failed to fetch bulk orders:", err);
         setError("Failed to fetch bulk orders. Please try again later.");
-      } finally {
-        dispatch(stopLoading());
+        showAlert("error", "Failed to fetch bulk orders");
       }
     };
-
+  useEffect(() => {
     fetchOrders();
   }, [dispatch]);
+
+  const updateStatus = async (status) => {
+    try {
+      showAlert("loading", "Updating status...");
+
+      const res = await put(`${ENDPOINTS.UPDATE_BULK_ORDERS}/${selectedOrder._id}`, { status });
+
+      // Update local state
+      setOrders((prev) =>
+        prev.map((o) => (o._id === selectedOrder._id ? { ...o, status: res.data.data.status } : o))
+      );
+
+      if (selectedOrder?._id === selectedOrder._id) {
+        setSelectedOrder((prev) => ({ ...prev, status }));
+      }
+
+      showAlert("success", `Order ${status}`);
+      closeModal();
+      fetchOrders();
+    } catch (e) {
+      showAlert("error", "Failed to update status");
+      closeModal();
+    }
+  };
 
   // === Filtering and Pagination ===
   const filteredOrders = orders.filter((order) => {
     const userName = order.user?.name?.toLowerCase() || "";
     const productTitle = order.product?.title?.toLowerCase() || "";
     return (
-      userName.includes(searchTerm.toLowerCase()) ||
-      productTitle.includes(searchTerm.toLowerCase())
+      userName.includes(searchTerm.toLowerCase()) || productTitle.includes(searchTerm.toLowerCase())
     );
   });
 
@@ -101,7 +129,7 @@ export default function BulkOrders() {
     switch (status?.toLowerCase()) {
       case "pending":
         return "#ffc107";
-      case "approved":
+      case "completed":
         return "#28a745";
       case "rejected":
         return "#dc3545";
@@ -204,8 +232,9 @@ export default function BulkOrders() {
             <thead>
               <tr>
                 <th style={headerCell}>#</th>
-                <th style={headerCell}>User</th>
+                <th style={headerCell}>Image</th>
                 <th style={headerCell}>Product</th>
+                <th style={headerCell}>User</th>
                 <th style={headerCell}>Price</th>
                 <th style={headerCell}>Status</th>
                 <th style={headerCell}>Date</th>
@@ -224,30 +253,30 @@ export default function BulkOrders() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
                   >
-                    <td style={{ ...bodyCell, textAlign: "center" }}>
-                      {startIndex + index + 1}
-                    </td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
                     <td style={bodyCell}>
-                      {order.user?.name || "Guest User"} <br />
-                      <small style={{ color: "#777" }}>{order.user?.email || "N/A"}</small>
+                      {order.product?.image && (
+                        <img
+                          src={`${process.env.REACT_APP_IMAGE_LINK}${order.product.image}`}
+                          alt={order.product.title}
+                          style={{
+                            width: "45px",
+                            height: "45px",
+                            borderRadius: "8px",
+                            marginLeft: "10px",
+                            objectFit: "cover",
+                          }}
+                        />
+                      )}
                     </td>
                     <td style={bodyCell}>
                       <div style={{ display: "flex", alignItems: "center" }}>
                         <span>{order.product?.title || "N/A"}</span>
-                        {order.product?.image && (
-                          <img
-                            src={`${process.env.REACT_APP_IMAGE_LINK}${order.product.image}`}
-                            alt={order.product.title}
-                            style={{
-                              width: "45px",
-                              height: "45px",
-                              borderRadius: "8px",
-                              marginLeft: "10px",
-                              objectFit: "cover",
-                            }}
-                          />
-                        )}
                       </div>
+                    </td>
+                    <td style={bodyCell}>
+                      {order.user?.name || "Guest User"} <br />
+                      <small style={{ color: "#777" }}>{order.user?.mobileNumber || "N/A"}</small>
                     </td>
                     <td style={bodyCell}>₹{order.product?.price ?? "—"}</td>
                     <td style={bodyCell}>
@@ -264,9 +293,7 @@ export default function BulkOrders() {
                         {order.status || "pending"}
                       </span>
                     </td>
-                    <td style={bodyCell}>
-                      {new Date(order.createdAt).toLocaleString()}
-                    </td>
+                    <td style={bodyCell}>{new Date(order.createdAt).toLocaleString()}</td>
                     <td style={{ ...bodyCell, textAlign: "center" }}>
                       <button
                         onClick={() => openModal(order)}
@@ -363,17 +390,17 @@ export default function BulkOrders() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            width: "90%",
-            maxWidth: "650px",
-            maxHeight: "85vh",
-            overflowY: "auto",
-            padding: "25px",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-            animation: "fadeIn 0.3s ease",
-            scrollbarWidth: "thin",
-            scrollbarColor: "#ccc #f9f9f9",
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              width: "90%",
+              maxWidth: "650px",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              padding: "25px",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+              animation: "fadeIn 0.3s ease",
+              scrollbarWidth: "thin",
+              scrollbarColor: "#ccc #f9f9f9",
             }}
           >
             <h2 style={{ color: "#0d6efd", marginBottom: 20 }}>📦 Bulk Order Details</h2>
@@ -386,16 +413,28 @@ export default function BulkOrders() {
             >
               <section style={{ borderBottom: "1px solid #eee", paddingBottom: "10px" }}>
                 <h4>User Information</h4>
-                <p><strong>Name:</strong> {selectedOrder.user?.name || "Guest"}</p>
-                <p><strong>Email:</strong> {selectedOrder.user?.email || "N/A"}</p>
-                <p><strong>Phone:</strong> {selectedOrder.user?.mobileNumber || "N/A"}</p>
+                <p>
+                  <strong>Name:</strong> {selectedOrder.user?.name || "Guest"}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedOrder.user?.email || "N/A"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {selectedOrder.user?.mobileNumber || "N/A"}
+                </p>
               </section>
 
               <section style={{ borderBottom: "1px solid #eee", paddingBottom: "10px" }}>
                 <h4>Product Information</h4>
-                <p><strong>Title:</strong> {selectedOrder.product?.title}</p>
-                <p><strong>Slug:</strong> {selectedOrder.product?.slug}</p>
-                <p><strong>Price:</strong> ₹{selectedOrder.product?.price}</p>
+                <p>
+                  <strong>Title:</strong> {selectedOrder.product?.title}
+                </p>
+                <p>
+                  <strong>Slug:</strong> {selectedOrder.product?.slug}
+                </p>
+                <p>
+                  <strong>Price:</strong> ₹{selectedOrder.product?.price}
+                </p>
                 {selectedOrder.product?.image && (
                   <img
                     src={`${process.env.REACT_APP_IMAGE_LINK}${selectedOrder.product.image}`}
@@ -427,29 +466,64 @@ export default function BulkOrders() {
                   </span>
                 </p>
                 <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(selectedOrder.createdAt).toLocaleString()}
+                  <strong>Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}
                 </p>
               </section>
             </div>
+            <div style={{ display: "flex", gap: "12px", marginTop: 25 }}>
+              <button
+                disabled={selectedOrder.status === "completed" || selectedOrder.status === "rejected"}
+                onClick={() => updateStatus("completed")}
+                style={{
+                  flex: 1,
+                  backgroundColor: selectedOrder.status === "rejected" || selectedOrder.status === "completed" ? "#ccc" : "#28a745",
+                  color: "#fff",
+                  padding: "12px",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: selectedOrder.status === "rejected" || selectedOrder.status === "completed" ? "not-allowed" : "pointer",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                }}
+              >
+                Complete
+              </button>
 
-            <button
-              onClick={closeModal}
-              style={{
-                marginTop: 25,
-                width: "100%",
-                backgroundColor: "#0d6efd",
-                color: "#fff",
-                padding: "12px 20px",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "16px",
-                fontWeight: "600",
-              }}
-            >
-              Close
-            </button>
+              <button
+                disabled={selectedOrder.status === "completed" || selectedOrder.status === "rejected"}
+                onClick={() => updateStatus("rejected")}
+                style={{
+                  flex: 1,
+                  backgroundColor: selectedOrder.status === "rejected" || selectedOrder.status === "completed" ? "#ccc" : "#dc3545",
+                  color: "#fff",
+                  padding: "12px",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: selectedOrder.status === "rejected" || selectedOrder.status === "completed" ? "not-allowed" : "pointer",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                }}
+              >
+                Reject
+              </button>
+
+              <button
+                onClick={closeModal}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#0d6efd",
+                  color: "#fff",
+                  padding: "12px",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

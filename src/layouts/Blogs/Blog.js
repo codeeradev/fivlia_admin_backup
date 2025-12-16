@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
-import { Button, Switch } from "@mui/material"; // ✅ Import MUI Switch
+import { Button, Switch } from "@mui/material";
+import { post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -38,16 +41,22 @@ function Blog() {
 
   const fetchBlogs = async () => {
     try {
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL}/getBlog?type=admin&page=${currentPage}&limit=${entriesToShow}`
+      showAlert("loading", "Loading blogs...");
+
+      const res = await post(
+        `${ENDPOINTS.GET_BLOG_ADMIN}?type=admin&page=${currentPage}&limit=${entriesToShow}`
       );
-      const data = await res.json();
+
+      const data = res.data;
 
       setBlogs(data.blogs || []);
       setTotalPages(data.totalPages || 1);
       setTotalCount(data.totalCount || 0);
+
+      showAlert("success", "Blogs loaded successfully");
     } catch (err) {
       console.error("Error fetching blogs:", err);
+      showAlert("error", "Failed to load blog list");
     }
   };
 
@@ -55,26 +64,16 @@ function Blog() {
   const handleStatusToggle = async (id, currentStatus) => {
     const newStatus = currentStatus === "published" ? "draft" : "published";
     try {
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL}/editBlog/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      showAlert("loading", "Updating status...");
 
-      if (!res.ok) throw new Error("Failed to update blog status");
+      await put(`${ENDPOINTS.EDIT_BLOG}/${id}`, { status: newStatus });
 
       // Update locally without refetching all
-      setBlogs((prev) =>
-        prev.map((b) => (b._id === id ? { ...b, status: newStatus } : b))
-      );
+      setBlogs((prev) => prev.map((b) => (b._id === id ? { ...b, status: newStatus } : b)));
+      showAlert("success", "Status updated");
     } catch (err) {
       console.error("Error updating blog status:", err);
-      alert("Failed to update status.");
+      showAlert("error", "Failed to update status");
     }
   };
 
@@ -84,10 +83,8 @@ function Blog() {
       (b.category || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const goToPreviousPage = () =>
-    currentPage > 1 && setCurrentPage(currentPage - 1);
-  const goToNextPage = () =>
-    currentPage < totalPages && setCurrentPage(currentPage + 1);
+  const goToPreviousPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const goToNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
 
   return (
     <MDBox
@@ -202,9 +199,7 @@ function Blog() {
             <tbody>
               {filteredBlogs.map((blog, index) => (
                 <tr key={blog._id}>
-                  <td style={bodyCell}>
-                    {(currentPage - 1) * entriesToShow + index + 1}
-                  </td>
+                  <td style={bodyCell}>{(currentPage - 1) * entriesToShow + index + 1}</td>
                   <td style={bodyCell}>
                     {blog.image ? (
                       <img
@@ -223,9 +218,7 @@ function Blog() {
                   </td>
                   <td style={bodyCell}>{blog.title}</td>
                   <td style={bodyCell}>{blog.category || "-"}</td>
-                  <td style={bodyCell}>
-                    {new Date(blog.createdAt).toLocaleDateString()}
-                  </td>
+                  <td style={bodyCell}>{new Date(blog.createdAt).toLocaleDateString()}</td>
 
                   {/* ✅ Toggle switch for status */}
                   <td style={{ ...bodyCell, textAlign: "center" }}>

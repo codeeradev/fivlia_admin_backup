@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Demo.css";
 import { useNavigate } from "react-router-dom";
 import "../servicearea/Table.css";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
 import MDBox from "components/MDBox";
-import axios from "axios";
 import Orders from "../Orders/Order";
 import { useMaterialUIController, setMiniSidenav } from "context";
 import {
@@ -13,19 +10,14 @@ import {
   FaStore,
   FaShoppingCart,
   FaBoxOpen,
-  FaPercentage,
   FaUserFriends,
   FaTruck,
-  FaCheck,
-  FaShippingFast,
   FaClipboardCheck,
-  FaTimes,
-  FaExclamationCircle,
   FaClock,
-  FaClipboardList,
 } from "react-icons/fa";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { showAlert } from "components/commonFunction/alertsLoader"
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -39,7 +31,7 @@ export default function Dashboard() {
     const fetchDashboardStats = async () => {
       showAlert("loading", "Fetching dashboard data...");
       try {
-        const res = await axios.get(`${process.env.REACT_APP_API_URL}/getDashboardStats`);
+        const res = await get(ENDPOINTS.GET_DASHBOARD_STATS);
         setStats(res.data);
         showAlert("info", "", 1);
       } catch (err) {

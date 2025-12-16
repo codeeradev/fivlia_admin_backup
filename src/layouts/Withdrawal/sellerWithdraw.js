@@ -4,6 +4,9 @@ import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
 import MDBox from "components/MDBox";
 import { showAlert } from "components/commonFunction/alertsLoader"
+import { ENDPOINTS } from "api/endPoints";
+import { get } from "api/apiClient";
+import { put } from "api/apiClient";
 
 export default function SellerWithdrawal() {
   const [controller] = useMaterialUIController();
@@ -51,10 +54,9 @@ export default function SellerWithdrawal() {
   useEffect(() => {
     const fetchWithdrawalRequests = async () => {
       try {
-        dispatch(startLoading());
         showAlert("loading", "Fetching seller withdrawal requests...");
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getWithdrawalRequest?type=seller`);
-        const data = await response.json();
+        const response = await get(`${ENDPOINTS.GET_WITHDRAWAL_REQUESTS}?type=seller`);
+        const data = await response.data;
         if (Array.isArray(data.requests)) {
           const formattedRequests = data.requests.map((request) => ({
             id: request._id,
@@ -75,8 +77,6 @@ export default function SellerWithdrawal() {
       } catch (error) {
         console.error("Failed to fetch withdrawal requests:", error);
         showAlert("error", error.message || "Failed to fetch withdrawal requests.");
-      } finally {
-        dispatch(stopLoading());
       }
     };
 
@@ -92,17 +92,9 @@ const handleWithdrawalAction = async (requestId, action) => {
     if (note && note.trim() !== "") formData.append("note", note);
     if (image) formData.append("image", image);
 
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/withdrawal/${requestId}/${action}/seller`, {
-      method: "PUT",
-      body: formData,
-    });
+    const response = await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}/seller`, formData);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Failed to ${action} withdrawal request`);
-    }
-
-    const updatedRequest = await response.json();
+    const updatedRequest = response.data;
 
     setWithdrawalRequests((prev) =>
       prev.map((req) =>

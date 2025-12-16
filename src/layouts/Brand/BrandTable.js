@@ -4,6 +4,9 @@ import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
 import * as XLSX from "xlsx";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -34,12 +37,16 @@ function BrandTable() {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getBrand`);
-        const data = await res.json();
+        showAlert("loading", "Loading brands...");
+
+        const res = await get(ENDPOINTS.GET_BRANDS);
+        const data = res.data;
         // Use allBrands from the API response
         setBrands(data.allBrands || []);
+        showAlert("success", "Brands loaded");
       } catch (err) {
         console.error("Error fetching brands:", err);
+        showAlert("error", "Failed to load brands");
       }
     };
 
@@ -54,22 +61,22 @@ function BrandTable() {
   const startIndex = (currentPage - 1) * entriesToShow;
   const currentBrands = filteredBrands.slice(startIndex, startIndex + entriesToShow);
 
-    const downloadSampleCSV = () => {
-      const sampleData = brands.map((item) => ({
-        "Brand Name": `${item.brandName}`,
-        " ": ` `,
-        "Brand Code": `${item.brandId}`,
-      }));
-  
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
-  
-      // Create Workbook
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "brands");
-  
-      // Generate & Download File
-      XLSX.writeFile(workbook, "brand-codes.csv"); // or .xlsx
-    };
+  const downloadSampleCSV = () => {
+    const sampleData = brands.map((item) => ({
+      "Brand Name": `${item.brandName}`,
+      " ": ` `,
+      "Brand Code": `${item.brandId}`,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+
+    // Create Workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "brands");
+
+    // Generate & Download File
+    XLSX.writeFile(workbook, "brand-codes.csv"); // or .xlsx
+  };
 
   const handleEntriesChange = (e) => {
     setEntriesToShow(Number(e.target.value));
@@ -95,7 +102,7 @@ function BrandTable() {
 
       if (res.status === 200) {
         setBrands((prev) => prev.filter((b) => b._id !== id));
-        alert("Deleted successfully!");
+        showAlert("success", "Deleted successfully!");
       }
     } catch (err) {
       console.log("Delete failed:", err);

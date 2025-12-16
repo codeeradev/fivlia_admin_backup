@@ -3,6 +3,8 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Switch } from "@mui/material";
+import { ENDPOINTS } from "api/endPoints";
+import { get } from "api/apiClient";
 
 const headerCell = {
   padding: "14px 12px",
@@ -41,13 +43,9 @@ function SubSubCat() {
 
     const GetSubSub = async () => {
       try {
-        const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/GetSubSubCategories/${subcategory._id}`
-        );
-        if (res.status === 200) {
-          const result = await res.json();
-          setData(result.subsubcategories);
-        }
+        const res = await get(`${ENDPOINTS.GET_SUB_SUB_CATEGORIES}/${subcategory._id}`);
+        const result = res.data;
+        setData(result.subsubcategories);
       } catch (err) {
         console.log(err);
       }

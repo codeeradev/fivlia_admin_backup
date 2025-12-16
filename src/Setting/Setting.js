@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
-import { Button, Switch, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, MenuItem, Select } from "@mui/material";
+import {
+  Button,
+  Switch,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  MenuItem,
+  Select,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
 import { Paper, Typography } from "@mui/material";
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { getAllTaxes } from "components/commonApi/commonApi";
 
 function Setting() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [adminSignatureFile, setAdminSignatureFile] = useState(null);
@@ -40,39 +51,41 @@ function Setting() {
     Map_Api: {
       google: { api_key: "", status: false },
       apple: { api_key: "", status: false },
-      ola: { api_key: "", status: false }
+      ola: { api_key: "", status: false },
     },
     Auth: [
       {
         // firebase: { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "", measurementId: "", status: false },
         whatsApp: { appKey: "", authKey: "", status: false },
-        bulksms: { api_id: "", api_password: "", status: false }
-      }
+        bulksms: { api_id: "", api_password: "", status: false },
+      },
     ],
     imageLink: "",
     // freeDeliveryLimit: 0,
-    adminSignature: ""
+    adminSignature: "",
   });
   const [taxOptions, setTaxOptions] = useState([]);
 
   useEffect(() => {
     const fetchTaxOptions = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getTax`);
-        const result = await response.json();
-        if (response.ok) {
-          let options = Array.isArray(result) ? result : result.result || [];
-          setTaxOptions(
-            options.map((tax) => ({
-              display: tax.value || tax,
-              value: parseFloat((tax.value || tax).replace("%", "")) || 0
-            }))
-          );
-        } else {
-          setTaxOptions([]);
-        }
+        // showAlert("loading", "Loading taxes...");
+
+        const response = await getAllTaxes();
+        const result = response.data;
+
+        let options = Array.isArray(result) ? result : result.result || [];
+        setTaxOptions(
+          options.map((tax) => ({
+            display: tax.value || tax,
+            value: parseFloat((tax.value || tax).replace("%", "")) || 0,
+          }))
+        );
+
+        // showAlert("success", "Taxes loaded");
       } catch (error) {
         console.error("Error fetching tax options:", error);
+        showAlert("error", "Failed to load taxes");
         setTaxOptions([]);
       }
     };
@@ -81,14 +94,12 @@ function Setting() {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      dispatch(startLoading());
+      showAlert("loading", "Loading settings...");
+
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getSettings`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" }
-        });
-        const result = await response.json();
-        if (response.ok && result.settings) {
+        const response = await get(ENDPOINTS.GET_SETTINGS);
+        const result = response.data;
+        if (result.settings) {
           const razorpayTest = result.settings.PaymentGateways?.RazorPayKey?.test || "";
           const razorpayLive = result.settings.PaymentGateways?.RazorPayKey?.live || "";
           const phonepeTest = result.settings.PaymentGateways?.PhonePe?.test || "";
@@ -111,7 +122,7 @@ function Setting() {
           const mapApi = result.settings.Map_Api?.[0] || {
             google: { api_key: "", status: false },
             apple: { api_key: "", status: false },
-            ola: { api_key: "", status: false }
+            ola: { api_key: "", status: false },
           };
           setFormData({
             Owner_Name: result.settings.Owner_Name || "",
@@ -136,66 +147,74 @@ function Setting() {
             PhonePe_live: phonepeLive,
             PhonePe_secret: result.settings.PaymentGateways?.PhonePe?.secretKey || "",
             Map_Api: {
-              google: { api_key: mapApi.google?.api_key || "", status: mapApi.google?.status || false },
-              apple: { api_key: mapApi.apple?.api_key || "", status: mapApi.apple?.status || false },
-              ola: { api_key: mapApi.ola?.api_key || "", status: mapApi.ola?.status || false }
+              google: {
+                api_key: mapApi.google?.api_key || "",
+                status: mapApi.google?.status || false,
+              },
+              apple: {
+                api_key: mapApi.apple?.api_key || "",
+                status: mapApi.apple?.status || false,
+              },
+              ola: { api_key: mapApi.ola?.api_key || "", status: mapApi.ola?.status || false },
             },
-            Auth: result.settings.Auth && result.settings.Auth.length > 0
-              ? result.settings.Auth.map(auth => ({
-                  // firebase: {
-                  //   apiKey: auth.firebase?.apiKey || "",
-                  //   authDomain: auth.firebase?.authDomain || "",
-                  //   projectId: auth.firebase?.projectId || "",
-                  //   storageBucket: auth.firebase?.storageBucket || "",
-                  //   messagingSenderId: auth.firebase?.messagingSenderId || "",
-                  //   appId: auth.firebase?.appId || "",
-                  //   measurementId: auth.firebase?.measurementId || "",
-                  //   status: auth.firebase?.status || false
-                  // },
-                  whatsApp: {
-                    appKey: auth.whatsApp?.appKey || "",
-                    authKey: auth.whatsApp?.authKey || "",
-                    status: auth.whatsApp?.status || false
-                  },
-                  bulksms: {
-                    api_id: auth.bulksms?.api_id || "",
-                    api_password: auth.bulksms?.api_password || "",
-                    status: auth.bulksms?.status || false
-                  }
-                }))
-              : [{
-                  // firebase: {
-                  //   apiKey: "",
-                  //   authDomain: "",
-                  //   projectId: "",
-                  //   storageBucket: "",
-                  //   messagingSenderId: "",
-                  //   appId: "",
-                  //   measurementId: "",
-                  //   status: false
-                  // },
-                  whatsApp: { appKey: "", authKey: "", status: false },
-                  bulksms: { api_id: "", api_password: "", status: false }
-                }],
+            Auth:
+              result.settings.Auth && result.settings.Auth.length > 0
+                ? result.settings.Auth.map((auth) => ({
+                    // firebase: {
+                    //   apiKey: auth.firebase?.apiKey || "",
+                    //   authDomain: auth.firebase?.authDomain || "",
+                    //   projectId: auth.firebase?.projectId || "",
+                    //   storageBucket: auth.firebase?.storageBucket || "",
+                    //   messagingSenderId: auth.firebase?.messagingSenderId || "",
+                    //   appId: auth.firebase?.appId || "",
+                    //   measurementId: auth.firebase?.measurementId || "",
+                    //   status: auth.firebase?.status || false
+                    // },
+                    whatsApp: {
+                      appKey: auth.whatsApp?.appKey || "",
+                      authKey: auth.whatsApp?.authKey || "",
+                      status: auth.whatsApp?.status || false,
+                    },
+                    bulksms: {
+                      api_id: auth.bulksms?.api_id || "",
+                      api_password: auth.bulksms?.api_password || "",
+                      status: auth.bulksms?.status || false,
+                    },
+                  }))
+                : [
+                    {
+                      // firebase: {
+                      //   apiKey: "",
+                      //   authDomain: "",
+                      //   projectId: "",
+                      //   storageBucket: "",
+                      //   messagingSenderId: "",
+                      //   appId: "",
+                      //   measurementId: "",
+                      //   status: false
+                      // },
+                      whatsApp: { appKey: "", authKey: "", status: false },
+                      bulksms: { api_id: "", api_password: "", status: false },
+                    },
+                  ],
             imageLink: result.settings.imageLink || "",
             // freeDeliveryLimit: result.settings.freeDeliveryLimit || 0,
-            adminSignature: result.settings.adminSignature || ""
+            adminSignature: result.settings.adminSignature || "",
           });
+          showAlert("success", "Settings loaded");
         } else {
-          alert(result.message || "Failed to fetch settings");
+          showAlert("error", result.message || "Failed to fetch settings");
         }
       } catch (error) {
         console.error("Fetch settings error =>", error);
-        alert("Something went wrong while fetching settings");
-      } finally {
-        dispatch(stopLoading());
+        showAlert("error", "Something went wrong while fetching settings");
       }
     };
     fetchSettings();
-  }, [dispatch]);
+  }, []);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: [
         "Delivery_Charges",
@@ -208,7 +227,7 @@ function Setting() {
         // "freeDeliveryLimit"
       ].includes(field)
         ? parseFloat(value) || 0
-        : value
+        : value,
     }));
   };
 
@@ -221,64 +240,64 @@ function Setting() {
   };
 
   const handleGatewayChange = (gateway) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       activeGateway: gateway,
-      activeMode: ""
+      activeMode: "",
     }));
   };
 
   const handleModeChange = (mode) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      activeMode: mode
+      activeMode: mode,
     }));
   };
 
   const handleMapApiKeyChange = (provider, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       Map_Api: {
         ...prev.Map_Api,
-        [provider]: { ...prev.Map_Api[provider], api_key: value }
-      }
+        [provider]: { ...prev.Map_Api[provider], api_key: value },
+      },
     }));
   };
 
   const handleMapApiStatusChange = (provider) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       Map_Api: {
         google: { ...prev.Map_Api.google, status: provider === "google" },
         apple: { ...prev.Map_Api.apple, status: provider === "apple" },
-        ola: { ...prev.Map_Api.ola, status: provider === "ola" }
-      }
+        ola: { ...prev.Map_Api.ola, status: provider === "ola" },
+      },
     }));
   };
 
   const handleAuthStatusChange = (provider, checked) => {
-  setFormData((prev) => ({
-    ...prev,
-    Auth: [
-      {
-        ...prev.Auth[0],
-        whatsApp: {
-          ...prev.Auth[0].whatsApp,
-          status: provider === "whatsApp" ? checked : false
+    setFormData((prev) => ({
+      ...prev,
+      Auth: [
+        {
+          ...prev.Auth[0],
+          whatsApp: {
+            ...prev.Auth[0].whatsApp,
+            status: provider === "whatsApp" ? checked : false,
+          },
+          bulksms: {
+            ...prev.Auth[0].bulksms,
+            status: provider === "bulksms" ? checked : false,
+          },
         },
-        bulksms: {
-          ...prev.Auth[0].bulksms,
-          status: provider === "bulksms" ? checked : false
-        }
-      }
-    ]
-  }));
-};
+      ],
+    }));
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    dispatch(startLoading());
+    showAlert("loading", "Updating settings...");
 
     try {
       // Step 1: Filter out UI-only fields
@@ -295,13 +314,13 @@ function Setting() {
           live: formData.RazorPayKey_live || "",
           secretKey: formData.RazorPayKey_secret || "",
           status: true,
-          activeMode: formData.activeMode
+          activeMode: formData.activeMode,
         };
         filteredData.PaymentGateways.PhonePe = {
           test: formData.PhonePe_test || "",
           live: formData.PhonePe_live || "",
           secretKey: "",
-          status: false
+          status: false,
         };
       } else if (formData.activeGateway === "PhonePe") {
         filteredData.PaymentGateways.PhonePe = {
@@ -309,32 +328,41 @@ function Setting() {
           live: formData.PhonePe_live || "",
           secretKey: formData.PhonePe_secret || "",
           status: true,
-          activeMode: formData.activeMode
+          activeMode: formData.activeMode,
         };
         filteredData.PaymentGateways.RazorPayKey = {
           test: formData.RazorPayKey_test || "",
           live: formData.RazorPayKey_live || "",
           secretKey: "",
-          status: false
+          status: false,
         };
       } else {
         filteredData.PaymentGateways = {
           RazorPayKey: { test: "", live: "", secretKey: "", status: false },
-          PhonePe: { test: "", live: "", secretKey: "", status: false }
+          PhonePe: { test: "", live: "", secretKey: "", status: false },
         };
       }
 
       // Step 3: Ensure Map_Api array structure
       filteredData.Map_Api = [
         {
-          google: { api_key: formData.Map_Api.google.api_key || "", status: formData.Map_Api.google.status || false },
-          apple: { api_key: formData.Map_Api.apple.api_key || "", status: formData.Map_Api.apple.status || false },
-          ola: { api_key: formData.Map_Api.ola.api_key || "", status: formData.Map_Api.ola.status || false }
-        }
+          google: {
+            api_key: formData.Map_Api.google.api_key || "",
+            status: formData.Map_Api.google.status || false,
+          },
+          apple: {
+            api_key: formData.Map_Api.apple.api_key || "",
+            status: formData.Map_Api.apple.status || false,
+          },
+          ola: {
+            api_key: formData.Map_Api.ola.api_key || "",
+            status: formData.Map_Api.ola.status || false,
+          },
+        },
       ];
 
       // Step 4: Ensure Auth array is correct, preserving all fields including firebase
-      filteredData.Auth = formData.Auth.map(auth => ({
+      filteredData.Auth = formData.Auth.map((auth) => ({
         // firebase: {
         //   apiKey: auth.firebase?.apiKey || "",
         //   authDomain: auth.firebase?.authDomain || "",
@@ -348,13 +376,13 @@ function Setting() {
         whatsApp: {
           appKey: auth.whatsApp.appKey || "",
           authKey: auth.whatsApp.authKey || "",
-          status: auth.whatsApp.status || false
+          status: auth.whatsApp.status || false,
         },
         bulksms: {
           api_id: auth.bulksms.api_id || "",
           api_password: auth.bulksms.api_password || "",
-          status: auth.bulksms.status || false
-        }
+          status: auth.bulksms.status || false,
+        },
       }));
 
       // Step 5: Delete temporary fields
@@ -364,47 +392,36 @@ function Setting() {
       delete filteredData.PhonePe_live;
       delete filteredData.PhonePe_secret;
 
-      let fetchOptions = {};
-      let url = `${process.env.REACT_APP_API_URL}/adminSetting`;
+      // let fetchOptions = {};
+      // let url = `${process.env.REACT_APP_API_URL}/adminSetting`;
+      let response;
 
       if (adminSignatureFile) {
         // Step 6a: File exists → use FormData
         const form = new FormData();
         form.append("payload", JSON.stringify(filteredData));
         form.append("image", adminSignatureFile);
-        fetchOptions = {
-          method: "PUT",
-          body: form
-        };
+        response = await put(ENDPOINTS.ADMIN_SETTING, form);
       } else {
         // Step 6b: No file → send JSON
-        fetchOptions = {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(filteredData)
-        };
+        response = await put(ENDPOINTS.ADMIN_SETTING, filteredData);
       }
 
       // Step 7: Make request
-      const response = await fetch(url, fetchOptions);
-      const result = await response.json();
+      const result = response.data;
 
-      if (response.ok) {
-        setFormData(prev => ({
-          ...prev,
-          adminSignature: result.settings?.adminSignature || prev.adminSignature
-        }));
-        alert("Settings updated successfully");
-        navigate(-1);
-      } else {
-        alert(result.message || "Update failed");
-      }
+      // Success alert
+      showAlert("success", "Settings updated successfully");
+
+      setFormData((prev) => ({
+        ...prev,
+        adminSignature: result.settings?.adminSignature || prev.adminSignature,
+      }));
     } catch (error) {
       console.error("Update error:", error);
-      alert("Something went wrong");
+      showAlert("error", "Failed to update settings");
     } finally {
       setIsSubmitting(false);
-      dispatch(stopLoading());
     }
   };
 
@@ -413,7 +430,7 @@ function Setting() {
       p={2}
       style={{
         marginLeft: miniSidenav ? "80px" : "250px",
-        transition: "margin-left 0.3s ease"
+        transition: "margin-left 0.3s ease",
       }}
     >
       <div className="store-container">
@@ -466,11 +483,7 @@ function Setting() {
             </div>
             <div className="store-input">
               <label>Admin Signature</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
+              <input type="file" accept="image/*" onChange={handleFileChange} />
               <div style={{ minHeight: "108px" }}>
                 {previewImage ? (
                   <img
@@ -483,7 +496,9 @@ function Setting() {
                     src={`${process.env.REACT_APP_IMAGE_LINK}${formData.adminSignature}`}
                     alt="Admin Signature"
                     style={{ maxWidth: "100px", marginTop: "8px", display: "block" }}
-                    onError={(e) => { e.target.src = "/placeholder.png"; }}
+                    onError={(e) => {
+                      e.target.src = "/placeholder.png";
+                    }}
                   />
                 ) : null}
               </div>
@@ -528,10 +543,18 @@ function Setting() {
               <label>Delivery Charges GST</label>
               <Select
                 fullWidth
-                value={taxOptions.find(option => option.value === formData.Delivery_Charges_Gst)?.display || ""}
+                value={
+                  taxOptions.find((option) => option.value === formData.Delivery_Charges_Gst)
+                    ?.display || ""
+                }
                 onChange={(e) => {
-                  const selectedOption = taxOptions.find(option => option.display === e.target.value);
-                  handleInputChange("Delivery_Charges_Gst", selectedOption ? selectedOption.value : 0);
+                  const selectedOption = taxOptions.find(
+                    (option) => option.display === e.target.value
+                  );
+                  handleInputChange(
+                    "Delivery_Charges_Gst",
+                    selectedOption ? selectedOption.value : 0
+                  );
                 }}
                 style={{ height: "37px" }}
               >
@@ -635,10 +658,16 @@ function Setting() {
             <>
               <div className="store-row">
                 <div className="store-input">
-                  <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
+                  <label>{`Razorpay ${
+                    formData.activeMode === "test" ? "Test" : "Live"
+                  } Key`}</label>
                   <input
                     type="text"
-                    value={formData.activeMode === "test" ? formData.RazorPayKey_test : formData.RazorPayKey_live}
+                    value={
+                      formData.activeMode === "test"
+                        ? formData.RazorPayKey_test
+                        : formData.RazorPayKey_live
+                    }
                     onChange={(e) =>
                       handleInputChange(
                         formData.activeMode === "test" ? "RazorPayKey_test" : "RazorPayKey_live",
@@ -650,7 +679,9 @@ function Setting() {
               </div>
               <div className="store-row">
                 <div className="store-input">
-                  <label>{`Razorpay ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+                  <label>{`Razorpay ${
+                    formData.activeMode === "test" ? "Test" : "Live"
+                  } Secret Key`}</label>
                   <input
                     type="text"
                     value={formData.RazorPayKey_secret}
@@ -667,7 +698,9 @@ function Setting() {
                   <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Key`}</label>
                   <input
                     type="text"
-                    value={formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live}
+                    value={
+                      formData.activeMode === "test" ? formData.PhonePe_test : formData.PhonePe_live
+                    }
                     onChange={(e) =>
                       handleInputChange(
                         formData.activeMode === "test" ? "PhonePe_test" : "PhonePe_live",
@@ -679,7 +712,9 @@ function Setting() {
               </div>
               <div className="store-row">
                 <div className="store-input">
-                  <label>{`PhonePe ${formData.activeMode === "test" ? "Test" : "Live"} Secret Key`}</label>
+                  <label>{`PhonePe ${
+                    formData.activeMode === "test" ? "Test" : "Live"
+                  } Secret Key`}</label>
                   <input
                     type="text"
                     value={formData.PhonePe_secret}
@@ -711,14 +746,17 @@ function Setting() {
                   padding: "16px",
                   marginBottom: "16px",
                   width: "100%",
-                  gap: "16px"
+                  gap: "16px",
                 }}
               >
                 <FormControlLabel
                   value={provider}
                   control={<Radio color="primary" />}
                   label={
-                    <Typography variant="subtitle1" style={{ textTransform: "capitalize", fontWeight: 600 }}>
+                    <Typography
+                      variant="subtitle1"
+                      style={{ textTransform: "capitalize", fontWeight: 600 }}
+                    >
                       {provider}
                     </Typography>
                   }
@@ -734,7 +772,7 @@ function Setting() {
                     padding: "8px",
                     border: "1px solid #ccc",
                     borderRadius: "4px",
-                    fontSize: "15px"
+                    fontSize: "15px",
                   }}
                 />
                 {formData.Map_Api[provider].status && (
@@ -748,53 +786,61 @@ function Setting() {
         </div>
       </div>
 
-  <div className="store-container">
-  <div className="store-header">Authentication</div>
-  <div className="store-form">
-    <RadioGroup
-      row
-      name="authStatus"
-      value={["whatsApp", "bulksms"].find((p) => formData.Auth[0][p].status) || ""}
-      onChange={(e) => handleAuthStatusChange(e.target.value, true)}
-    >
-      <div style={{ display: "flex", marginLeft: "50px", gap: "46px", flexWrap: "wrap" }}>
-        {["whatsApp", "bulksms"].map((provider) => (
-          <Paper
-            key={provider}
-            elevation={2}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "16px",
-              width: "300px",
-              gap: "16px"
-            }}
+      <div className="store-container">
+        <div className="store-header">Authentication</div>
+        <div className="store-form">
+          <RadioGroup
+            row
+            name="authStatus"
+            value={["whatsApp", "bulksms"].find((p) => formData.Auth[0][p].status) || ""}
+            onChange={(e) => handleAuthStatusChange(e.target.value, true)}
           >
-            <FormControlLabel
-              value={provider}
-              control={<Radio color="primary" />}
-              label={
-                <Typography variant="subtitle1" style={{ textTransform: "capitalize", fontWeight: 600 }}>
-                  {provider === "whatsApp" ? "WhatsApp" : "BulkSMS"}
-                </Typography>
-              }
-              style={{ marginRight: "24px" }}
-            />
-            {formData.Auth[0][provider].status && (
-              <span style={{ color: "#00c853", fontWeight: 500, marginLeft: 12 }}>
-                (Active)
-              </span>
-            )}
-          </Paper>
-        ))}
+            <div style={{ display: "flex", marginLeft: "50px", gap: "46px", flexWrap: "wrap" }}>
+              {["whatsApp", "bulksms"].map((provider) => (
+                <Paper
+                  key={provider}
+                  elevation={2}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "16px",
+                    width: "300px",
+                    gap: "16px",
+                  }}
+                >
+                  <FormControlLabel
+                    value={provider}
+                    control={<Radio color="primary" />}
+                    label={
+                      <Typography
+                        variant="subtitle1"
+                        style={{ textTransform: "capitalize", fontWeight: 600 }}
+                      >
+                        {provider === "whatsApp" ? "WhatsApp" : "BulkSMS"}
+                      </Typography>
+                    }
+                    style={{ marginRight: "24px" }}
+                  />
+                  {formData.Auth[0][provider].status && (
+                    <span style={{ color: "#00c853", fontWeight: 500, marginLeft: 12 }}>
+                      (Active)
+                    </span>
+                  )}
+                </Paper>
+              ))}
+            </div>
+          </RadioGroup>
+        </div>
       </div>
-    </RadioGroup>
-  </div>
-</div>
       <div style={{ display: "flex", gap: "30px", alignItems: "center", justifyContent: "center" }}>
         <Button
           variant="contained"
-          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px", padding: "8px 24px" }}
+          style={{
+            backgroundColor: "#00c853",
+            color: "white",
+            fontSize: "15px",
+            padding: "8px 24px",
+          }}
           onClick={handleSubmit}
           disabled={isSubmitting}
         >
@@ -802,7 +848,12 @@ function Setting() {
         </Button>
         <Button
           variant="contained"
-          style={{ backgroundColor: "#00c853", color: "white", fontSize: "15px", padding: "8px 24px" }}
+          style={{
+            backgroundColor: "#00c853",
+            color: "white",
+            fontSize: "15px",
+            padding: "8px 24px",
+          }}
           onClick={() => navigate(-1)}
         >
           BACK

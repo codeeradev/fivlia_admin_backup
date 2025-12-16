@@ -36,7 +36,7 @@ function UnitsTable() {
         showAlert("loading", "Fetching Units...");
         const res = await get(ENDPOINTS.GET_UNIT);
         const data = res.data;
-        setUnits(data);
+        setUnits(data.Result);
         showAlert("success", "Units loaded successfully");
       } catch (err) {
         console.error("Error fetching locations:", err);

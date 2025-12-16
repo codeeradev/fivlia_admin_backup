@@ -1,10 +1,13 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, TextField, Switch, FormControlLabel } from "@mui/material";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { startLoading, stopLoading } from "components/loader/appSlice";
+import { post, put, get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function AddDriver() {
   const [controller] = useMaterialUIController();
@@ -27,27 +30,29 @@ function AddDriver() {
   const [dlBack, setDlBack] = useState(null);
   const dispatch = useDispatch();
 
-
   const handleFileChange = (e, setter) => {
     setter(e.target.files[0]);
   };
 
   useEffect(() => {
-  const fetchCities = async () => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/getCity`);
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setCities(data);
+    const fetchCities = async () => {
+      try {
+        showAlert("loading", "Loading cities...");
+
+        const res = await get(ENDPOINTS.GET_CITY);
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setCities(data);
+        }
+        showAlert("success", "Cities loaded");
+      } catch (err) {
+        console.error("Failed to fetch cities:", err);
+        showAlert("error", "Failed to load cities");
       }
-    } catch (error) {
-      console.error("Failed to fetch cities:", error);
-    }
-  };
+    };
 
-  fetchCities();
-}, []);
-
+    fetchCities();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,20 +61,20 @@ function AddDriver() {
       alert("Please upload all required files");
       return;
     }
-dispatch(startLoading());
+    showAlert("loading", "Adding driver...");
     const formData = new FormData();
-    
+
     formData.append("driverName", driverName);
     formData.append("status", status ? "true" : "false");
     formData.append("image", image);
     formData.append("email", email);
     formData.append("password", password);
     formData.append("Police_Verification_Copy", policeVerification);
-formData.append("aadharCard", aadharFront); // index 0
-formData.append("aadharCard", aadharBack);  // index 1
+    formData.append("aadharCard", aadharFront); // index 0
+    formData.append("aadharCard", aadharBack); // index 1
 
-formData.append("drivingLicence", dlFront); // index 0
-formData.append("drivingLicence", dlBack);  
+    formData.append("drivingLicence", dlFront); // index 0
+    formData.append("drivingLicence", dlBack);
     formData.append(
       "address",
       JSON.stringify({
@@ -80,25 +85,13 @@ formData.append("drivingLicence", dlBack);
     );
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/driver`, {
-        method: "POST",
-        body: formData,
-      });
+      await post(ENDPOINTS.ADD_DRIVER, formData);
 
-      const result = await response.json();
-
-      if (response.ok) {
-        dispatch(stopLoading());
-        alert("Driver added successfully");
-        navigate("/drivers");
-      } else {
-        dispatch(stopLoading());
-        alert(result.message || "Failed to add driver");
-      }
+      showAlert("success", "Driver added successfully");
+      navigate("/drivers");
     } catch (err) {
-      dispatch(stopLoading());
       console.error("Upload error:", err);
-      alert("Something went wrong!");
+      showAlert("error", "Failed to add driver");
     }
   };
 
@@ -175,24 +168,23 @@ formData.append("drivingLicence", dlBack);
           required
         />
 
-<TextField
-  select
-  label=""
-  fullWidth
-  value={city}
-  onChange={(e) => setCity(e.target.value)}
-  margin="normal"
-  required
-  SelectProps={{ native: true }}
->
-  <option value="">-- Select City --</option>
-  {cities.map((c, index) => (
-    <option key={index} value={c.city}>
-      {c.city}
-    </option>
-  ))}
-</TextField>
-
+        <TextField
+          select
+          label=""
+          fullWidth
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          margin="normal"
+          required
+          SelectProps={{ native: true }}
+        >
+          <option value="">-- Select City --</option>
+          {cities.map((c, index) => (
+            <option key={index} value={c.city}>
+              {c.city}
+            </option>
+          ))}
+        </TextField>
 
         <div style={{ margin: "20px 0" }}>
           <label>Upload Profile Image:</label>
@@ -261,12 +253,7 @@ formData.append("drivingLicence", dlBack);
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 20 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            color="success"
-            style={{ minWidth: 100 }}
-          >
+          <Button type="submit" variant="contained" color="success" style={{ minWidth: 100 }}>
             Submit
           </Button>
           <Button

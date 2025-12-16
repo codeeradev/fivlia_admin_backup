@@ -4,9 +4,6 @@ import { useMaterialUIController } from "context";
 import {
   Button,
   Chip,
-  Popper,
-  Paper,
-  ClickAwayListener,
   IconButton,
   Menu,
   MenuItem,
@@ -19,16 +16,13 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
 } from "@mui/material";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { put, get, post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const headerCell = {
   padding: "14px 12px",
@@ -54,8 +48,6 @@ function SellerTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedZones, setSelectedZones] = useState([]);
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
   const [actionStore, setActionStore] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -80,22 +72,23 @@ function SellerTable() {
   const handleAdminLogin = async (store) => {
     try {
       showAlert("loading", "Generating access key...");
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/generateKey`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-internal-key": process.env.REACT_APP_INTERNAL_API_KEY,
-        },
-        body: JSON.stringify({
+      const response = await post(
+        ENDPOINTS.GENERATE_KEY,
+        {
           storeId: store._id,
           type: "admin",
-        }),
-      });
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-key": process.env.REACT_APP_INTERNAL_API_KEY,
+          },
+        }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        const generatedKey = data.accessKey;
-
+      const data = await response.data;
+      const generatedKey = data.accessKey;
+      if (generatedKey) {
         showAlert("success", "Access key generated successfully");
         const redirectUrl = `${process.env.REACT_APP_SELLER_URL}/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
         window.open(redirectUrl, "_blank");
@@ -112,15 +105,12 @@ function SellerTable() {
 
   const getAllStores = async () => {
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/getSeller?includeBanned=true`);
-      if (result.status === 200) {
-        const res = await result.json();
-        setStores(res.sellers || []);
-      } else {
-        console.log("Something went wrong");
-      }
+      const result = await get(`${ENDPOINTS.GET_SELLER}?includeBanned=true`);
+      const res = result.data;
+      setStores(res.sellers || []);
     } catch (err) {
       console.log(err);
+      showAlert("error", "Something went wrong");
     }
   };
 
@@ -148,21 +138,6 @@ function SellerTable() {
     setCurrentPage(1);
   };
 
-  const handleZonesClick = (event, zones) => {
-    if (anchorEl && anchorEl === event.currentTarget) {
-      setAnchorEl(null);
-      setSelectedZones([]);
-    } else {
-      setAnchorEl(event.currentTarget);
-      setSelectedZones(zones);
-    }
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-    setSelectedZones([]);
-  };
-
   const handleActionClick = (event, store) => {
     setActionAnchorEl(event.currentTarget);
     setActionStore(store);
@@ -177,42 +152,28 @@ function SellerTable() {
     try {
       const approveStatus = newStatus ? "banned" : "approved";
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approveStatus }),
-      });
+      await put(`${ENDPOINTS.EDIT_STORE}/${storeId}`, {approveStatus});
 
-      if (response.ok) {
-        setStores((prevStores) =>
-          prevStores.map((s) => (s._id === storeId ? { ...s, approveStatus } : s))
-        );
-      } else {
-        alert("Failed to update ban status.");
-      }
+      setStores((prevStores) =>
+        prevStores.map((s) => (s._id === storeId ? { ...s, approveStatus } : s))
+      );
     } catch (err) {
       console.error("Error updating ban status:", err);
-      alert("Error updating ban status");
+      showAlert("error", "Error updating ban status");
     }
   };
 
   const handleStatusToggle = async (storeId, newStatus) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${storeId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+      await put(`${ENDPOINTS.EDIT_STORE}/${storeId}`, {
+        status: newStatus,
       });
 
-      if (response.ok) {
-        setStores((prevStores) =>
-          prevStores.map((s) => (s._id === storeId ? { ...s, status: newStatus } : s))
-        );
-      } else {
-        alert("Failed to update status.");
-      }
+      setStores((prevStores) =>
+        prevStores.map((s) => (s._id === storeId ? { ...s, status: newStatus } : s))
+      );
     } catch (err) {
-      alert("Error updating status");
+      showAlert("error", "Something went wrong while updating status.");
     }
   };
 
@@ -221,7 +182,7 @@ function SellerTable() {
   const indexOfLast = currentPage * entries;
   const indexOfFirst = indexOfLast - entries;
   const paginatedStores = filteredStores.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(filteredStores.length / entries);
+  // const totalPages = Math.ceil(filteredStores.length / entries);
 
   return (
     <MDBox

@@ -21,7 +21,9 @@ import DataTable from "react-data-table-component";
 import Datetime from "react-datetime";
 import "react-datetime/css/react-datetime.css";
 import moment from "moment";
-import { showAlert } from "components/commonFunction/alertsLoader"
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 export default function Festival() {
   const [controller] = useMaterialUIController();
@@ -50,12 +52,9 @@ export default function Festival() {
   const fetchEvents = async () => {
     try {
       showAlert("loading", "Fetching events...");
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/getEvent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "admin" }),
-      });
-      const data = await response.json();
+      const response = await post(ENDPOINTS.GET_EVENTS, { role: "admin" });
+
+      const data = response.data;
 
       if (Array.isArray(data)) {
         setEvents(
@@ -145,11 +144,8 @@ export default function Festival() {
 
     try {
       showAlert("loading", "Adding event...");
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/addEvent`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
+      const response = await post(ENDPOINTS.ADD_EVENT, formData);
+      const data = response.data;
       showAlert("success", data.message || "Event added successfully!");
       setAddModalOpen(false);
       fetchEvents();
@@ -172,14 +168,8 @@ export default function Festival() {
 
     try {
       showAlert("loading", "Updating event...");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/editEvent/${selectedEvent._id}`,
-        {
-          method: "PUT",
-          body: formData,
-        }
-      );
-      const data = await response.json();
+      const response = await put(`${ENDPOINTS.EDIT_EVENT}/${selectedEvent._id}`, formData);
+      const data = response.data;
       showAlert("success", data.message || "Event updated successfully!");
       setEditModalOpen(false);
       fetchEvents();
@@ -211,10 +201,9 @@ export default function Festival() {
       formData.append("eventStatus", status);
       formData.append("startTime", start);
       formData.append("endTime", end);
-      await fetch(`${process.env.REACT_APP_API_URL}/editEvent/${_id}`, {
-        method: "PUT",
-        body: formData,
-      });
+
+      await put(`${ENDPOINTS.EDIT_EVENT}/${_id}`,formData)
+
       fetchEvents();
       setStatusModalOpen(false);
     } catch (error) {

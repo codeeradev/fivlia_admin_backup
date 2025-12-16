@@ -107,7 +107,6 @@ export default function Drivers() {
 
   const handleViewRating = async (driver) => {
     try {
-      showAlert("loading", "Loading ratings...");
       setSelectedDriver(driver);
       setRatingError("");
       setDriverRatings(null);
@@ -157,8 +156,6 @@ export default function Drivers() {
 
   const handleViewReferrals = async (driver) => {
     try {
-      showAlert("loading", "Loading referrals...");
-
       setSelectedDriver(driver);
       setReferralError("");
       setReferralMessage("");
@@ -226,6 +223,7 @@ export default function Drivers() {
             return bNum - aNum; // largest first
           });
           setDrivers(formattedDrivers);
+          showAlert("info","", 1);
         } else {
           setError("Invalid driver data format");
         }
@@ -238,8 +236,6 @@ export default function Drivers() {
     // Fetch withdrawal requests
     const fetchWithdrawalRequests = async () => {
       try {
-        showAlert("loading", "Loading withdrawal requests...");
-
         const res = await get(ENDPOINTS.GET_WITHDRAWAL_REQUESTS);
         const data = res.data;
         if (Array.isArray(data.requests)) {
@@ -312,6 +308,7 @@ export default function Drivers() {
       await put(`${ENDPOINTS.EDIT_DRIVER}/${id}`, { status: newStatus });
 
       setDrivers((prev) => prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d)));
+      showAlert("info","", 1);
     } catch (error) {
       console.error("Error updating status:", error);
       showAlert("error", "Failed to update status");
@@ -430,8 +427,6 @@ export default function Drivers() {
   // Handle Accept/Decline Withdrawal Request
   const handleWithdrawalAction = async (requestId, action) => {
     try {
-      showAlert("loading", "Updating request...");
-
       await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}`);
 
       setWithdrawalRequests((prev) =>

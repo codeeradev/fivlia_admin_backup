@@ -3,6 +3,9 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
+import { get, patch } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -34,20 +37,22 @@ function BannerManagement() {
   useEffect(() => {
     const getBanner = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getAllBanner`);
-        const bannersArray = await response.json();
+        showAlert("loading", "Fetching banners...");
 
+        const response = await get(ENDPOINTS.GET_ALL_BANNER);
+        const bannersArray = response.data;
         if (Array.isArray(bannersArray)) {
           const bannerWithStatus = bannersArray.map((banner) => ({
             ...banner, // ✅ include full data
             public: banner.status === true,
           }));
           setBanners(bannerWithStatus);
+          showAlert("success", "Banners loaded");
         } else {
-          console.error("Expected an array but got:", bannersArray);
+          showAlert("error", "Invalid banner response");
         }
       } catch (error) {
-        console.error("Error fetching banners:", error);
+        showAlert("error", "Failed to load banners");
       }
     };
 
@@ -58,26 +63,20 @@ function BannerManagement() {
     const newStatus = !banner.public;
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/admin/banner/${banner._id}/status`, {
-        method: "PATCH",
-        headers: {
-          
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus, zoneId: banner?.zones?.[0]?._id }),
+      showAlert("loading", "Updating banner status...");
+
+      await patch(`${ENDPOINTS.UPDATE_BANNER_STATUS}/${banner._id}/status`, {
+        status: newStatus,
+        zoneId: banner?.zones?.[0]?._id,
       });
 
-      if (res.ok) {
-        setBanners((prev) =>
-          prev.map((b) =>
-            b._id === banner._id ? { ...b, status: newStatus, public: newStatus } : b
-          )
-        );
-      } else {
-        console.error("Error updating banner status");
-      }
+      setBanners((prev) =>
+        prev.map((b) => (b._id === banner._id ? { ...b, status: newStatus, public: newStatus } : b))
+      );
+      showAlert("success", "Status updated");
     } catch (err) {
       console.error("Network error:", err);
+      showAlert("error", "Failed to update status");
     }
   };
 
@@ -111,8 +110,8 @@ function BannerManagement() {
       item.title?.toLowerCase().includes(search) ||
       item.type?.toLowerCase().includes(search) ||
       (item.city && Array.isArray(item.city)
-  ? item.city.some(c => c.name.toLowerCase().includes(search))
-  : item.city?.name?.toLowerCase().includes(search))
+        ? item.city.some((c) => c.name.toLowerCase().includes(search))
+        : item.city?.name?.toLowerCase().includes(search))
     );
   });
 

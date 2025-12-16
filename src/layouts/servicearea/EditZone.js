@@ -11,6 +11,10 @@ import { useMaterialUIController } from "context";
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import { Autocomplete as GMapsAutocomplete } from "@react-google-maps/api";
+import { showAlert } from "components/commonFunction/alertsLoader"
+import { get, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+
 
 const mapContainerStyle = {
   width: "100%",
@@ -76,8 +80,8 @@ function EditZone() {
   useEffect(() => {
     async function fetchZones() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAviableCity`);
-        const data = await res.json();
+        const res = await get(ENDPOINTS.GET_AVIABLE_CITY);
+        const data = await res.data;
         if (data && data.length > 0) {
           setZones(data);
 
@@ -104,7 +108,7 @@ function EditZone() {
         }
       } catch (err) {
         console.error("Failed to fetch zones", err);
-        alert("Failed to load zones from API.");
+        showAlert("error", "Failed to load cities from API.");
       }
     }
     fetchZones();
@@ -177,23 +181,12 @@ function EditZone() {
     };
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/updateZoneStatus/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dataToSave),
-      });
-
-      if (res.ok) {
-        alert("Zone updated successfully!");
+        await put(`${ENDPOINTS.UPDATE_ZONE_STATUS}/${id}`, dataToSave);
+        showAlert("success", "Zone updated successfully!");
         navigate(-1);
-      } else {
-        alert("Failed to update zone");
-      }
     } catch (error) {
       console.error("Error updating zone:", error);
-      alert("Error updating zone.");
+      showAlert("error", "Error updating zone.");
     }
   };
 

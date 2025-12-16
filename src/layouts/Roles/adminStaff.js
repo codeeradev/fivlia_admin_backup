@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import DataTable from "react-data-table-component";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 function StaffMembers() {
   const [controller] = useMaterialUIController();
@@ -40,8 +42,8 @@ function StaffMembers() {
 
   const fetchStaff = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getStaff`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_STAFF);
+      const data = res.data;
       // API might return array directly or wrapped - handle both
       setStaff(Array.isArray(data) ? data : data.staff || data.staffs || []);
     } catch (err) {
@@ -51,8 +53,8 @@ function StaffMembers() {
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getRoles`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_ROLES);
+      const data = res.data;
       // handle different payload shapes (Roles / roles)
       const list = data.Roles || data.roles || data.roleList || [];
       setRoles(list);
@@ -96,23 +98,16 @@ function StaffMembers() {
       showAlert("loading", editId ? "Updating staff..." : "Adding staff...");
 
       const url = editId
-        ? `${process.env.REACT_APP_API_URL}/editStaff/${editId}` // expects PUT
-        : `${process.env.REACT_APP_API_URL}/addStaff`; // expects POST
-
-      const method = editId ? "PUT" : "POST";
+        ? ENDPOINTS.EDIT_STAFF(editId)
+        : ENDPOINTS.ADD_STAFF
 
       // For edit: only send password if entered
       const body = { name, email, roleId };
       if (password.trim()) body.password = password;
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const apiCall = editId ? put : post;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "API error");
+      await apiCall(url, body, { authRequired: true });
 
       showAlert("success", editId ? "Staff updated" : "Staff added");
       setOpenModal(false);
@@ -123,7 +118,7 @@ function StaffMembers() {
       setEditId(null);
       fetchStaff();
     } catch (err) {
-      showAlert("error", err.message || "Something went wrong");
+      // showAlert("error", err.response?.data?.message || "Something went wrong");
     }
   };
 

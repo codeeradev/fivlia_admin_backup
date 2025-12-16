@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "./LoginPage.css";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 import routes from "routes";
 import logo from "./fivlialogo.png";
-import getFirstAllowedRoute from "components/RoleBaseFunction/firstAllowedRoute"
+import getFirstAllowedRoute from "components/RoleBaseFunction/firstAllowedRoute";
 function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -32,13 +34,8 @@ function LoginPage() {
     // else {
     try {
       showAlert("loading", "Verifying credentials...");
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/admin/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, otp }),
-      });
-
-      const data = await res.json();
+      const res = await post(ENDPOINTS.ADMIN_LOGIN, { username, password, otp, step });
+      const data = res.data;
 
       // if (res.ok) {
       // const expiryTime = Date.now() + 24 * 60 * 60 * 1000; // 30 minutes
@@ -50,21 +47,29 @@ function LoginPage() {
       //   showAlert("error", data.message || "Invalid OTP");
       // }
 
-      if (!res.ok) {
-        return showAlert("error", data.message);
+      if (data.requiresOTP === true && step === 1) {
+        setStep(2);
+        showAlert("info", "Enter the OTP from Google Authenticator");
+        return;
       }
-      const expiryTime = Date.now() + 24 * 60 * 60 * 1000; // 30 minutes
-      // Save user and permissions
-      localStorage.setItem("adminUser", JSON.stringify(data.user));
-      localStorage.setItem("adminAuth", "true");
-      localStorage.setItem("sessionExpiry", expiryTime);
+      if (data.user) {
+        const expiryTime = Date.now() + 24 * 60 * 60 * 1000; // 30 minutes
+        // Save user and permissions
+        localStorage.setItem("adminUser", JSON.stringify(data.user));
+        localStorage.setItem("adminAuth", "true");
+        localStorage.setItem("sessionExpiry", expiryTime);
+        localStorage.setItem("token", data.user.jwttoken);
+        showAlert("success", "Login successful!");
+        const allowedRoute = getFirstAllowedRoute(routes, data.user.permissions);
 
-      showAlert("success", "Login successful!");
-      const allowedRoute = getFirstAllowedRoute(routes, data.user.permissions);
-
-      navigate(allowedRoute, { replace: true });
+        return navigate(allowedRoute, { replace: true });
+      }
     } catch (err) {
       console.error("Login error:", err);
+      if (err.response?.status === 400 || err.response?.status === 401) {
+        return showAlert("error", err.response.data.message);
+      }
+
       showAlert("error", "Server error during login");
     }
     // }

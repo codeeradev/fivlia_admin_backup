@@ -4,6 +4,10 @@ import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
 import * as XLSX from "xlsx";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { get, post, put } from "../../api/apiClient";
+import { ENDPOINTS } from "../../api/endPoints";
+import { getMainCategories } from "components/commonApi/commonApi";
 
 const headerCell = {
   padding: "14px 12px",
@@ -35,13 +39,9 @@ function Categories() {
   useEffect(() => {
     const getMainCategory = async () => {
       try {
-        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        if (data.status === 200) {
-          const result = await data.json();
-          setMainCategories(result.result); // Assume each category has `status` field
-        } else {
-          console.log("Something Wrong");
-        }
+        const res = await getMainCategories();
+        const data = res.data;
+        setMainCategories(data.result); // Assume each category has `status` field
       } catch (err) {
         console.log(err);
       }
@@ -159,7 +159,7 @@ function Categories() {
           method: "DELETE",
         });
         if (result.status === 200) {
-          alert("Deleted Successfully");
+          showAlert("success", "Deleted Successfully");
           setMainCategories((prev) => prev.filter((cat) => cat._id !== id));
         }
       }
@@ -178,21 +178,12 @@ function Categories() {
     setMainCategories(updated);
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/editCat/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: updatedStatus,
-        }),
-      });
+      const res = await put(`${ENDPOINTS.EDIT_CATEGORY}/${id}`, { status: updatedStatus })
 
-      if (res.status === 200) {
-        console.log("Status updated successfully");
-      } else {
-        console.error("Failed to update status");
+      if (res.status !== 200) {
+        showAlert("error", "Failed to update status");
       }
+
     } catch (error) {
       console.error("Error updating status:", error);
     }

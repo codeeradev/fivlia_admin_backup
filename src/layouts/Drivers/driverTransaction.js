@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 import "../Wallet/Wallet.css";
 import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
-import axios from "axios";
+import { get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 export default function DriverTransaction() {
   const { state } = useLocation();
@@ -22,7 +23,7 @@ export default function DriverTransaction() {
       }
 
       try {
-        const txnRes = await axios.get(`${process.env.REACT_APP_API_URL}/transactionList/${driverId}`);
+        const txnRes = await get(`${ENDPOINTS.GET_DRIVER_TRANSACTIONS}/${driverId}`);
         const sortedTxns = txnRes.data.transactionList
           .filter((txn) => txn.createdAt)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

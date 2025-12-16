@@ -5,7 +5,9 @@ import { Button, Modal, Box, TextField, FormControlLabel, Checkbox } from "@mui/
 import DataTable from "react-data-table-component";
 import { showAlert } from "components/commonFunction/alertsLoader";
 import PermissionViewer from "components/RoleBaseFunction/PermissionViewer";
-import PERMISSION_LIST from "components/RoleBaseFunction/permissonList"
+import PERMISSION_LIST from "components/RoleBaseFunction/permissonList";
+import { get, post, put, del } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 function JobRoles() {
   const [controller] = useMaterialUIController();
@@ -27,8 +29,8 @@ function JobRoles() {
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/getRoles`);
-      const data = await res.json();
+      const res = await get(ENDPOINTS.GET_ROLES);
+      const data = res.data;
       setRoles(data.roles || []);
     } catch (err) {
       showAlert("error", "Failed to load roles");
@@ -84,21 +86,9 @@ function JobRoles() {
     try {
       showAlert("loading", editId ? "Updating Role..." : "Creating Role...");
 
-      const url = editId
-        ? `${process.env.REACT_APP_API_URL}/addRoles?id=${editId}`
-        : `${process.env.REACT_APP_API_URL}/addRoles`;
+      const url = editId ? `${ENDPOINTS.ADD_ROLE}?id=${editId}` : ENDPOINTS.ADD_ROLE;
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roles: roleName,
-          permissions: selectedPermissions,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      await post(url, { roles: roleName, permissions: selectedPermissions });
 
       showAlert("success", editId ? "Role Updated" : "Role Created");
 

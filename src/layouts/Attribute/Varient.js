@@ -36,7 +36,8 @@ function VarientTabel() {
         showAlert("loading", "Fetching Units...");
         const res = await get(ENDPOINTS.GET_UNIT);
         const data = res.data;
-        setUnits(data);
+        setUnits(data.Result);
+        showAlert("info","", 1);
       } catch (err) {
         console.error("Error fetching locations:", err);
         showAlert("error", "Failed to load units");

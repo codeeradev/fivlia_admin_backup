@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  TextField,
-  Button,
-} from "@mui/material";
+import { Button } from "@mui/material";
 import { Marker } from "@react-google-maps/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { updateCityStatus } from "components/commonApi/commonApi";
 import "./City.css";
 
 const containerStyle = {
@@ -36,18 +35,16 @@ function EditCity() {
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [fullAddress, setFullAddress] = useState("");
-  const [id,setId]=useState('')
+  const [id, setId] = useState("");
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(defaultCenter);
 
   useEffect(() => {
-   
     if (location.state) {
       const cityData = location.state;
-      setId(cityData.id)
-     
-      
+      setId(cityData.id);
+
       setSelectedCity(cityData.name || cityData.city || "");
       setSelectedState(cityData.state || "");
       setFullAddress(cityData.fullAddress || cityData.name || "");
@@ -114,27 +111,29 @@ function EditCity() {
   };
 
   const handleMapClick = async (e) => {
-    if (apiType === 'google' && e.latLng) {
+    if (apiType === "google" && e.latLng) {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       setLatitude(lat);
       setLongitude(lng);
       setMarkerPosition({ lat, lng });
-      
+
       // Use Google Geocoder if available
       if (window.google && window.google.maps) {
         const geocoder = new window.google.maps.Geocoder();
         geocoder.geocode({ location: { lat, lng } }, (results, status) => {
           if (status === "OK" && results[0]) {
             const address = results[0].address_components;
-            const city = address.find(comp => 
-              comp.types.includes('locality') || 
-              comp.types.includes('administrative_area_level_2')
-            )?.long_name || "Unknown City";
-            const state = address.find(comp => 
-              comp.types.includes('administrative_area_level_1')
-            )?.long_name || "Unknown State";
-            
+            const city =
+              address.find(
+                (comp) =>
+                  comp.types.includes("locality") ||
+                  comp.types.includes("administrative_area_level_2")
+              )?.long_name || "Unknown City";
+            const state =
+              address.find((comp) => comp.types.includes("administrative_area_level_1"))
+                ?.long_name || "Unknown State";
+
             setSelectedCity(city);
             setSelectedState(state);
             setFullAddress(results[0].formatted_address);
@@ -142,25 +141,33 @@ function EditCity() {
           }
         });
       }
-    } else if (apiType === 'ola') {
+    } else if (apiType === "ola") {
       // For Ola Maps, use OpenStreetMap reverse geocoding
       const lat = e.lat || e.latLng?.lat();
       const lng = e.lng || e.latLng?.lng();
-      
+
       if (lat && lng) {
         setLatitude(lat);
         setLongitude(lng);
         setMarkerPosition({ lat, lng });
-        
+
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
           );
           const data = await res.json();
           const address = data.address || {};
-          const city = address.city || address.town || address.village || address.hamlet || address.locality || address.municipality || address.state_district || "Unknown City";
+          const city =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.hamlet ||
+            address.locality ||
+            address.municipality ||
+            address.state_district ||
+            "Unknown City";
           const state = address.state || "Unknown State";
-          
+
           setSelectedCity(city);
           setSelectedState(state);
           setFullAddress(data.display_name || "");
@@ -178,7 +185,7 @@ function EditCity() {
 
   const handleSave = async () => {
     if (!latitude || !longitude) {
-      alert("Please select a city/location first!");
+      showAlert("error", "Please select a city/location first!");
       return;
     }
 
@@ -191,18 +198,19 @@ function EditCity() {
     };
 
     try {
-      const result = await fetch(`${process.env.REACT_APP_API_URL}/updateCityStatus/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSave),
-      });
+      showAlert("loading", "Updating city...");
 
-      if (result.status === 200) {
-        alert("Success");
+      const response = await updateCityStatus(id, dataToSave);
+
+      if (response.status === 200) {
+        showAlert("success", "City updated successfully!");
         navigate(-1);
+      } else {
+        showAlert("error", "Failed to update city!");
       }
     } catch (err) {
       console.error("Error saving city:", err);
+      showAlert("error", "An error occurred while updating the city");
     }
   };
 
@@ -217,7 +225,10 @@ function EditCity() {
             <div>
               <h3 style={{ textAlign: "center", marginLeft: "70px" }}>City</h3>
             </div>
-            <div style={{ width: "33%", position: "relative", marginRight: "30px" }} ref={searchRef}>
+            <div
+              style={{ width: "33%", position: "relative", marginRight: "30px" }}
+              ref={searchRef}
+            >
               <input
                 type="text"
                 placeholder="Search City"
@@ -256,7 +267,15 @@ function EditCity() {
             </AdaptiveMap>
           </div>
 
-          <div style={{ display:'flex',gap:'20px',marginTop: "30px",justifyContent:"center",alignItems:'center' }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
+              marginTop: "30px",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
             <Button
               style={{
                 backgroundColor: "#00c853",

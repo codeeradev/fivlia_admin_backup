@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Button, Switch } from "@mui/material";
+import { Switch } from "@mui/material";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { put, get } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 const headerCell = {
   padding: "14px 12px",
@@ -39,22 +42,23 @@ function GetSubCategories() {
 
     const getSubCate = async () => {
       try {
-        const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/GetSubCategories/${category._id}`
-        );
-        if (res.status === 200) {
-          const result = await res.json();
-          setData(result.subcategories);
+        showAlert("loading", "Loading sub-categories...");
 
-          // Set toggle state based on actual backend data
-          const toggleMap = {};
-          result.subcategories.forEach((subcat) => {
-            toggleMap[subcat._id] = subcat.status ?? true;
-          });
-          setToggleStates(toggleMap);
-        }
+        const res = await get(`${ENDPOINTS.GET_SUB_CATEGORIES}/${category._id}`);
+        const result = res.data;
+
+        setData(result.subcategories);
+
+        // Set toggle state based on actual backend data
+        const toggleMap = {};
+        result.subcategories.forEach((subcat) => {
+          toggleMap[subcat._id] = subcat.status ?? true;
+        });
+        setToggleStates(toggleMap);
+        showAlert("success", "Loaded successfully");
       } catch (err) {
         console.log(err);
+        showAlert("error", "An error occurred");
       }
     };
 
@@ -71,23 +75,20 @@ function GetSubCategories() {
     }));
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/editSubCat/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: updatedStatus,
-        }),
+      showAlert("loading", "Updating status...");
+
+      const response = await put(`${ENDPOINTS.EDIT_CATEGORY}/${id}`, {
+        status: updatedStatus,
       });
 
-      if (res.status === 200) {
-        console.log("Sub-category status updated");
+      if (response.status === 200) {
+        showAlert("success", updatedStatus ? "Sub-category enabled" : "Sub-category disabled");
       } else {
-        console.error("Failed to update sub-category status");
+        showAlert("error", "Failed to update status");
       }
     } catch (error) {
       console.error("Error updating status:", error);
+      showAlert("error", "Error updating sub-category status");
     }
   };
 

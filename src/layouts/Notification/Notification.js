@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// NotificationsDataTable.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
@@ -10,248 +11,346 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
+import DataTable from "react-data-table-component";
+import { get, post, del, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
+import { getAllZones } from "components/commonApi/commonApi";
+import EditIcon from "@mui/icons-material/Edit";
+import SendIcon from "@mui/icons-material/Send";
+import DeleteIcon from "@mui/icons-material/Delete";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 
-export default function Notifications() {
+/* ----------------------- Helpers ----------------------- */
+const cleanMulti = (v) => (typeof v === "string" ? v.split(",") : v || []);
+const mapCityNames = (cityIds = [], zones = []) =>
+  !cityIds || cityIds.includes("all")
+    ? ["All Cities"]
+    : (cityIds || []).map((id) => zones.find((c) => c._id === id)?.city).filter(Boolean);
+const mapZoneNames = (zoneIds = [], zones = [], cityIds = []) => {
+  if (!zoneIds || zoneIds.includes("all")) return ["All Zones"];
+  const list = [];
+  (zoneIds || []).forEach((zid) =>
+    (zones || []).forEach((city) =>
+      (city.zones || []).forEach((zn) => {
+        if (zn._id === zid && (cityIds?.includes("all") || cityIds?.includes(city._id)))
+          list.push(zn.zoneTitle);
+      })
+    )
+  );
+  return list;
+};
+const toFormData = (data) => {
+  const fd = new FormData();
+  if (data.title) fd.append("title", data.title);
+  if (data.description) fd.append("description", data.description);
+  (Array.isArray(data.city) ? data.city : []).forEach((c) => fd.append("city", c));
+  (Array.isArray(data.zone) ? data.zone : []).forEach((z) => fd.append("zone", z));
+  if (data.sendType) fd.append("sendType", data.sendType);
+  if (data.image) fd.append("image", data.image);
+  return fd;
+};
+/* ----------------------- Component ----------------------- */
+
+export default function NotificationsDataTable() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
   const navigate = useNavigate();
 
+  const [zones, setZones] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [entriesToShow, setEntriesToShow] = useState(5);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedNotification, setSelectedNotification] = useState(null);
-  const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editNotificationData, setEditNotificationData] = useState({
+  const [form, setForm] = useState({
     title: "",
     description: "",
-    city: "",
+    city: [],
+    zone: [],
+    sendType: "all",
     image: null,
   });
 
-  const headerCell = {
-    padding: "14px 12px",
-    border: "1px solid #ddd",
-    fontSize: 18,
-    fontWeight: "bold",
-    backgroundColor: "#007bff",
-    color: "white",
+  const [perPage, setPerPage] = useState(5);
+  const [filterText, setFilterText] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [selected, setSelected] = useState(null);
+  const [modals, setModals] = useState({ add: false, edit: false, image: false, info: false });
+  const [info, setInfo] = useState({ title: "", list: [] });
+
+  // styles used earlier — moved to DataTable customStyles
+  const customStyles = {
+    headRow: { style: { backgroundColor: "#007bff" } },
+    headCells: { style: { color: "white", fontWeight: "700", fontSize: "16px" } },
+    rows: { style: { minHeight: "56px" } },
+    cells: { style: { padding: "12px", fontSize: "15px" } },
   };
 
-  const bodyCell = {
-    padding: "12px",
-    border: "1px solid #eee",
-    fontSize: 17,
-    backgroundColor: "#fff",
-    textAlign: "center",
-  };
-
-  const modalLabelStyle = {
-    fontFamily: '"Urbanist", sans-serif',
-    fontSize: "17px",
-    fontWeight: "bold",
-    color: "#333",
-    marginRight: "8px",
-  };
-
-  const modalValueStyle = {
-    fontFamily: '"Urbanist", sans-serif',
-    fontSize: "16px",
-    color: "#555",
-  };
-
+  // load zones
   useEffect(() => {
-    const fetchNotifications = async () => {
+    (async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/getNotification`); // Corrected endpoint
-        const data = await response.json();
-
-        if (Array.isArray(data.notifications)) {
-          const formattedNotifications = data.notifications.map((notification) => ({
-            id: notification._id,
-            title: notification.title || "",
-            description: notification.description || "",
-            city: notification.city || "",
-            image: notification.image || "",
-            createdAt: notification.createdAt || "",
-          }));
-          setNotifications(formattedNotifications);
-        } else {
-          alert("Invalid notification data format");
-        }
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-        alert("Failed to fetch notifications. Please try again.");
+        const z = await getAllZones();
+        setZones(z?.data || []);
+      } catch (e) {
+        showAlert("error", "Failed to load zones");
       }
-    };
-
-    fetchNotifications();
+    })();
   }, []);
 
-  const filteredNotifications = notifications.filter((n) =>
-    (n.title || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // load notifications
+  useEffect(() => {
+    (async () => {
+      try {
+        showAlert("loading", "Loading notifications...");
+        const res = await get(ENDPOINTS.GET_NOTIFICATION);
+        const d = res.data;
+        if (!Array.isArray(d.notifications)) throw new Error("Invalid notification format");
+        const formatted = d.notifications.map((n) => ({
+          id: n._id,
+          title: n.title || "",
+          description: n.description || "",
+          city: Array.isArray(n.city) ? n.city : n.city ? [n.city] : [],
+          zone: Array.isArray(n.zone) ? n.zone : n.zone ? [n.zone] : [],
+          sendType: n.sendType || "",
+          image: n.image || "",
+          createdAt: n.createdAt || "",
+        }));
+        setNotifications(formatted);
+        showAlert("success", "Notifications loaded");
+      } catch (e) {
+        showAlert("error", "Failed to load notifications");
+      }
+    })();
+  }, []);
 
-  const totalPages = Math.ceil(filteredNotifications.length / entriesToShow);
-  const startIndex = (currentPage - 1) * entriesToShow;
-  const endIndex = startIndex + entriesToShow;
-  const currentNotifications = filteredNotifications.slice(startIndex, endIndex);
-
-  const handleEntriesChange = (e) => {
-    setEntriesToShow(parseInt(e.target.value));
-    setCurrentPage(1);
+  /* ------------------ Actions ------------------ */
+  const openInfo = (title, list) => {
+    setInfo({ title, list });
+    setModals((m) => ({ ...m, info: true }));
+  };
+  const openImage = (img) => {
+    setSelected({ image: img });
+    setModals((m) => ({ ...m, image: true }));
+  };
+  const closeImage = () => {
+    setSelected(null);
+    setModals((m) => ({ ...m, image: false }));
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
+  const openAdd = () => {
+    setForm({ title: "", description: "", city: [], zone: [], sendType: "all", image: null });
+    setModals((m) => ({ ...m, add: true }));
   };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handleOpenImageModal = (image) => {
-    setSelectedNotification({ image });
-    setImageModalOpen(true);
-  };
-
-  const handleCloseImageModal = () => {
-    setImageModalOpen(false);
-    setSelectedNotification(null);
-  };
-
-  const handleOpenAddModal = () => {
-    setEditNotificationData({ title: "", description: "", city: "", image: null });
-    setAddModalOpen(true);
-  };
-
-  const handleOpenEditModal = (notification) => {
-    setSelectedNotification(notification);
-    setEditNotificationData({
-      title: notification.title || "",
-      description: notification.description || "",
-      city: notification.city || "",
+  const openEdit = (row) => {
+    setSelected(row);
+    setForm({
+      title: row.title || "",
+      description: row.description || "",
+      city: Array.isArray(row.city) ? row.city : row.city ? [row.city] : [],
+      zone: Array.isArray(row.zone) ? row.zone : row.zone ? [row.zone] : [],
+      sendType: row.sendType || "all",
       image: null,
     });
-    setEditModalOpen(true);
+    setModals((m) => ({ ...m, edit: true }));
   };
 
-  const handleAddNotification = async () => {
-    const formData = new FormData();
-    formData.append("title", editNotificationData.title);
-    formData.append("description", editNotificationData.description);
-    formData.append("city", editNotificationData.city);
-    if (editNotificationData.image) {
-      formData.append("image", editNotificationData.image);
-    }
-
+  const sendNotification = async (n) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/notification`, {
-        method: "POST",
-        body: formData,
+      showAlert("loading", "Sending notification...");
+      await post(ENDPOINTS.SEND_NOTIFICATION, {
+        title: n.title,
+        description: n.description,
+        sendType: n.sendType,
+        city: n.city,
+        zone: n.zone,
       });
+      showAlert("success", "Notification sent successfully");
+    } catch (e) {
+      showAlert("error", e.response?.data?.message || "Failed to send notification");
+    }
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add notification");
-      }
-
-      const newNotification = await response.json();
-      setNotifications((prev) => [
-        ...prev,
+  const addNotification = async () => {
+    try {
+      showAlert("loading", "Adding notification...");
+      const fd = toFormData(form);
+      const res = await post(ENDPOINTS.ADD_NOTIFICATION, fd);
+      const n = res.data.notification;
+      setNotifications((p) => [
+        ...p,
         {
-          id: newNotification.notification._id,
-          title: newNotification.notification.title,
-          description: newNotification.notification.description,
-          city: newNotification.notification.city,
-          image: newNotification.notification.image,
-          createdAt: newNotification.notification.createdAt,
+          id: n._id,
+          title: n.title,
+          description: n.description,
+          city: n.city,
+          zone: n.zone,
+          sendType: n.sendType,
+          image: n.image,
+          createdAt: n.createdAt,
         },
       ]);
-      setAddModalOpen(false);
-      setEditNotificationData({ title: "", description: "", city: "", image: null });
-    } catch (error) {
-      console.error("Error adding notification:", error);
-      alert(`Failed to add notification: ${error.message}`);
+      setModals((m) => ({ ...m, add: false }));
+      setForm({ title: "", description: "", city: [], zone: [], sendType: "all", image: null });
+      showAlert("success", "Notification Created");
+    } catch (e) {
+      showAlert("error", e.response?.data?.message || "Failed to add notification");
     }
   };
 
-  const handleEditNotification = async () => {
-    if (!selectedNotification) return;
-
-    const formData = new FormData();
-    formData.append("title", editNotificationData.title);
-    formData.append("description", editNotificationData.description);
-    formData.append("city", editNotificationData.city);
-    if (editNotificationData.image) {
-      formData.append("image", editNotificationData.image);
-    }
-
+  const editNotification = async () => {
+    if (!selected) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/editNotification/${selectedNotification.id}`, {
-        method: "PUT",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update notification");
-      }
-
-      const updated = await response.json();
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === selectedNotification.id
+      showAlert("loading", "Updating notification...");
+      const fd = toFormData(form);
+      const res = await put(`${ENDPOINTS.EDIT_NOTIFICATION}/${selected.id}`, fd);
+      const u = res.data.notification;
+      setNotifications((p) =>
+        p.map((x) =>
+          x.id === selected.id
             ? {
-                ...n,
-                title: updated.edit?.title || n.title,
-                description: updated.edit?.description || n.description,
-                city: updated.edit?.city || n.city,
-                image: updated.edit?.image || n.image,
+                ...x,
+                title: u.title || x.title,
+                description: u.description || x.description,
+                city: u.city || x.city,
+                zone: u.zone || x.zone,
+                sendType: u.sendType,
+                image: u.image || x.image,
               }
-            : n
+            : x
         )
       );
-      setEditModalOpen(false);
-      setSelectedNotification(null);
-      setEditNotificationData({ title: "", description: "", city: "", image: null });
-    } catch (error) {
-      console.error("Error updating notification:", error);
-      alert(`Failed to update notification: ${error.message}`);
+      setModals((m) => ({ ...m, edit: false }));
+      setSelected(null);
+      setForm({ title: "", description: "", city: [], zone: [], sendType: "all", image: null });
+      showAlert("success", "Notification Updated");
+    } catch (e) {
+      showAlert("error", e.response?.data?.message || "Failed to edit notification");
     }
   };
 
-  const handleDeleteNotification = async (id) => {
+  const deleteNotification = async (id) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/deleteNotification/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete notification");
-      }else{
-        alert("✅ Notification deleted");
-      }
-
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      alert(`Failed to delete notification: ${error.message}`);
+      showAlert("loading", "Deleting...");
+      await del(`${ENDPOINTS.DELETE_NOTIFICATION}/${id}`);
+      setNotifications((p) => p.filter((n) => n.id !== id));
+      showAlert("success", "Notification deleted");
+    } catch (e) {
+      showAlert("error", e.response?.data?.message || "Failed to delete");
     }
+  };
+
+  /* ------------------ Derived for DataTable ------------------ */
+  const filtered = useMemo(() => {
+    return notifications.filter((n) => {
+      const cityNames = mapCityNames(n.city, zones).join(" ").toLowerCase();
+      const zoneNames = mapZoneNames(n.zone, zones, n.city).join(" ").toLowerCase();
+      return (
+        n.title.toLowerCase().includes(filterText.toLowerCase()) ||
+        cityNames.includes(filterText.toLowerCase()) ||
+        zoneNames.includes(filterText.toLowerCase())
+      );
+    });
+  }, [notifications, filterText, zones]);
+
+  // columns for react-data-table-component
+  const columns = useMemo(
+    () => [
+      {
+        name: "Sr No",
+        cell: (row, index) => (currentPage - 1) * perPage + index + 1,
+        width: "80px",
+        sortable: false,
+      },
+      { name: "Title", selector: (row) => row.title, sortable: true, wrap: true },
+      { name: "Description", selector: (row) => row.description, sortable: false, wrap: true },
+      {
+        name: "City",
+        selector: (row) => renderCitiesText(row, zones),
+        sortable: false,
+        cell: (row) => (
+          <div
+            style={{ color: "#0056d2", cursor: "pointer", textDecoration: "underline" }}
+            onClick={() => onCityClick(row, zones, openInfo)}
+          >
+            {renderCitiesText(row, zones)}
+          </div>
+        ),
+        grow: 1,
+      },
+      { name: "Send To", selector: (row) => row.sendType || "-", sortable: true },
+      {
+        name: "Image",
+        selector: (row) => row.image,
+        cell: (row) =>
+          row.image ? (
+            <Avatar
+              src={`${process.env.REACT_APP_IMAGE_LINK}${row.image}`}
+              sx={{ width: 40, height: 40, cursor: "pointer" }}
+              onClick={() => openImage(row.image)}
+            />
+          ) : (
+            "-"
+          ),
+        width: "90px",
+      },
+      {
+        name: "Action",
+        cell: (row) => (
+          <div style={{ display: "flex", gap: 6 }}>
+            <Tooltip title="Edit">
+              <IconButton size="small" onClick={() => openEdit(row)}>
+                <EditIcon sx={{ fontSize: 18, color: "#007BFF" }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Send Notification">
+              <IconButton size="small" onClick={() => sendNotification(row)}>
+                <SendIcon sx={{ fontSize: 18, color: "#00c853" }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Delete">
+              <IconButton size="small" onClick={() => deleteNotification(row.id)}>
+                <DeleteIcon sx={{ fontSize: 18, color: "#dc3545" }} />
+              </IconButton>
+            </Tooltip>
+          </div>
+        ),
+        ignoreRowClick: true,
+        allowOverflow: true,
+        button: true,
+      },
+    ],
+    [perPage, currentPage, zones]
+  );
+
+  /* ------------------ Small render helpers ------------------ */
+
+  const renderCitiesText = (n, zonesArr) =>
+    !n.city || n.city.includes("all") ? "All Cities" : mapCityNames(n.city, zonesArr).join(", ");
+  const onCityClick = (n, zonesArr, openInfoFn) => {
+    const cities = mapCityNames(n.city, zonesArr);
+    const zonesList = mapZoneNames(n.zone, zonesArr, n.city);
+    openInfoFn("City & Zones", ["Cities:", ...cities, "", "Zones:", ...zonesList]);
+  };
+
+  /* ------------------ DataTable pagination handling ------------------ */
+  const handlePageChange = (page) => setCurrentPage(page);
+  const handlePerRowsChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
   };
 
   return (
-    <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} >
+    <MDBox ml={miniSidenav ? "80px" : "250px"}>
       <div style={{ width: "100%", padding: "0 20px" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
@@ -262,6 +361,7 @@ export default function Notifications() {
             </p>
           </div>
           <Button
+            onClick={openAdd}
             style={{
               backgroundColor: "#00c853",
               height: 45,
@@ -270,19 +370,18 @@ export default function Notifications() {
               color: "white",
               letterSpacing: "1px",
             }}
-            onClick={handleOpenAddModal}
           >
             + Add Notification
           </Button>
         </div>
 
         {/* Controls */}
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: 12 }}>
           <div>
             <label style={{ fontSize: 17 }}>Show Entries </label>
             <select
-              value={entriesToShow}
-              onChange={handleEntriesChange}
+              value={perPage}
+              onChange={(e) => handlePerRowsChange(parseInt(e.target.value))}
               style={{
                 fontSize: 16,
                 padding: "6px 10px",
@@ -290,25 +389,28 @@ export default function Notifications() {
                 border: "1px solid #ccc",
               }}
             >
-              {[5, 10, 20, 30].map((num) => (
-                <option key={num} value={num}>
-                  {num}
+              {[5, 10, 20, 30].map((n) => (
+                <option key={n} value={n}>
+                  {n}
                 </option>
               ))}
             </select>
           </div>
-          <div style={{ marginLeft: "420px" }}>
+
+          <div style={{ marginLeft: "auto" }}>
             <label style={{ fontSize: 17, marginRight: 8 }}>Search:</label>
             <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
+              value={filterText}
+              onChange={(e) => {
+                setFilterText(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Search notifications..."
               style={{
-                padding: "8px 34px",
+                padding: "8px 12px",
                 borderRadius: "8px",
-                height: "42px",
-                width: "220px",
+                height: "38px",
+                width: "280px",
                 border: "1px solid #ccc",
                 fontSize: 16,
                 outline: "none",
@@ -316,148 +418,38 @@ export default function Notifications() {
             />
           </div>
         </div>
-        
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontFamily: '"Urbanist", sans-serif',
-            fontSize: "17px",
-            border: "1px solid #007BFF",
-            marginTop: "20px",
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={headerCell}>Sr No</th>
-              <th style={headerCell}>Title</th>
-              <th style={headerCell}>Description</th>
-              <th style={headerCell}>City</th>
-              <th style={headerCell}>Image</th>
-              <th style={headerCell}>Created At</th>
-              <th style={headerCell}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentNotifications.length > 0 ? (
-              currentNotifications.map((notification, index) => (
-                <tr
-                  key={notification.id}
-                  style={{
-                    backgroundColor: selectedNotification?.id === notification.id ? "#f1f1f1" : "white",
-                    cursor: "pointer",
-                  }}
-                >
-                  <td style={bodyCell}>{startIndex + index + 1}</td>
-                  <td style={bodyCell}>{notification.title || "-"}</td>
-                  <td style={bodyCell}>{notification.description || "-"}</td>
-                  <td style={bodyCell}>{notification.city || "-"}</td>
-                  <td style={bodyCell}>
-                    {notification.image ? (
-                      <Avatar
-                        src={`${process.env.REACT_APP_IMAGE_LINK}${notification.image}`}
-                        alt={notification.title}
-                        sx={{ width: 40, height: 40, cursor: "pointer" }}
-                        onClick={() => handleOpenImageModal(notification.image)}
-                      />
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td style={bodyCell}>
-                    {new Date(notification.createdAt).toLocaleDateString() || "-"}
-                  </td>
-                  <td style={bodyCell}>
-                    <Button
-                      onClick={() => handleOpenEditModal(notification)}
-                      style={{
-                        backgroundColor: "#007BFF",
-                        color: "white",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                        marginRight: "8px",
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteNotification(notification.id)}
-                      style={{
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ textAlign: "center", padding: "20px" }}>
-                  No notifications found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
 
-        {/* Pagination */}
-        <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-          <div>
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredNotifications.length)} of{" "}
-            {filteredNotifications.length} entries
-          </div>
-          <div>
-            <button
-              onClick={handlePrevious}
-              disabled={currentPage === 1}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === 1 ? "#ccc" : "#007BFF",
-                color: currentPage === 1 ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                marginRight: "8px",
-              }}
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: "8px 18px",
-                backgroundColor: currentPage === totalPages ? "#ccc" : "#007BFF",
-                color: currentPage === totalPages ? "#666" : "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {/* DataTable */}
+        <DataTable
+          columns={columns}
+          data={filtered}
+          customStyles={customStyles}
+          pagination
+          paginationServer={false}
+          paginationPerPage={perPage}
+          paginationTotalRows={filtered.length}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={(newPerPage) => handlePerRowsChange(newPerPage)}
+          highlightOnHover
+          responsive
+          noHeader
+        />
       </div>
 
-      {/* Image Viewer Modal */}
-      <Dialog open={imageModalOpen} onClose={handleCloseImageModal} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+      {/* Image Modal */}
+      <Dialog open={modals.image} onClose={closeImage} maxWidth="lg" fullWidth>
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Image Preview
         </DialogTitle>
-        <DialogContent sx={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "24px" }}>
-          {selectedNotification?.image && (
+        <DialogContent
+          sx={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "24px" }}
+        >
+          {selected?.image && (
             <img
-              src={`${process.env.REACT_APP_IMAGE_LINK}${selectedNotification.image}`}
-              alt="Notification Image"
+              src={`${process.env.REACT_APP_IMAGE_LINK}${selected.image}`}
+              alt="Notification"
               style={{
                 maxWidth: "100%",
                 maxHeight: "80vh",
@@ -470,7 +462,7 @@ export default function Notifications() {
         </DialogContent>
         <DialogActions sx={{ padding: "16px 24px" }}>
           <Button
-            onClick={handleCloseImageModal}
+            onClick={closeImage}
             color="error"
             sx={{
               fontFamily: '"Urbanist", sans-serif',
@@ -484,9 +476,16 @@ export default function Notifications() {
         </DialogActions>
       </Dialog>
 
-      {/* Add Notification Modal */}
-      <Dialog open={addModalOpen} onClose={() => setAddModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+      {/* Add Modal */}
+      <Dialog
+        open={modals.add}
+        onClose={() => setModals((m) => ({ ...m, add: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{ fontFamily: 'Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Add Notification
         </DialogTitle>
         <DialogContent dividers sx={{ padding: "24px" }}>
@@ -494,11 +493,8 @@ export default function Notifications() {
             label="Title"
             fullWidth
             margin="normal"
-            value={editNotificationData.title}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, title: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            value={form.title}
+            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
           />
           <TextField
             label="Description"
@@ -506,22 +502,91 @@ export default function Notifications() {
             margin="normal"
             multiline
             rows={4}
-            value={editNotificationData.description}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, description: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
           />
+
+          {/* City multi-select */}
           <TextField
+            select
             label="City"
             fullWidth
             margin="normal"
-            value={editNotificationData.city}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, city: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
-          />
+            SelectProps={{
+              multiple: true,
+              renderValue: (sel) =>
+                sel.includes("all") ? "All Cities" : mapCityNames(sel, zones).join(", "),
+            }}
+            value={form.city}
+            onChange={(e) => {
+              let v = cleanMulti(e.target.value);
+              if (v.includes("all")) v = ["all"];
+              v = v.filter((x) => !(x === "all" && v.length > 1));
+              setForm((p) => ({ ...p, city: v, zone: [] }));
+            }}
+          >
+            <MenuItem value="all">
+              <Checkbox checked={form.city.includes("all")} />
+              <ListItemText primary="All Cities" />
+            </MenuItem>
+            {zones.map((c) => (
+              <MenuItem key={c._id} value={c._id}>
+                <Checkbox checked={form.city.includes(c._id)} />
+                <ListItemText primary={c.city} />
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {/* Zone multi-select */}
+          <TextField
+            select
+            label="Zone"
+            fullWidth
+            margin="normal"
+            SelectProps={{
+              multiple: true,
+              renderValue: (sel) =>
+                sel.includes("all") ? "All Zones" : mapZoneNames(sel, zones, form.city).join(", "),
+            }}
+            value={form.zone}
+            onChange={(e) => {
+              let v = cleanMulti(e.target.value);
+              if (v.includes("all")) v = ["all"];
+              v = v.filter((x) => !(x === "all" && v.length > 1));
+              setForm((p) => ({ ...p, zone: v }));
+            }}
+            disabled={form.city.length === 0}
+          >
+            <MenuItem value="all">
+              <Checkbox checked={form.zone.includes("all")} />
+              <ListItemText primary="All Zones" />
+            </MenuItem>
+            {zones
+              .filter((c) => form.city.includes("all") || form.city.includes(c._id))
+              .flatMap((c) => c.zones || [])
+              .map((zn) => (
+                <MenuItem key={zn._id} value={zn._id}>
+                  <Checkbox checked={form.zone.includes(zn._id)} />
+                  <ListItemText primary={zn.zoneTitle} />
+                </MenuItem>
+              ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Send Type"
+            fullWidth
+            margin="normal"
+            value={form.sendType}
+            onChange={(e) => setForm((p) => ({ ...p, sendType: e.target.value }))}
+            SelectProps={{ native: true }}
+          >
+            <option value="all">All</option>
+            <option value="user">User</option>
+            <option value="seller">Seller</option>
+            <option value="driver">Driver</option>
+          </TextField>
+
           <TextField
             label="Image"
             type="file"
@@ -529,15 +594,12 @@ export default function Notifications() {
             margin="normal"
             InputLabelProps={{ shrink: true }}
             inputProps={{ accept: "image/*" }}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, image: e.target.files[0] }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            onChange={(e) => setForm((p) => ({ ...p, image: e.target.files[0] }))}
           />
         </DialogContent>
         <DialogActions sx={{ padding: "16px 24px" }}>
           <Button
-            onClick={() => setAddModalOpen(false)}
+            onClick={() => setModals((m) => ({ ...m, add: false }))}
             color="error"
             sx={{
               fontFamily: '"Urbanist", sans-serif',
@@ -549,7 +611,7 @@ export default function Notifications() {
             Cancel
           </Button>
           <Button
-            onClick={handleAddNotification}
+            onClick={addNotification}
             color="primary"
             sx={{
               fontFamily: '"Urbanist", sans-serif',
@@ -563,9 +625,16 @@ export default function Notifications() {
         </DialogActions>
       </Dialog>
 
-      {/* Edit Notification Modal */}
-      <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}>
+      {/* Edit Modal */}
+      <Dialog
+        open={modals.edit}
+        onClose={() => setModals((m) => ({ ...m, edit: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{ fontFamily: '"Urbanist", sans-serif', fontSize: "24px", fontWeight: "bold" }}
+        >
           Edit Notification
         </DialogTitle>
         <DialogContent dividers sx={{ padding: "24px" }}>
@@ -573,11 +642,8 @@ export default function Notifications() {
             label="Title"
             fullWidth
             margin="normal"
-            value={editNotificationData.title}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, title: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            value={form.title}
+            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
           />
           <TextField
             label="Description"
@@ -585,22 +651,88 @@ export default function Notifications() {
             margin="normal"
             multiline
             rows={4}
-            value={editNotificationData.description}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, description: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
           />
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>City</InputLabel>
+            <Select
+              multiple
+              value={form.city}
+              onChange={(e) => {
+                let v = cleanMulti(e.target.value);
+                if (v.includes("all")) v = ["all"];
+                v = v.filter((x) => !(x === "all" && v.length > 1));
+                setForm((p) => ({ ...p, city: v, zone: [] }));
+              }}
+              input={<OutlinedInput label="City" />}
+              renderValue={(sel) =>
+                sel.includes("all") ? "All Cities" : mapCityNames(sel, zones).join(", ")
+              }
+              sx={{ height: 48, borderRadius: "8px" }}
+            >
+              <MenuItem value="all">
+                <Checkbox checked={form.city.includes("all")} />
+                <ListItemText primary="All Cities" />
+              </MenuItem>
+              {zones.map((c) => (
+                <MenuItem key={c._id} value={c._id}>
+                  <Checkbox checked={form.city.includes(c._id)} />
+                  <ListItemText primary={c.city} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal" disabled={form.city.length === 0}>
+            <InputLabel>Zone</InputLabel>
+            <Select
+              multiple
+              value={form.zone}
+              onChange={(e) => {
+                let v = cleanMulti(e.target.value);
+                if (v.includes("all")) v = ["all"];
+                v = v.filter((x) => !(x === "all" && v.length > 1));
+                setForm((p) => ({ ...p, zone: v }));
+              }}
+              input={<OutlinedInput label="Zone" />}
+              renderValue={(sel) =>
+                sel.includes("all") ? "All Zones" : mapZoneNames(sel, zones, form.city).join(", ")
+              }
+              sx={{ height: 48, borderRadius: "8px" }}
+            >
+              <MenuItem value="all">
+                <Checkbox checked={form.zone.includes("all")} />
+                <ListItemText primary="All Zones" />
+              </MenuItem>
+              {zones
+                .filter((c) => form.city.includes("all") || form.city.includes(c._id))
+                .flatMap((c) => c.zones || [])
+                .map((zn) => (
+                  <MenuItem key={zn._id} value={zn._id}>
+                    <Checkbox checked={form.zone.includes(zn._id)} />
+                    <ListItemText primary={zn.zoneTitle} />
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+
           <TextField
-            label="City"
+            select
+            label="Send Type"
             fullWidth
             margin="normal"
-            value={editNotificationData.city}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, city: e.target.value }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
-          />
+            value={form.sendType}
+            onChange={(e) => setForm((p) => ({ ...p, sendType: e.target.value }))}
+            SelectProps={{ native: true }}
+          >
+            <option value="all">All</option>
+            <option value="user">User</option>
+            <option value="seller">Seller</option>
+            <option value="driver">Driver</option>
+          </TextField>
+
           <TextField
             label="Image"
             type="file"
@@ -608,15 +740,12 @@ export default function Notifications() {
             margin="normal"
             InputLabelProps={{ shrink: true }}
             inputProps={{ accept: "image/*" }}
-            onChange={(e) =>
-              setEditNotificationData((prev) => ({ ...prev, image: e.target.files[0] }))
-            }
-            sx={{ fontFamily: '"Urbanist", sans-serif' }}
+            onChange={(e) => setForm((p) => ({ ...p, image: e.target.files[0] }))}
           />
         </DialogContent>
         <DialogActions sx={{ padding: "16px 24px" }}>
           <Button
-            onClick={() => setEditModalOpen(false)}
+            onClick={() => setModals((m) => ({ ...m, edit: false }))}
             color="error"
             sx={{
               fontFamily: '"Urbanist", sans-serif',
@@ -628,7 +757,7 @@ export default function Notifications() {
             Cancel
           </Button>
           <Button
-            onClick={handleEditNotification}
+            onClick={editNotification}
             color="primary"
             sx={{
               fontFamily: '"Urbanist", sans-serif',
@@ -638,6 +767,34 @@ export default function Notifications() {
             }}
           >
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Info Modal */}
+      <Dialog
+        open={modals.info}
+        onClose={() => setModals((m) => ({ ...m, info: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: "22px", fontWeight: "bold" }}>{info.title}</DialogTitle>
+        <DialogContent dividers>
+          {!info.list.length ? (
+            <p>No data</p>
+          ) : (
+            <ul>
+              {info.list.map((it, idx) => (
+                <li key={idx} style={{ fontSize: 17, marginBottom: 6 }}>
+                  {it}
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModals((m) => ({ ...m, info: false }))} color="error">
+            Close
           </Button>
         </DialogActions>
       </Dialog>

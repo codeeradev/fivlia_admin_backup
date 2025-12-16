@@ -12,6 +12,9 @@ import {
 } from "@mui/material";
 import MDBox from "components/MDBox";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import { ENDPOINTS } from "api/endPoints";
+import { get } from "api/apiClient";
+import { put } from "api/apiClient";
 
 const OrderSetting = ({ miniSidenav }) => {
   const theme = useTheme();
@@ -25,6 +28,7 @@ const OrderSetting = ({ miniSidenav }) => {
     freeDeliveryLimit: 0,
     minimumOrderCancelTime: 0,
     codLimit: 0,
+    extraTime:0,
   });
 
   const [loading, setLoading] = useState(false);
@@ -39,9 +43,7 @@ const OrderSetting = ({ miniSidenav }) => {
     setLoading(true);
     showAlert("loading", "Fetching order settings...");
     try {
-      const { data } = await axios.get(
-        `${process.env.REACT_APP_API_URL}/getSmsType`
-      );
+      const { data } = await get(ENDPOINTS.GET_SMS_TYPE);
 
       if (data.setting && data.setting[0]) {
         const s = data.setting[0];
@@ -52,6 +54,7 @@ const OrderSetting = ({ miniSidenav }) => {
           freeDeliveryLimit: Number(s.freeDeliveryLimit ?? 0),
           minimumOrderCancelTime: Number(s.minimumOrderCancelTime ?? 0),
           codLimit: Number(s.codLimit ?? 0),
+          extraTime: Number(s.extraTime ?? 0),
         });
         showAlert("info", "", 1);
       } else {
@@ -82,8 +85,9 @@ const OrderSetting = ({ miniSidenav }) => {
     showAlert("loading", "Saving settings...");
 
     try {
-      await axios.put(`${process.env.REACT_APP_API_URL}/adminSetting`, formData);
+      await put(`${ENDPOINTS.ADMIN_SETTING}`, formData);
       showAlert("success", "Settings updated successfully!");
+      fetchSettings()
     } catch (err) {
       console.error("Save failed:", err);
       showAlert("error", "Failed to save settings.");
@@ -194,7 +198,7 @@ const OrderSetting = ({ miniSidenav }) => {
               </Grid>
 
               {/* Auto Cancel Time */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={8} sm={4}>
                 <TextField
                   label="Order Auto-Cancel Time (Minutes)"
                   name="minimumOrderCancelTime"
@@ -208,8 +212,23 @@ const OrderSetting = ({ miniSidenav }) => {
                 />
               </Grid>
 
+               {/* COD Limit */}
+              <Grid item xs={8} sm={4}>
+                <TextField
+                  label="Additional Delivery Time (minutes)"
+                  name="extraTime"
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  fullWidth
+                  value={formData.extraTime}
+                  onChange={handleChange}
+                  variant="outlined"
+                  helperText="Adds extra minutes to the system-calculated delivery time."
+                />
+              </Grid>
+
               {/* COD Limit */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={8} sm={4}>
                 <TextField
                   label="COD Limit"
                   name="codLimit"

@@ -4,7 +4,9 @@ import { useMaterialUIController } from "context";
 import { useNavigate,useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@mui/material";
-
+import { put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 function EditBrand() {
     const [controller] = useMaterialUIController();
@@ -35,25 +37,21 @@ function EditBrand() {
 
     const handleBrand = async () => {
   try {
+    showAlert("loading", "Updating brand...");
     const formData = new FormData();
     formData.append("brandName", name);
     formData.append("description", description);
     formData.append("image", document.querySelector('input[type="file"]').files[0]);
     formData.append("featured", featured.toString()); // Added featured field
 
-    const result = await fetch(`${process.env.REACT_APP_API_URL}/editBrand/${id}`, {
-      method: "PUT",
-      body: formData,
-    });
+    await put(`${ENDPOINTS.EDIT_BRAND}/${id}`, formData);
 
-    if (result.status === 200) {
-      alert("Brand Updated Successfully");
-      navigate(-1);
-    } else {
-      alert("Something went wrong");
-    }
+    showAlert("success", "Brand updated successfully");
+    navigate(-1);
+
   } catch (err) {
     console.error(err);
+    showAlert("error", "Failed to update brand");
   }
 };
 

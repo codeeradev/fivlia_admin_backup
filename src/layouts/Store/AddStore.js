@@ -8,6 +8,14 @@ import { Marker, Circle } from "@react-google-maps/api"; // works for Ola via Ad
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import { showAlert } from "components/commonFunction/alertsLoader";
+import {
+  getMainCategories,
+  getAllZones,
+} from "components/commonApi/commonApi";
+
+// Shared api client & endpoints
+import { post, put } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
 
 function AddStore() {
   const [controller] = useMaterialUIController();
@@ -79,10 +87,10 @@ function AddStore() {
 
   useEffect(() => {
     const getMainCategory = async () => {
-      try {
-        const data = await fetch(`${process.env.REACT_APP_API_URL}/getMainCategory`);
-        if (data.status === 200) {
-          const result = await data.json();
+      try {        
+        const res = await getMainCategories();
+        if (res.status === 200) {
+          const result = await res.data;
           setMainCategories(result.result);
         } else {
           console.error("Failed to fetch categories");
@@ -94,8 +102,8 @@ function AddStore() {
 
     const fetchCities = async () => {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/getAllZone`);
-        const data = await res.json();
+        const res = await getAllZones();
+        const data = res.data;
         if (data) {
           setCities(data);
         }
@@ -228,15 +236,9 @@ function AddStore() {
 
       let response;
       if (storedetails && storedetails.store) {
-        response = await fetch(`${process.env.REACT_APP_API_URL}/storeEdit/${id}`, {
-          method: "PUT",
-          body: formData,
-        });
+        response = await put(`${ENDPOINTS.EDIT_STORE}/${id}`, formData);
       } else {
-        response = await fetch(`${process.env.REACT_APP_API_URL}/createStore`, {
-          method: "POST",
-          body: formData,
-        });
+        response = await post(ENDPOINTS.CREATE_STORE, formData);
       }
 
       if (response.status === 201) {
