@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Wallet.css";
 import { FaArrowUp, FaArrowDown, FaWallet } from "react-icons/fa";
 import MDBox from "components/MDBox";
+import { FaDownload } from "react-icons/fa";
 import { showAlert } from "components/commonFunction/alertsLoader";
 import { useMaterialUIController } from "context";
 import { get } from "api/apiClient";
@@ -9,34 +10,68 @@ import { ENDPOINTS } from "api/endPoints";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [controller] = useMaterialUIController();
- const { miniSidenav } = controller;
+  const { miniSidenav } = controller;
+
+  const fetchData = async () => {
+    try {
+      showAlert("loading", "Fetching Wallet data...");
+      const walletRes = await get(ENDPOINTS.WALLET_ADMIN);
+      setWallet(walletRes.data);
+      // Transactions
+      const query = new URLSearchParams();
+
+      if (startDate) query.append("startDate", startDate);
+      if (endDate) query.append("endDate", endDate);
+
+      const txnRes = await get(`${ENDPOINTS.ADMIN_TRANSACTION}?${query.toString()}`);
+      const sortedTxns = txnRes.data.transactions
+        .filter((txn) => txn.createdAt) // ignore incomplete entries
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setTransactions(sortedTxns);
+      showAlert("info", "", 1);
+    } catch (err) {
+      console.error("Failed to fetch wallet data", err);
+      showAlert("error", "Failed to fetch wallet stats.");
+    }
+  };
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        showAlert("loading", "Fetching Wallet data...");
-        const walletRes = await get(ENDPOINTS.WALLET_ADMIN);
-        setWallet(walletRes.data);
-        // Transactions
-        const txnRes = await get(ENDPOINTS.ADMIN_TRANSACTION);
-        const sortedTxns = txnRes.data.transactions
-          .filter((txn) => txn.createdAt) // ignore incomplete entries
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setTransactions(sortedTxns);
-        showAlert("info", "", 1);
-      } catch (err) {
-        console.error("Failed to fetch wallet data", err);
-        showAlert("error", "Failed to fetch wallet stats.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
-  if (loading) return <p className="loading-text">Loading wallet...</p>;
+  const downloadCSV = () => {
+    if (!transactions.length) {
+      showAlert("info", "No transactions to export");
+      return;
+    }
+
+    const headers = ["Order ID", "Seller", "Type", "Amount", "Description", "City", "Date"];
+
+    const rows = transactions.map((txn) => [
+      txn.orderId || "",
+      txn.storeName || "",
+      txn.type || "",
+      txn.amount || 0,
+      txn.description || "",
+      txn.city || "",
+      new Date(txn.createdAt).toLocaleString("en-IN"),
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `wallet-transactions-${Date.now()}.csv`;
+    link.click();
+  };
 
   // Calculate total credits/debits from transactions
   const totalCredits = transactions
@@ -87,7 +122,30 @@ export default function Wallet() {
         </div>
         {/* Transactions */}
         <div className="transactions-section">
-          <h3 className="section-title">Recent Transactions</h3>
+          <div className="transactions-header">
+            <h3 className="section-title">Recent Transactions</h3>
+            <div className="transaction-actions">
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+
+              <button className="btn-outline" onClick={fetchData}>
+                Apply
+              </button>
+
+              <button className="btn-ghost" onClick={downloadCSV}>
+                <FaDownload /> Download CSV
+              </button>
+            </div>
+          </div>
           {transactions.length > 0 ? (
             <ul className="transaction-list">
               {transactions.map((txn, idx) => (

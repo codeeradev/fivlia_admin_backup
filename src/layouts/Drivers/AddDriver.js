@@ -58,10 +58,24 @@ function AddDriver() {
     e.preventDefault();
 
     if (!image || !policeVerification || !aadharFront || !aadharBack || !dlFront || !dlBack) {
-      alert("Please upload all required files");
+      showAlert("error", "Please upload all required files");
       return;
     }
-    showAlert("loading", "Adding driver...");
+
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+    if (
+      image.size > MAX_SIZE ||
+      policeVerification.size > MAX_SIZE ||
+      aadharFront.size > MAX_SIZE ||
+      aadharBack.size > MAX_SIZE ||
+      dlFront.size > MAX_SIZE ||
+      dlBack.size > MAX_SIZE
+    ) {
+      showAlert("error", "Each file must be less than 2MB");
+      return;
+    }
+
     const formData = new FormData();
 
     formData.append("driverName", driverName);
@@ -91,7 +105,11 @@ function AddDriver() {
       navigate("/drivers");
     } catch (err) {
       console.error("Upload error:", err);
-      showAlert("error", "Failed to add driver");
+      if (err?.response?.status === 409) {
+        showAlert("error", err.response.data.message);
+      } else {
+        showAlert("error", "Failed to add driver");
+      }
     }
   };
 
