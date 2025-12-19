@@ -44,14 +44,14 @@ function EditBrand() {
     formData.append("image", document.querySelector('input[type="file"]').files[0]);
     formData.append("featured", featured.toString()); // Added featured field
 
-    await put(`${ENDPOINTS.EDIT_BRAND}/${id}`, formData);
+    await put(`${ENDPOINTS.EDIT_BRAND}/${id}`, formData, { authRequired: true });
 
     showAlert("success", "Brand updated successfully");
     navigate(-1);
 
   } catch (err) {
     console.error(err);
-    showAlert("error", "Failed to update brand");
+    // showAlert("error", "Failed to update brand");
   }
 };
 

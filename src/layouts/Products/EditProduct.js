@@ -28,6 +28,7 @@ function EditProduct() {
   const [variantImages, setVariantImages] = useState({}); // Added for variant image handling
   const [returnProduct, setReturnProduct] = useState({ title: "", image: null });
   const returnImageInputRef = useRef(null);
+  const [originalProduct, setOriginalProduct] = useState(null);
   const thumbnailInputRef = useRef(null); // Added for thumbnail handling
 
   const sectionIds = ["basicinfo", "imagesection", "category-section", "citysection", "taxsection"];
@@ -747,7 +748,7 @@ function EditProduct() {
   const fetchAttribute = async () => {
     try {
       const res = await get(ENDPOINTS.GET_ATTRIBUTES);
-      console.log(res)
+      console.log(res);
       setAttribute(res.data);
     } catch (err) {
       console.error(err);
@@ -763,13 +764,12 @@ function EditProduct() {
     }
   };
 
-  const setData = () => {
-    if (!location.state) {
+  const setData = (data) => {
+    if (!data) {
       alert("No product data provided.");
       navigate(-1);
       return;
     }
-    const data = location.state;
 
     setId(data._id || "");
     setName(data.productName || "");
@@ -957,6 +957,28 @@ function EditProduct() {
     setSubCategory(data.subCategory?.[0]?._id || "");
     setSubSubCategory(data.subSubCategory?.[0]?._id || "");
   };
+
+  const fetchFullProduct = async (productId) => {
+    try {
+      showAlert("loading", "Loading product...");
+      const res = await get(`${ENDPOINTS.GET_PRODUCTS}?id=${productId}`);
+      const product = res.data?.Product;
+
+      if (!product) {
+        showAlert("error", "Product not found");
+        navigate(-1);
+        return;
+      }
+      setOriginalProduct(product);
+      setData(product);
+      showAlert("info","",1)
+    } catch (err) {
+      console.error(err);
+      showAlert("error", "Failed to load product");
+      navigate(-1);
+    }
+  };
+
   useEffect(() => {
     getCategory();
     getActiveCity();
@@ -964,7 +986,7 @@ function EditProduct() {
     getTax();
     fetchAttribute();
     getUnits();
-    setData();
+    fetchFullProduct(location.state.id);
 
     const handleScroll = () => {
       let current = "";
@@ -1109,7 +1131,7 @@ function EditProduct() {
             return null;
           }
           // Find the original variant data from the initial product data
-          const originalVariant = location.state?.variants?.find(
+          const originalVariant = setData?.variants?.find(
             (v) => v.variantValue.split(" ")[0] === item.variantName
           );
           return {
@@ -1185,9 +1207,9 @@ function EditProduct() {
 
   const handlefiltervalue = async () => {
     try {
-    const newvalue = await patch(`${ENDPOINTS.EDIT_FILTER}/${filterTypeName}`, {
-      Filter: [{ name: newFilterValue }],
-    });
+      const newvalue = await patch(`${ENDPOINTS.EDIT_FILTER}/${filterTypeName}`, {
+        Filter: [{ name: newFilterValue }],
+      });
       if (newvalue.status === 200) {
         alert("Success");
         const res = await fetch(`https://node-m8jb.onrender.com/getfilter/${filterTypeName}`);

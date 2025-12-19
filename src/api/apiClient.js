@@ -45,13 +45,16 @@ apiClient.interceptors.request.use(
 
     if (config.authRequired) {
       const token = getToken();
+      console.log('token',token)
       //console.log('API Client: authRequired: true detected, token:', token ? 'present' : 'missing');
 
       if (token) {
         config.headers = config.headers || {};
         config.headers['Authorization'] = `Bearer ${token}`;
+        console.log('token',token)
         //console.log('API Client: Authorization header set:', config.headers['Authorization']);
       } else {
+        
         //console.warn('API Client: authRequired: true but no token found in localStorage');
       }
 
@@ -129,6 +132,7 @@ export const get = (endpoint, config = {}) => {
 
 export const post = (endpoint, data, config = {}) => {
   const finalConfig = config.authRequired ? withAuth(config) : config;
+
   return apiClient.post(endpoint, data, finalConfig);
 };
 

@@ -242,7 +242,7 @@ export default function SalesReport() {
             onClick={fetchReport}
             sx={{
               backgroundColor: "#1976d2",
-              color: "white",
+              color: "#fff !important",
               borderRadius: "8px",
               px: 3,
               py: 1.4,

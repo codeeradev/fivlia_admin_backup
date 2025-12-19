@@ -86,32 +86,7 @@ function ProductTable() {
   const [bulkUploadedImages, setBulkUploadedImages] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const query = `?page=${currentPage}&limit=${entries}&search=${encodeURIComponent(
-          searchQuery
-        )}&city=${encodeURIComponent(selectedCity)}&category=${encodeURIComponent(
-          selectedCategory
-        )}`;
-
-        const resp = await get(`${ENDPOINTS.GET_PRODUCTS}${query}`);
-        const res = resp.data;
-
-        setData(res.Product || []);
-        setTotalItems(res.count || 0);
-        setTotalPages(res.totalPages || 1);
-
-        const initialPublicStatus = (res.Product || []).reduce((acc, cur) => {
-          acc[cur._id] = cur.status === true;
-          return acc;
-        }, {});
-        setPublicStatus(initialPublicStatus);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      }
-    };
-
-    fetchData();
+    fetchProducts();
   }, [searchQuery, entries, selectedCity, selectedCategory, currentPage]);
 
   const handleMenuOpen = (event, index) => {
@@ -145,28 +120,30 @@ function ProductTable() {
   };
 
   // Filter products client-side
-  const filteredProducts = Array.isArray(data)
-    ? data
-        .filter((item) =>
-          selectedCity ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity) : true
-        )
-        .filter((item) =>
-          selectedCategory ? item.category?.some((cat) => cat.name === selectedCategory) : true
-        )
-        .filter((item) =>
-          Object.values(item).some((val) =>
-            Array.isArray(val)
-              ? val.some((v) =>
-                  typeof v === "object"
-                    ? Object.values(v).some((subVal) =>
-                        String(subVal).toLowerCase().includes(search.toLowerCase())
-                      )
-                    : String(v).toLowerCase().includes(search.toLowerCase())
-                )
-              : String(val).toLowerCase().includes(search.toLowerCase())
+  const filteredProducts = React.useMemo(() => {
+    return Array.isArray(data)
+      ? data
+          .filter((item) =>
+            selectedCity ? item.location?.some((loc) => loc.city?.[0]?.name === selectedCity) : true
           )
-        )
-    : [];
+          .filter((item) =>
+            selectedCategory ? item.category?.some((cat) => cat.name === selectedCategory) : true
+          )
+          .filter((item) =>
+            Object.values(item).some((val) =>
+              Array.isArray(val)
+                ? val.some((v) =>
+                    typeof v === "object"
+                      ? Object.values(v).some((subVal) =>
+                          String(subVal).toLowerCase().includes(search.toLowerCase())
+                        )
+                      : String(v).toLowerCase().includes(search.toLowerCase())
+                  )
+                : String(val).toLowerCase().includes(search.toLowerCase())
+            )
+          )
+      : [];
+  }, [data, selectedCity, selectedCategory, search]);
 
   const fetchProducts = async () => {
     try {
@@ -191,17 +168,17 @@ function ProductTable() {
     }
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = React.useCallback(() => {
     if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+      setCurrentPage((p) => p + 1);
     }
-  };
+  }, [currentPage, totalPages]);
 
-  const handlePrevPage = () => {
+  const handlePrevPage = React.useCallback(() => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      setCurrentPage((p) => p - 1);
     }
-  };
+  }, [currentPage]);
 
   const handleSwitchChange = async (id) => {
     try {
@@ -1018,7 +995,9 @@ function ProductTable() {
                           open={Boolean(anchorEl) && menuIndex === index}
                           onClose={handleMenuClose}
                         >
-                          <MenuItem onClick={() => navigate("/edit-product", { state: item })}>
+                          <MenuItem
+                            onClick={() => navigate("/edit-product", { state: { id: item._id } })}
+                          >
                             Edit
                           </MenuItem>
                           <MenuItem onClick={() => handleDeleteProduct(item._id)}>Delete</MenuItem>
