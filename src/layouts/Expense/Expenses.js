@@ -102,11 +102,11 @@ function Expenses() {
 
       if (editId) {
         showAlert("loading", "Updating expense...");
-        await put(ENDPOINTS.EDIT_EXPENSES(editId), payload);
+        await put(ENDPOINTS.EDIT_EXPENSES(editId), payload, { authRequired: true });
         showAlert("success", "Expense updated successfully");
       } else {
         showAlert("loading", "Adding expense...");
-        await post(ENDPOINTS.ADD_EXPENSES, payload);
+        await post(ENDPOINTS.ADD_EXPENSES, payload, { authRequired: true });
         showAlert("success", "Expense added successfully");
       }
 
@@ -115,7 +115,7 @@ function Expenses() {
 
       fetchExpenses();
     } catch (err) {
-      showAlert("error", "Something went wrong");
+      // showAlert("error", "Something went wrong");
     }
   };
 

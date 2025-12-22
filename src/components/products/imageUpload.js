@@ -20,7 +20,7 @@ export default function ImageUploadPanel({ images, clearImages, onUploaded }) {
     images.forEach((img) => formData.append("ProductImages", img));
 
     try {
-      const res = await post(ENDPOINTS.BULK_IMAGE_UPLOAD);
+      const res = await post(ENDPOINTS.BULK_IMAGE_UPLOAD, formData);
 
       const result = res.data;
       if (res.status === 200) {

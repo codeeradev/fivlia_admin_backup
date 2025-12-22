@@ -56,7 +56,7 @@ function ExpenseTypeList() {
         ? `${ENDPOINTS.ADD_EXPENSE_TYPE}?id=${editId}`
         : ENDPOINTS.ADD_EXPENSE_TYPE;
 
-      await post(url, { title: newTitle });
+      await post(url, { title: newTitle }, { authRequired: true });
 
       
       showAlert("success", editId ? "Expense Type Updated" : "Expense Type Added");
@@ -67,7 +67,7 @@ function ExpenseTypeList() {
 
       fetchExpenseTypes();
     } catch (err) {
-      showAlert("error", "Something went wrong");
+      // showAlert("error", "Something went wrong");
     }
   };
 
