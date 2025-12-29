@@ -46,6 +46,16 @@ export default function SalesReport() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    driverPaid: 0,
+    sellerPaid: 0,
+    totalProfit: 0,
+  });
+
   useEffect(() => {
     getCategories();
     getCities();
@@ -58,13 +68,22 @@ export default function SalesReport() {
 
       const response = await get(ENDPOINTS.GET_SELLER_REPORT, {
         params: {
-          category: selectedCategory?._id || "",
+          categoryId: selectedCategory?._id || "",
           city: selectedCity?._id || "",
-          zone: selectedZone || "",
+          zone: selectedZone?._id || "",
+          fromDate: fromDate ? `${fromDate}T00:00:00.000Z` : "",
+          toDate: toDate ? `${toDate}T23:59:59.999Z` : "",
         },
       });
 
       setReports(response.data.data || []);
+      setSummary({
+        totalRevenue: response.data.totalRevenue || 0,
+        driverPaid: response.data.driverPaid || 0,
+        sellerPaid: response.data.sellerPaid || 0,
+        totalProfit: response.data.totalProfit || 0,
+      });
+
       showAlert("success", "Report loaded");
     } catch (err) {
       console.error("Error fetching report:", err);
@@ -74,10 +93,8 @@ export default function SalesReport() {
 
   const getCategories = async () => {
     try {
-      showAlert("loading", "Loading categories...");
       const res = await getMainCategories();
       setCategories(res.data.result || []);
-      showAlert("success", "Categories loaded");
     } catch (err) {
       console.error("Error fetching categories:", err);
       showAlert("error", "Failed to load categories");
@@ -86,10 +103,8 @@ export default function SalesReport() {
 
   const getCities = async () => {
     try {
-      showAlert("loading", "Loading cities...");
       const res = await getAllZones();
       setCityData(res.data || []);
-      showAlert("success", "Cities loaded");
     } catch (err) {
       console.error("Error fetching cities:", err);
       showAlert("error", "Failed to load cities");
@@ -99,18 +114,8 @@ export default function SalesReport() {
   const handleCityChange = (city) => {
     setSelectedCity(city);
     setSelectedZone(null);
-    if (city && city.zones) {
-      setZones(city.zones.map((z) => z.zoneTitle));
-    } else {
-      setZones([]);
-    }
+    setZones(city?.zones || []);
   };
-
-  useEffect(() => {
-    if (selectedCategory || selectedCity || selectedZone) {
-      fetchReport();
-    }
-  }, [selectedCategory, selectedCity, selectedZone]);
 
   const handleOpenDetailsModal = (order) => {
     setSelectedOrder(order);
@@ -172,6 +177,56 @@ export default function SalesReport() {
         p: { xs: 1, sm: 2 },
       }}
     >
+      {/* Summary Boxes */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(4, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Paper sx={{ p: 2, borderRadius: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Total Revenue
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">
+            ₹{summary.totalRevenue.toFixed(2)}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, borderRadius: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Paid To Driver
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">
+            ₹{summary.driverPaid.toFixed(2)}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, borderRadius: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Paid To Seller
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">
+            ₹{summary.sellerPaid.toFixed(2)}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, borderRadius: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Total Profit
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">
+            ₹{summary.totalProfit.toFixed(2)}
+          </Typography>
+        </Paper>
+      </Box>
+
       <Paper
         elevation={2}
         sx={{
@@ -230,11 +285,34 @@ export default function SalesReport() {
             sx={{ minWidth: 250 }}
             options={zones}
             value={selectedZone}
+            getOptionLabel={(option) => option?.zoneTitle || ""}
             onChange={(e, val) => setSelectedZone(val)}
             disabled={!zones.length}
             renderInput={(params) => (
               <TextField {...params} label="Zone" size="small" variant="outlined" />
             )}
+          />
+
+          {/* From Date */}
+          <TextField
+            label="From Date"
+            type="date"
+            size="small"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 180 }}
+          />
+
+          {/* To Date */}
+          <TextField
+            label="To Date"
+            type="date"
+            size="small"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 180 }}
           />
 
           <Button

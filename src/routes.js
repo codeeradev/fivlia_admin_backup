@@ -62,6 +62,7 @@ import Wallet from "layouts/Wallet/Wallet";
 import DriversWithdrawal from "layouts/Withdrawal/driverWithdraw";
 import SellerWithdrawal from "layouts/Withdrawal/sellerWithdraw";
 import SetCommisson from "layouts/Commission/commisson";
+import Franchise from "layouts/Franchise/franchise";
 import Festival from "layouts/Festival/Festival";
 import Blog from "layouts/Blogs/Blog";
 import DownloadAppPages from "layouts/DownloadAppPages/DownloadAppPages";
@@ -120,6 +121,15 @@ const routes = [
     permission: "COMMISSION_MANAGE",
     route: "/commisson",
     component: <SetCommisson />,
+  },
+  {
+    type: "collapse",
+    name: "Franchise Enquiries",
+    key: "franchise",
+    icon: <Icon fontSize="small">business</Icon>,
+    permission: "FRANCHISE_MANAGE",
+    route: "/franchise",
+    component: <Franchise />,
   },
   {
     type: "collapse",
@@ -389,9 +399,9 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Mobile App Downloads",
+    name: "App Download Pages",
     key: "download-app-pages",
-    icon: <Icon fontSize="small">download</Icon>,
+    icon: <Icon fontSize="small">apps</Icon>,
     permission: "APP_DOWNLOAD_VIEW",
     route: "/download-app-pages",
     component: <DownloadAppPages />,

@@ -156,5 +156,7 @@ export const ENDPOINTS = {
   GET_PAGE: "/getPage",
   EDIT_PAGE: "/editPage",
   ADD_PAGE: "/addPage",
-  UPDATE_PAGE_STATUS: "/updatePageStatus"
+  UPDATE_PAGE_STATUS: "/updatePageStatus",
+
+  GET_FRANCHISE_ENQUIRY: "/get-frenchise-enquiry"
 };

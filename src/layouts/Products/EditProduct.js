@@ -1005,22 +1005,7 @@ function EditProduct() {
 
   const handelProduct = async () => {
     showAlert("loading", "Updating product...");
-    const selectedFilterIds = Object.keys(selectedValuesByFilter)
-      .filter((filterId) => {
-        const selectedArray = selectedValuesByFilter[filterId];
-        return Array.isArray(selectedArray) && selectedArray.length > 0;
-      })
-      .map((filterId) => filterId);
-    const newformdata1 = new FormData();
-    newformdata1.append("filterIds", JSON.stringify(selectedFilterIds));
-
-    const res = await put(`${ENDPOINTS.ADD_FILTER_IN_CATEGORY}/${selecetdcategory}`, newformdata1);
-    if (res.status === 200) {
-      console.log("Success");
-    } else {
-      console.log("Something wrong");
-    }
-
+    
     const formData = new FormData();
 
     formData.append("productName", name);
@@ -1131,7 +1116,7 @@ function EditProduct() {
             return null;
           }
           // Find the original variant data from the initial product data
-          const originalVariant = setData?.variants?.find(
+          const originalVariant = originalProduct?.variants?.find(
             (v) => v.variantValue.split(" ")[0] === item.variantName
           );
           return {
