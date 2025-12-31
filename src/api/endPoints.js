@@ -1,6 +1,6 @@
-export const API_BASE_URL = "https://api.fivlia.in";
+// export const API_BASE_URL = "https://api.fivlia.in";
 // export const API_BASE_URL = "http://localhost:8080";
-// export const API_BASE_URL = "https://api.fivlia.co.in";
+export const API_BASE_URL = "https://api.fivlia.co.in";
 
 // Define all endpoints here
 export const ENDPOINTS = {
@@ -46,6 +46,8 @@ export const ENDPOINTS = {
   GET_CITY: "/getCity",
   GET_AVIABLE_CITY: "/getAviableCity",
   GET_ALL_ZONE: "/getAllZone",
+  ADD_CITY_DATA: "/addcitydata",
+  ADD_ZONE: "/add-location",
   UPDATE_CITY_STATUS: "/updateCityStatus",
   UPDATE_ZONE_STATUS: "/updateZoneStatus",
   ADD_UNIT: "/unit",

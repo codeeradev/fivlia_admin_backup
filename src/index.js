@@ -6,7 +6,6 @@ import App from "App";
 // Material Dashboard 2 React Context Provider
 import { MaterialUIControllerProvider } from "context";
 import 'leaflet/dist/leaflet.css';
-import Categories from "NewTable";
 import { Provider } from "react-redux";
 
 const container = document.getElementById("app");

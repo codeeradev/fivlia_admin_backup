@@ -6,11 +6,9 @@ import "./Product.css";
 import ColorNamer from "color-namer";
 import { Button, Switch } from "@mui/material";
 
-import { startLoading, stopLoading } from "components/loader/appSlice";
-
 import { showAlert } from "components/commonFunction/alertsLoader";
 
-import { get, del, post, put, patch } from "api/apiClient";
+import { get, post, patch } from "api/apiClient";
 import { ENDPOINTS } from "api/endPoints";
 
 function EditProduct() {

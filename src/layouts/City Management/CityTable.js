@@ -123,24 +123,6 @@ export default function CityTable() {
     alert(`Edit city: ${city.name}`);
   };
 
-  // const handleDelete = async (id) => {
-  //   try {
-  //     if (!window.confirm("Are you sure you want to delete?")) return;
-
-  //     const result = await fetch(
-  //       `https://node-m8jb.onrender.com/deleteCity/${id}`,
-  //       { method: "DELETE" }
-  //     );
-
-  //     if (result.status === 200) {
-  //       setCities((prev) => prev.filter((loc) => loc.id !== id));
-  //       alert("City deleted successfully.");
-  //     }
-  //   } catch (err) {
-  //     console.log(err);
-  //   }
-  // };
-
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2} sx={{ marginTop: "30px" }}>
       <div style={{ width: "100%", padding: "0 20px" }}>
@@ -271,19 +253,6 @@ export default function CityTable() {
                       >
                         Edit
                       </button>
-                      {/* <button
-                        onClick={() => handleDelete(city.id)}
-                        style={{
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Delete
-                      </button> */}
                     </td>
                   </tr>
                 ))

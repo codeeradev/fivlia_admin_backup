@@ -104,28 +104,7 @@ function Table() {
   const goToNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
 
 
-  // const handledeleteZone = async (id) => {
-  //   try {
-  //     const confirmDelete = window.confirm("Are you sure you want to delete this zone?");
-  //     if (confirmDelete) {
-  //       const result = await fetch(`https://node-m8jb.onrender.com/deletezone/${id}`, {
-  //         method: 'DELETE'
-  //       });
-  //       if (result.status === 200) {
-  //         setLocations((prev) => prev.filter((loc) => loc._id !== id));
-  //         alert('Success')
-  //       }
-  //     }
-  //     else {
-  //       return;
-  //     }
-
-  //   }
-  //   catch (err) {
-  //     console.log(err);
-
-  //   }
-  // }
+ 
   const updateZone = async (id, updatedFields) => {
     try {
       await put(`${ENDPOINTS.UPDATE_ZONE_STATUS}/${id}`, updatedFields);
@@ -353,18 +332,6 @@ function Table() {
                         >
                           Edit
                         </button>
-                        {/* <button
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            border: "none",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                          }} onClick={() => handledeleteZone(item._id)}
-                        >
-                          Delete
-                        </button> */}
                       </div>
                     </td>
                   </tr>

@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  TextField,
-  Button,
-} from "@mui/material";
+import { TextField, Button } from "@mui/material";
 import { Marker } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import MDBox from "components/MDBox";
@@ -10,6 +7,9 @@ import { useMaterialUIController } from "context";
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import "./City.css";
+import { post } from "api/apiClient";
+import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const containerStyle = {
   width: "100%",
@@ -89,27 +89,29 @@ function City() {
 
   // map click handler
   const handleMapClick = async (e) => {
-    if (apiType === 'google' && e.latLng) {
+    if (apiType === "google" && e.latLng) {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       setLatitude(lat);
       setLongitude(lng);
       setMarkerPosition({ lat, lng });
-      
+
       // Use Google Geocoder if available
       if (window.google && window.google.maps) {
         const geocoder = new window.google.maps.Geocoder();
         geocoder.geocode({ location: { lat, lng } }, (results, status) => {
           if (status === "OK" && results[0]) {
             const address = results[0].address_components;
-            const city = address.find(comp => 
-              comp.types.includes('locality') || 
-              comp.types.includes('administrative_area_level_2')
-            )?.long_name || "Unknown City";
-            const state = address.find(comp => 
-              comp.types.includes('administrative_area_level_1')
-            )?.long_name || "Unknown State";
-            
+            const city =
+              address.find(
+                (comp) =>
+                  comp.types.includes("locality") ||
+                  comp.types.includes("administrative_area_level_2")
+              )?.long_name || "Unknown City";
+            const state =
+              address.find((comp) => comp.types.includes("administrative_area_level_1"))
+                ?.long_name || "Unknown State";
+
             setSelectedCity(city);
             setSelectedState(state);
             setFullAddress(results[0].formatted_address);
@@ -117,25 +119,33 @@ function City() {
           }
         });
       }
-    } else if (apiType === 'ola') {
+    } else if (apiType === "ola") {
       // For Ola Maps, use OpenStreetMap reverse geocoding
       const lat = e.lat || e.latLng?.lat();
       const lng = e.lng || e.latLng?.lng();
-      
+
       if (lat && lng) {
         setLatitude(lat);
         setLongitude(lng);
         setMarkerPosition({ lat, lng });
-        
+
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
           );
           const data = await res.json();
           const address = data.address || {};
-          const city = address.city || address.town || address.village || address.hamlet || address.locality || address.municipality || address.state_district || "Unknown City";
+          const city =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.hamlet ||
+            address.locality ||
+            address.municipality ||
+            address.state_district ||
+            "Unknown City";
           const state = address.state || "Unknown State";
-          
+
           setSelectedCity(city);
           setSelectedState(state);
           setFullAddress(data.display_name || "");
@@ -166,17 +176,15 @@ function City() {
     };
 
     try {
-      const result = await fetch("https://node-m8jb.onrender.com/addcitydata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSave),
-      });
+      showAlert("loading", "Creating Cities...");
+      const result = await post(ENDPOINTS.ADD_CITY_DATA, dataToSave);
 
       if (result.status === 200) {
-        alert("Success");
+        showAlert("success", "Cities Added Successfully");
         navigate(-1);
       }
     } catch (err) {
+      showAlert("error", "Failed to create city");
       console.error("Error saving city:", err);
     }
   };
@@ -192,7 +200,10 @@ function City() {
             <div>
               <h3 style={{ textAlign: "center", marginLeft: "70px" }}>City</h3>
             </div>
-            <div style={{ width: "33%", position: "relative", marginRight: "30px" }} ref={searchRef}>
+            <div
+              style={{ width: "33%", position: "relative", marginRight: "30px" }}
+              ref={searchRef}
+            >
               <input
                 type="text"
                 placeholder="Search City"
@@ -232,7 +243,15 @@ function City() {
           </div>
 
           {/* Buttons */}
-          <div style={{ display:'flex',justifyContent:'center',alignItems:'center',marginTop:'30px',gap:"30px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: "30px",
+              gap: "30px",
+            }}
+          >
             <Button
               style={{
                 backgroundColor: "#00c853",

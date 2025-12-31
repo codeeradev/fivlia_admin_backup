@@ -4,8 +4,7 @@ import MDBox from "components/MDBox";
 import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
-import { post, put, get } from "api/apiClient";
+import { post, get } from "api/apiClient";
 import { ENDPOINTS } from "api/endPoints";
 import { showAlert } from "components/commonFunction/alertsLoader";
 

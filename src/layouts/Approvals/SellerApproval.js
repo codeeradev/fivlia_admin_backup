@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useMaterialUIController } from "context";
-import { useDispatch } from "react-redux";
-import { startLoading, stopLoading } from "components/loader/appSlice";
 import Swal from "sweetalert2";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -33,13 +31,13 @@ import { ENDPOINTS } from "api/endPoints";
 export default function ApprovalRequests() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
-  const dispatch = useDispatch();
 
   const [sellerRequests, setSellerRequests] = useState([]);
   const [locationRequests, setLocationRequests] = useState([]);
   const [imageRequests, setImageRequests] = useState([]);
   const [productRequests, setProductRequests] = useState([]);
   const [brandRequests, setBrandRequests] = useState([]);
+  const [sellerOfferRequests, setSellerOfferRequests] = useState([]);
   const [requestType, setRequestType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
@@ -77,6 +75,10 @@ export default function ApprovalRequests() {
       // { value: "pending_admin_approval", label: "Pending Admin Approval", icon: ScheduleIcon },
       // { value: "request_brand_approval", label: "Need Brand Approval", icon: EditIcon },
       { value: "approved", label: "Accept", icon: VerifiedIcon },
+      { value: "rejected", label: "Reject", icon: CloseIcon },
+    ],
+    sellerOffer: [
+      { value: "approved", label: "Accept", icon: CheckIcon },
       { value: "rejected", label: "Reject", icon: CloseIcon },
     ],
   };
@@ -120,6 +122,9 @@ export default function ApprovalRequests() {
         return "#fffde7";
       case "brand":
         return "#fce4ec";
+      case "sellerOffer":
+        return "#e0f2f1";
+
       default:
         return "#fff";
     }
@@ -128,7 +133,6 @@ export default function ApprovalRequests() {
   // Fetch all approval requests
   const fetchRequests = async () => {
     try {
-      dispatch(startLoading());
       const res = await get(ENDPOINTS.GET_SELLER_REQUEST);
       const data = res.data;
       setSellerRequests((data.requests || []).map((r) => ({ ...r, type: "seller" })));
@@ -136,17 +140,21 @@ export default function ApprovalRequests() {
       setImageRequests((data.imageRequest || []).map((r) => ({ ...r, type: "image" })));
       setProductRequests((data.productRequest || []).map((r) => ({ ...r, type: "product" })));
       setBrandRequests((data.brandRequest || []).map((r) => ({ ...r, type: "brand" })));
+      setSellerOfferRequests(
+        (data.sellerOfferRequest || []).map((r) => ({
+          ...r,
+          type: "sellerOffer",
+        }))
+      );
     } catch (e) {
       showAlert("error", "Failed to fetch requests.");
       console.error(e);
-    } finally {
-      dispatch(stopLoading());
     }
   };
 
   useEffect(() => {
     fetchRequests();
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     if (success) {
@@ -159,12 +167,13 @@ export default function ApprovalRequests() {
   const handleUpdateStatus = async () => {
     const { type, id, status, note } = selectedUpdate;
     try {
-      dispatch(startLoading());
       let body = {};
-      if (["seller", "location", "image"].includes(type)) {
+      if (["seller", "location", "image", "sellerOffer"].includes(type)) {
         body.approval = status;
         if (type === "seller") {
           body.id = id;
+        } else if (type === "sellerOffer") {
+          body.couponId = id;
         } else if (type === "location") {
           body.id = id;
           body.isLocation = true;
@@ -215,7 +224,6 @@ export default function ApprovalRequests() {
         text: e.message || "Failed to update status. Please try again.",
       });
     } finally {
-      dispatch(stopLoading());
       setNoteOpen(false);
     }
   };
@@ -227,6 +235,7 @@ export default function ApprovalRequests() {
     ...imageRequests,
     ...productRequests,
     ...brandRequests,
+    ...sellerOfferRequests,
   ];
 
   const normalized = (v) => (v || "").toString().toLowerCase();
@@ -253,6 +262,8 @@ export default function ApprovalRequests() {
       } else if (r.type === "image") {
         haystack.push(r.pendingAdvertisementImages?.status);
       }
+    } else if (r.type === "sellerOffer") {
+      haystack = [r.title, r.offer, r.limit, r.validDays, r.approvalStatus, r.type];
     } else if (r.type === "product" || r.type === "brand") {
       haystack = [
         r.productName,
@@ -280,6 +291,7 @@ export default function ApprovalRequests() {
   };
 
   const getStatus = (r) => {
+    if (r.type === "sellerOffer") return r.approvalStatus || "pending";
     if (r.type === "seller") return r.approveStatus || "pending";
     if (r.type === "location") return r.pendingAddressUpdate?.status || "pending";
     if (r.type === "image") return r.pendingAdvertisementImages?.status || "pending";
@@ -294,6 +306,29 @@ export default function ApprovalRequests() {
       "request_brand_approval",
       "submit_brand_approval",
     ].includes(status);
+  };
+
+  const getColumnHeading = (type, key) => {
+    if (type === "sellerOffer") {
+      const map = {
+        name: "Offer Title",
+        owner: "Discount",
+        mobile: "Limit",
+        email: "Validity",
+        city: "Start Date",
+        gst: "Image",
+      };
+      return map[key];
+    }
+
+    return {
+      name: "Store / Product",
+      owner: "Owner / Description",
+      mobile: "Mobile / SKU",
+      email: "Email / Category",
+      city: "City / SubCategory",
+      gst: "GST / Brand",
+    }[key];
   };
 
   const getDisplayValue = (r, field) => {
@@ -316,6 +351,44 @@ export default function ApprovalRequests() {
           return r.city?.name || "-";
         case "gst":
           return r.gstNumber || "-";
+        default:
+          return "-";
+      }
+    }
+    if (r.type === "sellerOffer") {
+      switch (field) {
+        case "name":
+          return r.title;
+
+        case "owner":
+          return `${r.offer}% OFF`;
+
+        case "mobile":
+          return `Limit: ${r.limit}`;
+
+        case "email":
+          return `Valid ${r.validDays} days`;
+
+        case "city":
+          return new Date(r.fromTo).toLocaleDateString();
+
+        case "gst":
+          return (
+            <MDBox display="flex" alignItems="center" gap={1}>
+              {r.image && (
+                <img
+                  src={`${IMAGE_BASE_URL}${r.image}`}
+                  alt="offer"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 6,
+                    objectFit: "cover",
+                  }}
+                />
+              )}
+            </MDBox>
+          );
         default:
           return "-";
       }
@@ -355,42 +428,42 @@ export default function ApprovalRequests() {
         style: { justifyContent: "center", fontWeight: "medium" },
       },
       {
-        name: "Store/Product",
+        name: getColumnHeading(requestType, "name"),
         selector: (row) => getDisplayValue(row, "name"),
         width: "240px",
         wrap: true,
         style: { justifyContent: "center" },
       },
       {
-        name: "Owner/Desc",
+        name: getColumnHeading(requestType, "owner"),
         selector: (row) => getDisplayValue(row, "owner"),
         width: "200px",
         wrap: true,
         style: { justifyContent: "center" },
       },
       {
-        name: "Mobile/SKU",
+        name: getColumnHeading(requestType, "mobile"),
         selector: (row) => getDisplayValue(row, "mobile"),
         width: "150px",
         wrap: true,
         style: { justifyContent: "center" },
       },
       {
-        name: "Email/Category",
+        name: getColumnHeading(requestType, "email"),
         selector: (row) => getDisplayValue(row, "email"),
         width: "150px",
         wrap: true,
         style: { justifyContent: "center" },
       },
       {
-        name: "City/SubCategory",
+        name: getColumnHeading(requestType, "city"),
         selector: (row) => getDisplayValue(row, "city"),
         width: "150px",
         wrap: true,
         style: { justifyContent: "center" },
       },
       {
-        name: "GST/Brand",
+        name: getColumnHeading(requestType, "gst"),
         selector: (row) => getDisplayValue(row, "gst"),
         width: "150px",
         wrap: true,
@@ -543,6 +616,74 @@ export default function ApprovalRequests() {
   // Detailed view for dialog
   const renderRequestDetails = (request) => {
     const { type } = request;
+
+    if (type === "sellerOffer") {
+      return (
+        <Grid container spacing={2} sx={{ p: 2 }}>
+          <Grid item xs={12} md={6}>
+            <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+              <MDTypography variant="h6" color="primary" gutterBottom>
+                Offer Details
+              </MDTypography>
+
+              <MDTypography>
+                <strong>Title:</strong> {request.title}
+              </MDTypography>
+              <MDTypography>
+                <strong>Discount:</strong> {request.offer}%
+              </MDTypography>
+              <MDTypography>
+                <strong>Limit:</strong> {request.limit}
+              </MDTypography>
+              <MDTypography>
+                <strong>Valid Days:</strong> {request.validDays}
+              </MDTypography>
+              <MDTypography>
+                <strong>Start Date:</strong> {new Date(request.fromTo).toLocaleDateString()}
+              </MDTypography>
+              <MDTypography>
+                <strong>Status:</strong>{" "}
+                <Chip
+                  label={request.approvalStatus || "Pending"}
+                  color={
+                    request.approvalStatus === "approved"
+                      ? "success"
+                      : request.approvalStatus === "rejected"
+                      ? "error"
+                      : "warning"
+                  }
+                  size="small"
+                />
+              </MDTypography>
+            </MDBox>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <MDBox p={2} borderRadius="md" bgColor="white" boxShadow="sm">
+              <MDTypography variant="h6" color="primary" gutterBottom>
+                Offer Image
+              </MDTypography>
+
+              {request.image ? (
+                <img
+                  src={`${IMAGE_BASE_URL}${request.image}`}
+                  alt="Offer"
+                  style={{
+                    width: "100%",
+                    maxHeight: 300,
+                    objectFit: "contain",
+                    borderRadius: 8,
+                  }}
+                />
+              ) : (
+                <MDTypography>No image uploaded</MDTypography>
+              )}
+            </MDBox>
+          </Grid>
+        </Grid>
+      );
+    }
+
     return (
       <Grid container spacing={2} sx={{ p: 2 }}>
         {type === "seller" || type === "location" || type === "image" ? (
@@ -1005,6 +1146,7 @@ export default function ApprovalRequests() {
                   <MenuItem value="image">Image</MenuItem>
                   <MenuItem value="product">Product</MenuItem>
                   <MenuItem value="brand">Brand</MenuItem>
+                  <MenuItem value="sellerOffer">Seller Offer</MenuItem>
                 </Select>
               </FormControl>
             </MDBox>

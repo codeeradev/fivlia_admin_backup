@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  TextField,
-  Slider,
-  Button,
-} from "@mui/material";
+import { TextField, Slider, Button } from "@mui/material";
 import { Marker, Circle } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import MDBox from "components/MDBox";
@@ -11,9 +7,10 @@ import { useMaterialUIController } from "context";
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import { Autocomplete as GooglePlacesAutocomplete } from "@react-google-maps/api";
-import { showAlert } from "components/commonFunction/alertsLoader"
+import { showAlert } from "components/commonFunction/alertsLoader";
 import { get } from "api/apiClient";
 import { ENDPOINTS } from "api/endPoints";
+import { post } from "api/apiClient";
 
 const mapContainerStyle = {
   width: "100%",
@@ -30,7 +27,7 @@ function AddServiceArea() {
   const [isGoogleReady, setIsGoogleReady] = useState(false);
 
   useEffect(() => {
-    if (apiType === 'google' && !googleFatalError) {
+    if (apiType === "google" && !googleFatalError) {
       const check = () => {
         const ready = !!(window.google && window.google.maps && window.google.maps.places);
         setIsGoogleReady(ready);
@@ -49,7 +46,7 @@ function AddServiceArea() {
   const [markerPosition, setMarkerPosition] = useState({ lat: 29.1492, lng: 75.7217 });
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
-  const [title,setTitle]=useState('')
+  const [title, setTitle] = useState("");
 
   const autocompleteRef = useRef(null);
 
@@ -91,44 +88,36 @@ function AddServiceArea() {
 
   const handleSave = async () => {
     try {
+      showAlert("loading", "Loading cities...");
       if (!city) {
-        alert("Please select a city");
+        showAlert("warning", "Please select a city");
         return;
       }
       if (!areaTitle) {
-        alert("Please enter/select a zone");
+        showAlert("warning", "Please enter/select a zone");
         return;
       }
-      if(!title){
-        alert('Invalid Title')
-        return
+      if (!title) {
+        showAlert("warning", "Invalid Title");
+        return;
       }
 
       const payload = {
         city: city.city,
-        zoneTitle:title,
+        zoneTitle: title,
         address: areaTitle,
         latitude,
         longitude,
         range: range * 1000,
       };
 
-      const result = await fetch("https://node-m8jb.onrender.com/addLocation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      await post(ENDPOINTS.ADD_ZONE, payload);
 
-      if (result.status === 200) {
-        alert("Area Saved Successfully");
-        navigate(-1);
-      } else {
-        const errRes = await result.json();
-        alert("Failed to save area: " + errRes.message);
-      }
+      showAlert("success", "Area Saved Successfully");
+      navigate(-1);
     } catch (err) {
       console.error("Save failed:", err);
-      alert("Error saving area.");
+      showAlert("error", "Error saving area.");
     }
   };
 
@@ -156,7 +145,7 @@ function AddServiceArea() {
     }
 
     // Leaflet/Ola click
-    if (typeof e?.lat === 'number' && typeof e?.lng === 'number') {
+    if (typeof e?.lat === "number" && typeof e?.lng === "number") {
       const lat = e.lat;
       const lng = e.lng;
       setLatitude(lat);
@@ -183,33 +172,36 @@ function AddServiceArea() {
           </select>
         </div>
 
-         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px" }}>
           <label>Zone Title</label>
-           <input type="text" style={{ width: "70%" }} placeholder="Enter Zone Title" 
-           onChange={(e)=>setTitle(e.target.value)}
-           />
+          <input
+            type="text"
+            style={{ width: "70%" }}
+            placeholder="Enter Zone Title"
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
 
         {/* Google Places Autocomplete */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px" }}>
           <label>Zone</label>
           <div style={{ width: "70%" }}>
-            {apiType === 'google' && isGoogleReady ? (
+            {apiType === "google" && isGoogleReady ? (
               <GooglePlacesAutocomplete
-              onLoad={(autocomplete) => {
-                autocompleteRef.current = autocomplete;
-              }}
-              onPlaceChanged={() => {
-                const place = autocompleteRef.current.getPlace();
-                if (place.geometry) {
-                  const lat = place.geometry.location.lat();
-                  const lng = place.geometry.location.lng();
-                  setAreaTitle(place.formatted_address);
-                  setLatitude(lat);
-                  setLongitude(lng);
-                  setMarkerPosition({ lat, lng });
-                }
-              }}
+                onLoad={(autocomplete) => {
+                  autocompleteRef.current = autocomplete;
+                }}
+                onPlaceChanged={() => {
+                  const place = autocompleteRef.current.getPlace();
+                  if (place.geometry) {
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    setAreaTitle(place.formatted_address);
+                    setLatitude(lat);
+                    setLongitude(lng);
+                    setMarkerPosition({ lat, lng });
+                  }
+                }}
               >
                 <TextField
                   fullWidth
@@ -232,7 +224,9 @@ function AddServiceArea() {
         {/* Map and Steps Section */}
         <div style={{ display: "flex", flexDirection: "row", gap: "30px", marginBottom: "30px" }}>
           {/* Steps */}
-          <div style={{ flex: "1", padding: "20px", border: "1px solid #ccc", borderRadius: "10px" }}>
+          <div
+            style={{ flex: "1", padding: "20px", border: "1px solid #ccc", borderRadius: "10px" }}
+          >
             <h3 style={{ color: "#333", marginBottom: "15px" }}>Steps to Add a New Service Area</h3>
             <ul style={{ paddingLeft: "20px", fontSize: "14px", lineHeight: "1.5", color: "#555" }}>
               <li style={{ marginBottom: "10px" }}>
