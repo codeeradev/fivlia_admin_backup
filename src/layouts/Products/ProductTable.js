@@ -777,6 +777,7 @@ function ProductTable() {
                 <th style={{ ...headerCell, width: "130px" }}>City</th>
                 <th style={headerCell}>Zone</th>
                 <th style={headerCell}>Price</th>
+                <th style={headerCell}>Tax</th>
                 <th style={headerCell}>Categories</th>
                 <th style={headerCell}>Public</th>
                 <th style={headerCell}>Action</th>
@@ -951,6 +952,31 @@ function ProductTable() {
                           </div>
                         </Popover>
                       </td>
+                      <td style={bodyCell}>
+                        {item.variants?.length ? (
+                          item.variants.slice(0, 2).map((variant, idx) => {
+                            const taxPercent = parseFloat(item.tax) || 0;
+                            const taxAmount = ((variant.sell_price * taxPercent) / 100).toFixed(2);
+
+                            return (
+                              <Chip
+                                key={idx}
+                                label={`${taxAmount} (${taxPercent}%)`}
+                                size="small"
+                                style={{
+                                  backgroundColor: "#fff3e0",
+                                  color: "#e65100",
+                                  fontSize: 10,
+                                  marginRight: 4,
+                                }}
+                              />
+                            );
+                          })
+                        ) : (
+                          <span>N/A</span>
+                        )}
+                      </td>
+
                       <td style={bodyCell}>
                         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                           {item.category?.map((category, idx) => (

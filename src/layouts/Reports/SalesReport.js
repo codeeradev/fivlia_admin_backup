@@ -19,6 +19,10 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DataTable from "react-data-table-component";
 import moment from "moment";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { get, put } from "api/apiClient";
 import { ENDPOINTS } from "api/endPoints";
 import { showAlert } from "components/commonFunction/alertsLoader";
@@ -36,11 +40,13 @@ export default function SalesReport() {
   const [categories, setCategories] = useState([]);
   const [cityData, setCityData] = useState([]);
   const [zones, setZones] = useState([]);
+  const [sellers, setSellers] = useState([]);
 
   // Selected filters
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedCity, setSelectedCity] = useState(null);
   const [selectedZone, setSelectedZone] = useState(null);
+  const [selectedSeller, setSelectedSeller] = useState(null);
 
   // Modal
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -71,12 +77,18 @@ export default function SalesReport() {
           categoryId: selectedCategory?._id || "",
           city: selectedCity?._id || "",
           zone: selectedZone?._id || "",
+          sellerId: selectedSeller?.sellerId || "",
           fromDate: fromDate ? `${fromDate}T00:00:00.000Z` : "",
           toDate: toDate ? `${toDate}T23:59:59.999Z` : "",
         },
       });
 
       setReports(response.data.data || []);
+      const uniqueSellers = Array.from(
+        new Map((response.data.data || []).map((r) => [r.sellerName, r])).values()
+      );
+      setSellers(uniqueSellers);
+
       setSummary({
         totalRevenue: response.data.totalRevenue || 0,
         driverPaid: response.data.driverPaid || 0,
@@ -155,7 +167,17 @@ export default function SalesReport() {
     {
       name: "Order At",
       selector: (row) => (row.createdAt ? moment(row.createdAt).format("DD MMM YYYY") : "-"),
-      minWidth: "100px",
+      minWidth: "130px",
+    },
+    {
+      name: "GST",
+      selector: (row) => row.tax?.toFixed(2) ?? "-",
+      minWidth: "80px",
+    },
+    {
+      name: "Delivery Charge",
+      selector: (row) => row.deliveryCharge?.toFixed(2) ?? "-",
+      minWidth: "150px",
     },
     {
       name: "Amount",
@@ -163,11 +185,81 @@ export default function SalesReport() {
       minWidth: "100px",
     },
     {
+      name: "Platform Fee",
+      selector: (row) => row.platformFeeAmount?.toFixed(2) ?? "-",
+      minWidth: "120px",
+    },
+    {
       name: "Commission",
       selector: (row) => row.commission?.toFixed(2) ?? "-",
+      minWidth: "120px",
+    },
+    {
+      name: "Profit",
+      selector: (row) => row.profit?.toFixed(2) ?? "-",
       minWidth: "80px",
     },
   ];
+
+  const getExportData = () =>
+    reports.map((row) => ({
+      "Order ID": row.orderId,
+      "Seller Name": row.sellerName,
+      City: row.city || "-",
+      Zone: Array.isArray(row.zone) ? row.zone.join(", ") : row.zone || "-",
+      "Order Date": row.createdAt ? moment(row.createdAt).format("DD MMM YYYY") : "-",
+      GST: (row.tax).toFixed(2),
+      "Delivery Charge": row.deliveryCharge,
+      Amount: Number(row.totalPrice || 0).toFixed(2),
+      "Platform Fee": Number(row.platformFeeAmount || 0).toFixed(2),
+      Commission: Number(row.commission || 0).toFixed(2),
+      Profit: (row.profit).toFixed(2),
+    }));
+
+  const handleExcelDownload = () => {
+    if (!reports.length) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(getExportData());
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(file, `Sales_Report_${fromDate || "ALL"}_to_${toDate || "ALL"}.xlsx`);
+  };
+
+  const handlePdfDownload = () => {
+    if (!reports.length) return;
+
+    const doc = new jsPDF("landscape");
+
+    doc.setFontSize(14);
+    doc.text("Sales Report", 14, 12);
+
+    doc.setFontSize(10);
+    doc.text(
+      `Revenue: Rs. ${summary.totalRevenue.toFixed(
+        2
+      )}   |   Profit: Rs. ${summary.totalProfit.toFixed(2)}`,
+      14,
+      20
+    );
+
+    autoTable(doc, {
+      startY: 26,
+      head: [Object.keys(getExportData()[0])],
+      body: getExportData().map((row) => Object.values(row)),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [25, 118, 210] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    doc.save(`Sales_Report_${fromDate || "ALL"}_to_${toDate || "ALL"}.pdf`);
+  };
 
   return (
     <MDBox
@@ -292,6 +384,14 @@ export default function SalesReport() {
               <TextField {...params} label="Zone" size="small" variant="outlined" />
             )}
           />
+          <Autocomplete
+            sx={{ minWidth: 250 }}
+            options={sellers}
+            value={selectedSeller}
+            getOptionLabel={(option) => option?.sellerName || ""}
+            onChange={(e, val) => setSelectedSeller(val)}
+            renderInput={(params) => <TextField {...params} label="Seller" size="small" />}
+          />
 
           {/* From Date */}
           <TextField
@@ -332,6 +432,52 @@ export default function SalesReport() {
           >
             {loading ? <CircularProgress size={22} color="inherit" /> : "Apply Filters"}
           </Button>
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+            mt: 1,
+            px: 1,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Showing <b>{reports.length}</b> records
+          </Typography>
+
+          <Box sx={{ display: "flex", gap: 1.5 }}>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleExcelDownload}
+              disabled={!reports.length}
+              sx={{
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+              }}
+            >
+              Export Excel
+            </Button>
+
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handlePdfDownload}
+              disabled={!reports.length}
+              sx={{
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+              }}
+            >
+              Export PDF
+            </Button>
+          </Box>
         </Box>
 
         {/* Data Table */}

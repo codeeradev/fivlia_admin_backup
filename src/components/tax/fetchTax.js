@@ -10,9 +10,7 @@ export default function TaxHeader({ onReady }) {
     const fetchTax = async () => {
       try {
         const res = await get(ENDPOINTS.GET_TAX);
-        console.log('res',res)
         const data = res.data;
-        console.log('data',data)
         if (data?.result) {
           const arr = data.result.map((t) => t.value); // ["0%", "5%", "18%"]
           setTaxData(arr);

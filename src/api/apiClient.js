@@ -51,7 +51,6 @@ apiClient.interceptors.request.use(
       if (token) {
         config.headers = config.headers || {};
         config.headers['Authorization'] = `Bearer ${token}`;
-        console.log('token',token)
         //console.log('API Client: Authorization header set:', config.headers['Authorization']);
       } else {
         
