@@ -23,6 +23,16 @@ const mapContainerStyle = {
 
 const libraries = ["places"];
 
+const pickFirstDefined = (source, keys) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return "";
+};
+
+const hasWindow = (start, end) => Boolean(start && end);
+
 function EditZone() {
   const location = useLocation();
   const { zone: initialZone } = location.state || {};
@@ -45,7 +55,8 @@ function EditZone() {
     setIsGoogleReady(false);
   }, [apiType, googleFatalError]);
 
-  const [range, setRange] = useState(3.2);
+  const [dayRange, setDayRange] = useState(3.2);
+  const [nightRange, setNightRange] = useState(3.2);
   const [areaTitle, setAreaTitle] = useState("");
   const [zones, setZones] = useState([]);
   const [zoneTitle,setZoneTitle]=useState('')
@@ -54,6 +65,15 @@ function EditZone() {
   const [id, setId] = useState("");
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const [windowConfig, setWindowConfig] = useState({
+    dayStartTime: "",
+    dayEndTime: "",
+    nightStartTime: "",
+    nightEndTime: "",
+    // zoneTimeZone: "",
+    dayEnabled: true,
+    nightEnabled: true,
+  });
 
   // Loader is managed centrally by AdaptiveMap; avoid re-initializing with different options
 
@@ -71,11 +91,52 @@ function EditZone() {
         setLatitude(coords.lat);
         setLongitude(coords.lng);
       }
-      if (initialZone.range) {
-        setRange(initialZone.range / 1000);
-      }
+      if (initialZone.range) setDayRange(initialZone.range / 1000);
+      if (initialZone.nightRange) setNightRange(initialZone.nightRange / 1000);
     }
   }, [initialZone]);
+
+  useEffect(() => {
+    async function fetchZoneWindowConfig() {
+      try {
+        const response = await get(ENDPOINTS.GET_SETTINGS);
+        const settings = response?.data?.settings || {};
+
+        const dayStartTime = pickFirstDefined(settings, ["dayStartTime", "dayStart", "dayTimeStart"]);
+        const dayEndTime = pickFirstDefined(settings, ["dayEndTime", "dayEnd", "dayTimeEnd"]);
+        const nightStartTime = pickFirstDefined(settings, [
+          "nightStartTime",
+          "nightStart",
+          "nightTimeStart",
+        ]);
+        const nightEndTime = pickFirstDefined(settings, ["nightEndTime", "nightEnd", "nightTimeEnd"]);
+        // const zoneTimeZone = pickFirstDefined(settings, [
+        //   "zoneTimeZone",
+        //   "zoneTimezone",
+        //   "timeZone",
+        //   "timezone",
+        // ]);
+
+        const dayEnabled = hasWindow(dayStartTime, dayEndTime);
+        const nightEnabled = hasWindow(nightStartTime, nightEndTime);
+        const noWindowsConfigured = !dayEnabled && !nightEnabled;
+
+        setWindowConfig({
+          dayStartTime,
+          dayEndTime,
+          nightStartTime,
+          nightEndTime,
+          // zoneTimeZone,
+          dayEnabled: noWindowsConfigured ? true : dayEnabled,
+          nightEnabled: noWindowsConfigured ? true : nightEnabled,
+        });
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    }
+
+    fetchZoneWindowConfig();
+  }, []);
 
   useEffect(() => {
     async function fetchZones() {
@@ -114,7 +175,8 @@ function EditZone() {
     fetchZones();
   }, [initialZone]);
 
-  const handleRangeChange = (_, newValue) => setRange(newValue);
+  const handleDayRangeChange = (_, newValue) => setDayRange(newValue);
+  const handleNightRangeChange = (_, newValue) => setNightRange(newValue);
 
   const handleZoneChange = (event) => {
     const selectedZone = zones.find((z) => z._id === event.target.value);
@@ -170,6 +232,26 @@ function EditZone() {
   };
 
   const updateZone = async () => {
+    if (!zoneTitle?.trim()) {
+      showAlert("warning", "Invalid Title");
+      return;
+    }
+    if (!areaTitle?.trim()) {
+      showAlert("warning", "Please enter/select zone address");
+      return;
+    }
+    if (windowConfig.dayEnabled && (!dayRange || dayRange <= 0)) {
+      showAlert("warning", "Please set day radius");
+      return;
+    }
+    if (windowConfig.nightEnabled && (!nightRange || nightRange <= 0)) {
+      showAlert("warning", "Please set night radius");
+      return;
+    }
+
+    const dayRangeMeters = windowConfig.dayEnabled ? dayRange * 1000 : null;
+    const nightRangeMeters = windowConfig.nightEnabled ? nightRange * 1000 : null;
+
     const dataToSave = {
       city: zone?.city,
       state: zone?.state,
@@ -177,7 +259,8 @@ function EditZone() {
       zoneTitle:zoneTitle,
       latitude,
       longitude,
-      range: range * 1000,
+      range: dayRangeMeters || nightRangeMeters,
+      nightRange: nightRangeMeters,
     };
 
     try {
@@ -191,6 +274,9 @@ function EditZone() {
   };
 
   // Rendering of map is handled by AdaptiveMap. For Autocomplete input, gate usage to google-only
+  const dayRadiusMeters = windowConfig.dayEnabled && dayRange > 0 ? dayRange * 1000 : null;
+  const nightRadiusMeters =
+    windowConfig.nightEnabled && nightRange > 0 ? nightRange * 1000 : null;
 
   return (
     <MDBox ml={miniSidenav ? "80px" : "250px"} p={2}>
@@ -284,38 +370,114 @@ function EditZone() {
               center={markerPosition}
               zoom={13}
               onClick={handleMapClick}
-              radiusMeters={range * 1000}
+              radiusMeters={dayRadiusMeters}
+              secondaryRadiusMeters={nightRadiusMeters}
+              primaryRadiusColor="#2e7d32"
+              secondaryRadiusColor="#1565c0"
             >
               <Marker position={markerPosition} />
-              <Circle
-                center={markerPosition}
-                radius={range * 1000}
-                options={{
-                  strokeColor: "red",
-                  strokeOpacity: 0.8,
-                  strokeWeight: 2,
-                  fillColor: "red",
-                  fillOpacity: 0.2,
-                }}
-              />
+              {dayRadiusMeters ? (
+                <Circle
+                  center={markerPosition}
+                  radius={dayRadiusMeters}
+                  options={{
+                    strokeColor: "#2e7d32",
+                    strokeOpacity: 0.85,
+                    strokeWeight: 2,
+                    fillColor: "#2e7d32",
+                    fillOpacity: 0.12,
+                  }}
+                />
+              ) : null}
+              {nightRadiusMeters ? (
+                <Circle
+                  center={markerPosition}
+                  radius={nightRadiusMeters}
+                  options={{
+                    strokeColor: "#1565c0",
+                    strokeOpacity: 0.85,
+                    strokeWeight: 2,
+                    fillColor: "#1565c0",
+                    fillOpacity: 0.08,
+                  }}
+                />
+              ) : null}
             </AdaptiveMap>
           </div>
         </div>
+        <div style={{ display: "flex", gap: "16px", marginTop: "-15px", marginBottom: "20px" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px" }}>
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                backgroundColor: "#2e7d32",
+              }}
+            />
+            Day Radius
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px" }}>
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                backgroundColor: "#1565c0",
+              }}
+            />
+            Night Radius
+          </span>
+        </div>
 
-        <label>Select Range</label>
+        <label>Day Radius</label>
         <Slider
-          value={range}
-          onChange={handleRangeChange}
+          value={dayRange}
+          onChange={handleDayRangeChange}
           min={0.1}
           max={50}
           step={0.1}
+          disabled={!windowConfig.dayEnabled}
+          valueLabelDisplay="auto"
+          style={{ color: "#007bff", marginBottom: "10px" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+          <span>0.1 km</span>
+          <span>{dayRange.toFixed(1)} km</span>
+          <span>50 km</span>
+        </div>
+
+        <label>Night Radius</label>
+        <Slider
+          value={nightRange}
+          onChange={handleNightRangeChange}
+          min={0.1}
+          max={50}
+          step={0.1}
+          disabled={!windowConfig.nightEnabled}
           valueLabelDisplay="auto"
           style={{ color: "#007bff", marginBottom: "10px" }}
         />
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>0.1 km</span>
-          <span>{range.toFixed(1)} km</span>
+          <span>{nightRange.toFixed(1)} km</span>
           <span>50 km</span>
+        </div>
+
+        <div style={{ marginTop: "10px", fontSize: "13px", color: "#555" }}>
+          <div>
+            Day Window:{" "}
+            {windowConfig.dayEnabled
+              ? `${windowConfig.dayStartTime} - ${windowConfig.dayEndTime}`
+              : "Not configured"}
+          </div>
+          <div>
+            Night Window:{" "}
+            {windowConfig.nightEnabled
+              ? `${windowConfig.nightStartTime} - ${windowConfig.nightEndTime}`
+              : "Not configured"}
+          </div>
+          {/* {windowConfig.zoneTimeZone ? <div>Timezone: {windowConfig.zoneTimeZone}</div> : null} */}
         </div>
 
         <Button

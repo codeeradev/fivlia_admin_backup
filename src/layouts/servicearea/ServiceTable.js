@@ -23,6 +23,11 @@ const bodyCell = {
   backgroundColor: "#fff",
 };
 
+const formatRange = (value) => {
+  if (typeof value !== "number" || value <= 0) return "Not set";
+  return value >= 1000 ? (value / 1000).toFixed(1) + " km" : value + " m";
+};
+
 function Table() {
   const [controller] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -66,8 +71,8 @@ function Table() {
 
   const filteredLocations = locations.filter((item) => {
     const search = searchTerm.toLowerCase();
-    const formattedRange =
-      item.range >= 1000 ? (item.range / 1000).toFixed(1) + " km" : item.range + " m";
+    const formattedDayRange = formatRange(item.range);
+    const formattedNightRange = formatRange(item.nightRange);
 
     // Check city filter: if 'All Cities' selected, ignore city filtering
     const cityMatch = selectedCity === "All Cities" || item.city === selectedCity;
@@ -76,7 +81,8 @@ function Table() {
     const searchMatch =
       item.city.toLowerCase().includes(search) ||
       item.address.toLowerCase().includes(search) ||
-      formattedRange.toLowerCase().includes(search);
+      formattedDayRange.toLowerCase().includes(search) ||
+      formattedNightRange.toLowerCase().includes(search);
 
     return cityMatch && searchMatch;
   });
@@ -258,7 +264,8 @@ function Table() {
                   <th style={headerCell}>Zone Address</th>
                   <th style={headerCell}>Cash Delivery</th>
                   <th style={headerCell}>Status</th>
-                  <th style={headerCell}>Range</th>
+                  <th style={headerCell}>Day Range</th>
+                  <th style={headerCell}>Night Range</th>
                   <th style={headerCell}>City</th>
                   <th style={{ ...headerCell, width: "12%", textAlign: "center" }}>Action</th>
                 </tr>
@@ -310,11 +317,8 @@ function Table() {
 
                     </td>
 
-                    <td style={bodyCell}>
-                      {item.range >= 1000
-                        ? (item.range / 1000).toFixed(1) + " km"
-                        : item.range + " m"}
-                    </td>
+                    <td style={bodyCell}>{formatRange(item.range)}</td>
+                    <td style={bodyCell}>{formatRange(item.nightRange)}</td>
                     <td style={bodyCell}>{item.city}</td>
                     <td style={bodyCell}>
                       <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>

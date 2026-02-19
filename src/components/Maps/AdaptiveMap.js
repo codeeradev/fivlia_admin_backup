@@ -18,6 +18,9 @@ const AdaptiveMap = ({
   children, 
   style = mapContainerStyle,
   radiusMeters,
+  secondaryRadiusMeters,
+  primaryRadiusColor = '#2e7d32',
+  secondaryRadiusColor = '#1565c0',
   ...props 
 }) => {
   const { apiType, apiKey, googleFatalError } = useMapsApi();
@@ -116,9 +119,19 @@ const AdaptiveMap = ({
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <LeafletMarker position={leafletCenter} />
-        <LeafletCircle center={leafletCenter} radius={50} pathOptions={{ color: 'blue' }} />
         {typeof radiusMeters === 'number' && radiusMeters > 0 && (
-          <LeafletCircle center={leafletCenter} radius={radiusMeters} pathOptions={{ color: 'red', fillOpacity: 0.2 }} />
+          <LeafletCircle
+            center={leafletCenter}
+            radius={radiusMeters}
+            pathOptions={{ color: primaryRadiusColor, fillOpacity: 0.12 }}
+          />
+        )}
+        {typeof secondaryRadiusMeters === 'number' && secondaryRadiusMeters > 0 && (
+          <LeafletCircle
+            center={leafletCenter}
+            radius={secondaryRadiusMeters}
+            pathOptions={{ color: secondaryRadiusColor, fillOpacity: 0.08 }}
+          />
         )}
       </MapContainer>
     );

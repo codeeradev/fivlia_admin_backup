@@ -37,6 +37,8 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
   const [showDriverModal, setShowDriverModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [pendingOrderId, setPendingOrderId] = useState(null);
+  const [activeTab, setActiveTab] = useState("all"); // all | temp
+  const [tempOrders, setTempOrders] = useState([]);
 
   const restrictedStatuses = ["Going to Pickup", "Picked Up", "On The Way", "Delivered"];
 
@@ -44,13 +46,15 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
     showAlert("loading", "Loading orders...");
 
     try {
-      const [ordersRes, storesRes, zonesRes, driversRes, statusesRes] = await Promise.all([
-        get(ENDPOINTS.GET_ORDERS),
-        get(ENDPOINTS.GET_STORE),
-        getAllZones(), // common API
-        get(ENDPOINTS.GET_DRIVERS),
-        get(ENDPOINTS.GET_DELIVERY_STATUS),
-      ]);
+      const [ordersRes, tempOrdersRes, storesRes, zonesRes, driversRes, statusesRes] =
+        await Promise.all([
+          get(ENDPOINTS.GET_ORDERS),
+          get(ENDPOINTS.GET_TEMP_ORDERS),
+          get(ENDPOINTS.GET_STORE),
+          getAllZones(), // common API
+          get(ENDPOINTS.GET_DRIVERS),
+          get(ENDPOINTS.GET_DELIVERY_STATUS),
+        ]);
       // Handle Orders
       const ordersData = ordersRes.data;
       const storesData = storesRes.data;
@@ -60,6 +64,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
 
       // console.log("Orders API response:", ordersData);
       if (ordersData?.orders) setOrders(ordersData.orders);
+      if (tempOrdersRes.data?.tempOrders) setTempOrders(tempOrdersRes.data.tempOrders);
 
       // Handle Stores
       // console.log("Stores API response:", storesData);
@@ -278,21 +283,17 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
+  const activeOrders = activeTab === "all" ? orders : tempOrders;
+
+  const filteredOrders = activeOrders.filter((order) => {
     const search = searchTerm.toLowerCase();
-    const matchesSearch =
-      (order.orderId && order.orderId.toLowerCase().includes(search)) ||
-      (order.items?.[0]?.name && order.items[0].name.toLowerCase().includes(search)) ||
-      (order.addressId?.fullAddress || "").toLowerCase().includes(search) ||
-      (order.orderStatus && order.orderStatus.toLowerCase().includes(search)) ||
-      (order.storeId?.storeName || "").toLowerCase().includes(search);
 
-    const matchesStore = !selectedStore || String(order.storeId?._id) === String(selectedStore);
-    const matchesZone =
-      !selectedZone || zones.some((zone) => zone.id === selectedZone && zone.city === order.city);
-    const matchesStatus = !selectedStatus || order.orderStatus === selectedStatus;
-
-    return matchesSearch && matchesStore && matchesZone && matchesStatus;
+    return (
+      order.orderId?.toLowerCase().includes(search) ||
+      order.items?.[0]?.name?.toLowerCase().includes(search) ||
+      order.addressId?.fullAddress?.toLowerCase().includes(search) ||
+      order.paymentStatus?.toLowerCase().includes(search)
+    );
   });
 
   const totalPages = Math.ceil(filteredOrders.length / entriesToShow);
@@ -763,6 +764,30 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
               </div>
             </div>
 
+            <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+              <button
+                className="refresh-button"
+                style={{
+                  background: activeTab === "all" ? "#007bff" : "#e0e0e0",
+                  color: activeTab === "all" ? "#fff" : "#344767",
+                }}
+                onClick={() => setActiveTab("all")}
+              >
+                All Orders
+              </button>
+
+              <button
+                className="refresh-button"
+                style={{
+                  background: activeTab === "temp" ? "#007bff" : "#e0e0e0",
+                  color: activeTab === "temp" ? "#fff" : "#344767",
+                }}
+                onClick={() => setActiveTab("temp")}
+              >
+                Failed Orders
+              </button>
+            </div>
+
             <div className="controls-container">
               {!isDashboard && (
                 <div className="control-item">
@@ -817,20 +842,24 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
               </div>
               <div className="control-item">
                 <label>Status</label>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => {
-                    setSelectedStatus(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="">All Statuses</option>
-                  {deliveryStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
+                {activeTab === "temp" ? (
+                  <span style={{ color: "#dc3545", fontWeight: 600 }}>Failed Payment</span>
+                ) : (
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="">All Statuses</option>
+                    {deliveryStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="control-item">
                 <label>Search</label>
@@ -984,7 +1013,7 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                               onChange={(e) =>
                                 handleOrderUpdate(order._id, undefined, e.target.value)
                               }
-                              disabled={driverUpdating || !drivers.length}
+                              disabled={activeTab === "temp" || driverUpdating || !drivers.length}
                             >
                               <option value="">Unassigned</option>
                               {drivers.map((driver) => (
@@ -1020,18 +1049,22 @@ const Orders = ({ showHeader = true, isDashboard = false }) => {
                             )}
                           </td>
                           <td className="body-cell">
-                            <select
-                              className="status-select"
-                              value={order.orderStatus || ""}
-                              onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                              disabled={statusUpdating || !deliveryStatuses.length}
-                            >
-                              {deliveryStatuses.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
-                              ))}
-                            </select>
+                            {activeTab === "temp" ? (
+                              <span style={{ color: "#dc3545", fontWeight: 600 }}>Canceled</span>
+                            ) : (
+                              <select
+                                className="status-select"
+                                value={order.orderStatus || ""}
+                                onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                                disabled={statusUpdating || !deliveryStatuses.length}
+                              >
+                                {deliveryStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {status}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           </td>
                         </tr>
                       );
