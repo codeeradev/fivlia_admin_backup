@@ -1,7 +1,7 @@
-// export const API_BASE_URL = "https://api.fivlia.com";
+export const API_BASE_URL = "https://api.fivlia.com";
 // export const API_BASE_URL = "https://api.fivlia.in";
 // export const API_BASE_URL = "http://localhost:8080";
-export const API_BASE_URL = "https://api.fivlia.co.in";
+// export const API_BASE_URL = "https://api.fivlia.co.in";
 
 // Define all endpoints here
 export const ENDPOINTS = {
