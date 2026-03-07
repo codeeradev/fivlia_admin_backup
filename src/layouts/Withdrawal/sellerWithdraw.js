@@ -92,7 +92,7 @@ const handleWithdrawalAction = async (requestId, action) => {
     if (note && note.trim() !== "") formData.append("note", note);
     if (image) formData.append("image", image);
 
-    const response = await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}/seller`, formData);
+    const response = await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}?type=seller`, formData);
 
     const updatedRequest = response.data;
 

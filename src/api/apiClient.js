@@ -93,13 +93,6 @@ apiClient.interceptors.response.use(
     }
 
 
-    // console.log('API Client: Error response for:', error.config?.url);
-    // console.log('API Client: Error status:', error.response?.status);
-    // console.log('API Client: Request headers that were sent:', error.config?.headers);
-    // console.log('API Client: Authorization header sent:', error.config?.headers.Authorization);
-    // console.log('API Client: Error message:', error.response?.data);
-    // console.log('API Client: Current token before error handling:', !!localStorage.getItem("token"));
-
     if (error.response?.status === 401) {
       // console.warn('API Client: 401 Unauthorized - token might be invalid');
       // console.log('API Client: Error response data:', error.response?.data);

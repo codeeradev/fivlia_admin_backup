@@ -8,10 +8,7 @@ import { Marker, Circle } from "@react-google-maps/api"; // works for Ola via Ad
 import AdaptiveMap from "../../components/Maps/AdaptiveMap";
 import { useMapsApi } from "../../hooks/useMapsApi";
 import { showAlert } from "components/commonFunction/alertsLoader";
-import {
-  getMainCategories,
-  getAllZones,
-} from "components/commonApi/commonApi";
+import { getMainCategories, getAllZones } from "components/commonApi/commonApi";
 
 // Shared api client & endpoints
 import { post, put } from "api/apiClient";
@@ -26,6 +23,12 @@ function AddStore() {
   const [storeName, setStoreName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
+
+  const [gstNumber, setGstNumber] = useState("");
+  const [fsiNumber, setFsiNumber] = useState("");
+  const [enrollmentId, setEnrollmentId] = useState("");
+  const [invoicePrefix, setInvoicePrefix] = useState("");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
@@ -62,6 +65,13 @@ function AddStore() {
       setId(storedetails.store._id);
       setStoreName(storedetails.store.storeName);
       setOwnerName(storedetails.store.ownerName);
+
+      setGstNumber(storedetails.store.gstNumber);
+      setFsiNumber(storedetails.store.fsiNumber);
+
+      setEnrollmentId(storedetails.store.enrollmentId);
+      setInvoicePrefix(storedetails.store.invoicePrefix);
+
       setPhone(storedetails.store.PhoneNumber);
       setEmail(storedetails.store.email || "");
       setPassword(storedetails.store.password);
@@ -87,7 +97,7 @@ function AddStore() {
 
   useEffect(() => {
     const getMainCategory = async () => {
-      try {        
+      try {
         const res = await getMainCategories();
         if (res.status === 200) {
           const result = await res.data;
@@ -227,6 +237,12 @@ function AddStore() {
       formData.append("isAuthorized", isAuthorized);
       formData.append("isAssured", isAssured);
       formData.append("Category", JSON.stringify(selectedCategory));
+
+      formData.append("gstNumber", gstNumber);
+      formData.append("fsiNumber", fsiNumber);
+      formData.append("enrollmentId", enrollmentId);
+      if (invoicePrefix) formData.append("invoicePrefix", invoicePrefix);
+
       if (openTime) formData.append("openTime", openTime);
       if (closeTime) formData.append("closeTime", closeTime);
 
@@ -299,7 +315,7 @@ function AddStore() {
                 type="text"
                 placeholder="Store Phone Number"
                 value={phone}
-                maxLength={13} 
+                maxLength={13}
                 onChange={(e) => setPhone(e.target.value)}
               />
             </div>
@@ -322,6 +338,48 @@ function AddStore() {
                 placeholder="Enter Store Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="store-input">
+              <label>Enrollment Id</label>
+              <input
+                type="text"
+                placeholder="Enter Enrollment Id"
+                value={enrollmentId}
+                onChange={(e) => setEnrollmentId(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="store-row">
+            <div className="store-input">
+              <label>GST Number</label>
+              <input
+                type="text"
+                placeholder="Enter GST Number"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+              />
+            </div>
+
+            <div className="store-input">
+              <label>Fssai</label>
+              <input
+                type="text"
+                placeholder="Enter Fssai Number"
+                value={fsiNumber}
+                onChange={(e) => setFsiNumber(e.target.value)}
+              />
+            </div>
+
+            <div className="store-input">
+              <label>Invoice Prefix</label>
+              <input
+                type="text"
+                placeholder="Enter Invoice Prefix"
+                value={invoicePrefix}
+                onChange={(e) => setInvoicePrefix(e.target.value)}
               />
             </div>
             {storedetails && storedetails.store && (

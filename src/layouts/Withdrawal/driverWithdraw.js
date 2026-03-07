@@ -31,7 +31,6 @@ export default function DriversWithdrawal() {
   };
 
   // Fetch withdrawal requests
-  useEffect(() => {
     const fetchWithdrawalRequests = async () => {
       try {
         showAlert("loading", "Loading Requests....");
@@ -58,6 +57,7 @@ export default function DriversWithdrawal() {
         showAlert("error", "Failed to fetch withdrawal requests. Please try again.");
       }
     };
+      useEffect(() => {
     fetchWithdrawalRequests();
   }, []);
 
@@ -72,6 +72,9 @@ export default function DriversWithdrawal() {
           req.id === requestId ? { ...req, status: action === "accept" ? "Approved" : "Declined" } : req
         )
       );
+      showAlert("success", `Withdrawal request ${action}ed successfully.`);
+          await fetchWithdrawalRequests();
+
     } catch (error) {
       console.error(`Error ${action}ing withdrawal request:`, error);
       showAlert("error", `Failed to ${action} withdrawal request: ${error.message}`);
@@ -194,7 +197,7 @@ export default function DriversWithdrawal() {
                     {request.status === "Pending" ? (
                       <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                         <button
-                          onClick={() => handleWithdrawalAction(request.id, "accept")}
+                          onClick={() => handleWithdrawalAction(request.driverId, "accept")}
                           style={{
                             backgroundColor: "#28a745",
                             color: "white",
@@ -207,7 +210,7 @@ export default function DriversWithdrawal() {
                           Accept
                         </button>
                         <button
-                          onClick={() => handleWithdrawalAction(request.id, "decline")}
+                          onClick={() => handleWithdrawalAction(request.driverId, "decline")}
                           style={{
                             backgroundColor: "#dc3545",
                             color: "white",
