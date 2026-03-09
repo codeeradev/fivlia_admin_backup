@@ -50,6 +50,8 @@ export default function Drivers() {
     status: false,
     email: "",
     password: "",
+    vehicleRegistrationNumber: "",
+    drivingLicenseNumber: "",
     image: null,
     Police_Verification_Copy: null,
     aadharCard: { front: null, back: null },
@@ -214,6 +216,8 @@ export default function Drivers() {
             Police_Verification_Copy: driver.Police_Verification_Copy || "",
             aadharCard: driver.aadharCard || { front: "", back: "" },
             drivingLicence: driver.drivingLicence || { front: "", back: "" },
+            vehicleRegistrationNumber: driver.vehicleRegistrationNumber || "",
+            drivingLicenseNumber: driver.drivingLicenseNumber || "",
             address: driver.address || { city: "", locality: "", mobileNo: "" },
             averageRating: driver.averageRating || 0,
           }));
@@ -223,7 +227,7 @@ export default function Drivers() {
             return bNum - aNum; // largest first
           });
           setDrivers(formattedDrivers);
-          showAlert("info","", 1);
+          showAlert("info", "", 1);
         } else {
           setError("Invalid driver data format");
         }
@@ -308,7 +312,7 @@ export default function Drivers() {
       await put(`${ENDPOINTS.EDIT_DRIVER}/${id}`, { status: newStatus });
 
       setDrivers((prev) => prev.map((d) => (d.id === id ? { ...d, status: newStatus } : d)));
-      showAlert("info","", 1);
+      showAlert("info", "", 1);
     } catch (error) {
       console.error("Error updating status:", error);
       showAlert("error", "Failed to update status");
@@ -354,6 +358,8 @@ export default function Drivers() {
     formData.append("driverName", editDriverData.driverName);
     formData.append("status", editDriverData.status.toString());
     formData.append("email", editDriverData.email);
+    formData.append("vehicleRegistrationNumber", editDriverData.vehicleRegistrationNumber);
+    formData.append("drivingLicenseNumber", editDriverData.drivingLicenseNumber);
     if (editDriverData.password) {
       formData.append("password", editDriverData.password);
     }
@@ -450,6 +456,8 @@ export default function Drivers() {
       status: driver.status,
       email: driver.email,
       password: "",
+      vehicleRegistrationNumber: driver.vehicleRegistrationNumber || "",
+      drivingLicenseNumber: driver.drivingLicenseNumber || "",
       image: null,
       Police_Verification_Copy: null,
       aadharCard: { front: null, back: null },
@@ -1296,6 +1304,31 @@ export default function Drivers() {
             value={editDriverData.email}
             onChange={(e) => setEditDriverData((prev) => ({ ...prev, email: e.target.value }))}
             sx={{ fontFamily: '"Urbanist", sans-serif' }}
+          />
+          <TextField
+            label="Vehicle Registration Number"
+            fullWidth
+            margin="normal"
+            value={editDriverData.vehicleRegistrationNumber}
+            onChange={(e) =>
+              setEditDriverData((prev) => ({
+                ...prev,
+                vehicleRegistrationNumber: e.target.value,
+              }))
+            }
+          />
+
+          <TextField
+            label="Driving License Number"
+            fullWidth
+            margin="normal"
+            value={editDriverData.drivingLicenseNumber}
+            onChange={(e) =>
+              setEditDriverData((prev) => ({
+                ...prev,
+                drivingLicenseNumber: e.target.value,
+              }))
+            }
           />
           <TextField
             label="Password"

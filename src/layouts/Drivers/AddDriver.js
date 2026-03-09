@@ -22,6 +22,10 @@ function AddDriver() {
   const [cities, setCities] = useState([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [drivingLicenseNumber, setDrivingLicenseNumber] = useState("");
+  const [vehicleRegistrationNumber, setVehicleRegistrationNumber] = useState("");
+
   const [policeVerification, setPoliceVerification] = useState(null);
   const [aadharFront, setAadharFront] = useState(null);
   const [aadharBack, setAadharBack] = useState(null);
@@ -78,6 +82,8 @@ function AddDriver() {
     const formData = new FormData();
 
     formData.append("driverName", driverName);
+    formData.append("vehicleRegistrationNumber", vehicleRegistrationNumber);
+    formData.append("drivingLicenseNumber", drivingLicenseNumber);
     formData.append("status", status ? "true" : "false");
     formData.append("image", image);
     formData.append("email", email);
@@ -172,6 +178,24 @@ function AddDriver() {
           fullWidth
           value={mobileNo}
           onChange={(e) => setMobileNo(e.target.value)}
+          margin="normal"
+          required
+        />
+
+        <TextField
+          label="Driving License Number"
+          fullWidth
+          value={drivingLicenseNumber}
+          onChange={(e) => setDrivingLicenseNumber(e.target.value)}
+          margin="normal"
+          required
+        />
+
+        <TextField
+          label="Vehicle Registration Number"
+          fullWidth
+          value={vehicleRegistrationNumber}
+          onChange={(e) => setVehicleRegistrationNumber(e.target.value)}
           margin="normal"
           required
         />
