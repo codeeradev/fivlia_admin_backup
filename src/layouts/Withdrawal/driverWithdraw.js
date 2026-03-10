@@ -13,6 +13,18 @@ export default function DriversWithdrawal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = (request) => {
+    setSelectedRequest(request);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedRequest(null);
+    setIsModalOpen(false);
+  };
 
   const headerCell = {
     padding: "14px 12px",
@@ -30,38 +42,50 @@ export default function DriversWithdrawal() {
     backgroundColor: "#fff",
   };
 
-  // Fetch withdrawal requests
-    const fetchWithdrawalRequests = async () => {
-      try {
-        showAlert("loading", "Loading Requests....");
-        const response = await get(ENDPOINTS.GET_WITHDRAWAL_REQUESTS);
-        const data = response.data;
-        if (Array.isArray(data.requests)) {
-          const formattedRequests = data.requests.map((request) => ({
-            id: request._id,
-            driverId: request.driverId,
-            amount: request.amount,
-            type: request.type,
-            description: request.description,
-            status: request.status,
-            createdAt: request.createdAt,
-            updatedAt: request.updatedAt,
-          }));
-          setWithdrawalRequests(formattedRequests);
-          showAlert("info","", 1);
-        } else {
-          showAlert("error", "Invalid withdrawal requests data format");
-        }
-      } catch (error) {
-        console.error("Failed to fetch withdrawal requests:", error);
-        showAlert("error", "Failed to fetch withdrawal requests. Please try again.");
+  const getDisplayValue = (value) => {
+    if (value === undefined || value === null || value === "") {
+      return "";
+    }
+    return value;
+  };
+
+  const formatDate = (value) => (value ? new Date(value).toLocaleString() : "");
+
+  const fetchWithdrawalRequests = async () => {
+    try {
+      showAlert("loading", "Loading Requests....");
+      const response = await get(ENDPOINTS.GET_WITHDRAWAL_REQUESTS);
+      const data = response.data;
+
+      if (Array.isArray(data.requests)) {
+        const formattedRequests = data.requests.map((request) => ({
+          id: request._id,
+          driverId: request.driverId,
+          displayDriverId: request.driverDetails?.driverId || "",
+          driverName: request.driverDetails?.driverName || "",
+          amount: request.amount,
+          type: request.type,
+          description: request.description,
+          status: request.status,
+          createdAt: request.createdAt,
+          updatedAt: request.updatedAt,
+          driverDetails: request.driverDetails || null,
+        }));
+        setWithdrawalRequests(formattedRequests);
+        showAlert("info", "", 1);
+      } else {
+        showAlert("error", "Invalid withdrawal requests data format");
       }
-    };
-      useEffect(() => {
+    } catch (error) {
+      console.error("Failed to fetch withdrawal requests:", error);
+      showAlert("error", "Failed to fetch withdrawal requests. Please try again.");
+    }
+  };
+
+  useEffect(() => {
     fetchWithdrawalRequests();
   }, []);
 
-  // Handle Accept/Decline Withdrawal Request
   const handleWithdrawalAction = async (requestId, action) => {
     try {
       showAlert("loading", "Processing....");
@@ -69,21 +93,27 @@ export default function DriversWithdrawal() {
 
       setWithdrawalRequests((prev) =>
         prev.map((req) =>
-          req.id === requestId ? { ...req, status: action === "accept" ? "Approved" : "Declined" } : req
+          req.id === requestId || req.driverId === requestId
+            ? { ...req, status: action === "accept" ? "Approved" : "Declined" }
+            : req
         )
       );
       showAlert("success", `Withdrawal request ${action}ed successfully.`);
-          await fetchWithdrawalRequests();
-
+      closeModal();
+      await fetchWithdrawalRequests();
     } catch (error) {
       console.error(`Error ${action}ing withdrawal request:`, error);
       showAlert("error", `Failed to ${action} withdrawal request: ${error.message}`);
     }
   };
 
-  const filteredRequests = withdrawalRequests.filter((req) =>
-    req.driverId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRequests = withdrawalRequests.filter((req) => {
+    const normalizedSearchTerm = searchTerm.toLowerCase();
+    return (
+      (req.displayDriverId || "").toLowerCase().includes(normalizedSearchTerm) ||
+      (req.driverName || "").toLowerCase().includes(normalizedSearchTerm)
+    );
+  });
 
   const totalPages = Math.ceil(filteredRequests.length / entriesToShow);
   const startIndex = (currentPage - 1) * entriesToShow;
@@ -91,7 +121,7 @@ export default function DriversWithdrawal() {
   const currentRequests = filteredRequests.slice(startIndex, endIndex);
 
   const handleEntriesChange = (e) => {
-    setEntriesToShow(parseInt(e.target.value));
+    setEntriesToShow(parseInt(e.target.value, 10));
     setCurrentPage(1);
   };
 
@@ -146,7 +176,7 @@ export default function DriversWithdrawal() {
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search by Driver ID..."
+              placeholder="Search by Driver ID or Name..."
               style={{
                 padding: "8px 34px",
                 borderRadius: "8px",
@@ -174,6 +204,7 @@ export default function DriversWithdrawal() {
             <tr>
               <th style={headerCell}>Sr No</th>
               <th style={headerCell}>Driver ID</th>
+              <th style={headerCell}>Driver Name</th>
               <th style={headerCell}>Amount</th>
               <th style={headerCell}>Type</th>
               <th style={headerCell}>Description</th>
@@ -187,53 +218,33 @@ export default function DriversWithdrawal() {
               currentRequests.map((request, index) => (
                 <tr key={request.id}>
                   <td style={{ ...bodyCell, textAlign: "center" }}>{startIndex + index + 1}</td>
-                  <td style={bodyCell}>{request.driverId}</td>
-                  <td style={bodyCell}>₹{request.amount}</td>
-                  <td style={bodyCell}>{request.type}</td>
-                  <td style={bodyCell}>{request.description}</td>
-                  <td style={bodyCell}>{request.status}</td>
-                  <td style={bodyCell}>{new Date(request.createdAt).toLocaleString()}</td>
+                  <td style={bodyCell}>{getDisplayValue(request.displayDriverId)}</td>
+                  <td style={bodyCell}>{getDisplayValue(request.driverName)}</td>
+                  <td style={bodyCell}>Rs. {getDisplayValue(request.amount)}</td>
+                  <td style={bodyCell}>{getDisplayValue(request.type)}</td>
+                  <td style={bodyCell}>{getDisplayValue(request.description)}</td>
+                  <td style={bodyCell}>{getDisplayValue(request.status)}</td>
+                  <td style={bodyCell}>{formatDate(request.createdAt)}</td>
                   <td style={{ ...bodyCell, textAlign: "center" }}>
-                    {request.status === "Pending" ? (
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.driverId, "accept")}
-                          style={{
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleWithdrawalAction(request.driverId, "decline")}
-                          style={{
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ color: request.status === "Approved" ? "green" : "red" }}>
-                        {request.status}
-                      </span>
-                    )}
+                    <button
+                      onClick={() => openModal(request)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        backgroundColor: "#007BFF",
+                        color: "#fff",
+                        border: "none",
+                      }}
+                    >
+                      View
+                    </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="8" style={{ textAlign: "center", padding: "20px" }}>
+                <td colSpan="9" style={{ textAlign: "center", padding: "20px" }}>
                   No withdrawal requests found.
                 </td>
               </tr>
@@ -243,7 +254,7 @@ export default function DriversWithdrawal() {
 
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
           <div>
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredRequests.length)} of{" "}
+            Showing {filteredRequests.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredRequests.length)} of{" "}
             {filteredRequests.length} entries
           </div>
           <div>
@@ -279,6 +290,111 @@ export default function DriversWithdrawal() {
           </div>
         </div>
       </div>
+
+      {isModalOpen && selectedRequest && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={closeModal}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              width: "600px",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              position: "relative",
+              padding: "30px 25px",
+              boxShadow: "0px 5px 20px rgba(0,0,0,0.3)",
+              transition: "all 0.3s ease",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginBottom: 15, color: "#007BFF" }}>Driver Withdrawal Details</h2>
+
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Driver Details</h3>
+              <p><strong>Driver ID:</strong> {getDisplayValue(selectedRequest.displayDriverId)}</p>
+              <p><strong>Name:</strong> {getDisplayValue(selectedRequest.driverDetails?.driverName)}</p>
+              <p><strong>Phone:</strong> {getDisplayValue(selectedRequest.driverDetails?.phoneNumber)}</p>
+              <p><strong>Email:</strong> {getDisplayValue(selectedRequest.driverDetails?.email)}</p>
+              <p><strong>City:</strong> {getDisplayValue(selectedRequest.driverDetails?.city)}</p>
+              <p><strong>Locality:</strong> {getDisplayValue(selectedRequest.driverDetails?.locality)}</p>
+              <p><strong>Image:</strong> {getDisplayValue(selectedRequest.driverDetails?.image)}</p>
+            </div>
+
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Withdrawal Request Details</h3>
+              <p><strong>Current Wallet Balance:</strong> {getDisplayValue(selectedRequest.driverDetails?.wallet)}</p>
+              <p><strong>Requested Amount:</strong> Rs. {getDisplayValue(selectedRequest.amount)}</p>
+              <p><strong>Type:</strong> {getDisplayValue(selectedRequest.type)}</p>
+              <p><strong>Status:</strong> {getDisplayValue(selectedRequest.status)}</p>
+              <p><strong>Description:</strong> {getDisplayValue(selectedRequest.description)}</p>
+              <p><strong>Created At:</strong> {formatDate(selectedRequest.createdAt)}</p>
+              <p><strong>Updated At:</strong> {formatDate(selectedRequest.updatedAt)}</p>
+            </div>
+
+            {selectedRequest.status === "Pending" && (
+              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                <button
+                  onClick={() => handleWithdrawalAction(selectedRequest.driverId || selectedRequest.id, "accept")}
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    backgroundColor: "#28a745",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleWithdrawalAction(selectedRequest.driverId || selectedRequest.id, "decline")}
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    backgroundColor: "#dc3545",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={closeModal}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                fontSize: 22,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
     </MDBox>
   );
 }
