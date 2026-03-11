@@ -335,6 +335,16 @@ export default function DriversWithdrawal() {
             </div>
 
             <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
+              <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Bank & Payment Details</h3>
+              <p><strong>Bank Name:</strong> {getDisplayValue(selectedRequest.driverDetails?.bankDetails?.bankName)}</p>
+              <p><strong>Account Holder:</strong> {getDisplayValue(selectedRequest.driverDetails?.bankDetails?.accountHolder)}</p>
+              <p><strong>Account Number:</strong> {getDisplayValue(selectedRequest.driverDetails?.bankDetails?.accountNumber)}</p>
+              <p><strong>IFSC Code:</strong> {getDisplayValue(selectedRequest.driverDetails?.bankDetails?.ifsc)}</p>
+              <p><strong>Branch:</strong> {getDisplayValue(selectedRequest.driverDetails?.bankDetails?.branch)}</p>
+              <p><strong>UPI ID:</strong> {getDisplayValue(selectedRequest.driverDetails?.upiId)}</p>
+            </div>
+
+            <div style={{ marginBottom: 15, padding: 15, backgroundColor: "#f9f9f9", borderRadius: 8 }}>
               <h3 style={{ margin: 0, marginBottom: 10, fontSize: 18 }}>Withdrawal Request Details</h3>
               <p><strong>Current Wallet Balance:</strong> {getDisplayValue(selectedRequest.driverDetails?.wallet)}</p>
               <p><strong>Requested Amount:</strong> Rs. {getDisplayValue(selectedRequest.amount)}</p>
