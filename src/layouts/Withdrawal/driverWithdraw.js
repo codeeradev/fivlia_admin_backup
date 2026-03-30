@@ -13,16 +13,24 @@ export default function DriversWithdrawal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesToShow, setEntriesToShow] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
+  const [note, setNote] = useState("");
+  const [image, setImage] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(null);
 
   const openModal = (request) => {
     setSelectedRequest(request);
+    setNote("");
+    setImage(null);
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setSelectedRequest(null);
+    setNote("");
+    setImage(null);
+    setLoadingAction(null);
     setIsModalOpen(false);
   };
 
@@ -65,7 +73,7 @@ export default function DriversWithdrawal() {
           driverName: request.driverDetails?.driverName || "",
           amount: request.amount,
           type: request.type,
-          description: request.description,
+          description: request.description || request.Note || "",
           status: request.status,
           createdAt: request.createdAt,
           updatedAt: request.updatedAt,
@@ -86,24 +94,55 @@ export default function DriversWithdrawal() {
     fetchWithdrawalRequests();
   }, []);
 
-  const handleWithdrawalAction = async (requestId, action) => {
+  const handleWithdrawalAction = async (request, action) => {
+    const trimmedNote = note.trim();
+    const requestTargetId = request?.driverId || request?.id;
+
+    if (!requestTargetId) {
+      showAlert("error", "Unable to identify this withdrawal request.");
+      return;
+    }
+
     try {
-      showAlert("loading", "Processing....");
-      await put(`${ENDPOINTS.WITHDRAWAL_ACTION}/${requestId}/${action}`);
+      setLoadingAction(action);
+      showAlert("loading", `${action === "accept" ? "Approving" : "Declining"} request...`);
+
+      const formData = new FormData();
+      if (trimmedNote) formData.append("note", trimmedNote);
+      if (image) formData.append("image", image);
+
+      const response = await put(
+        `${ENDPOINTS.WITHDRAWAL_ACTION}/${requestTargetId}/${action}`,
+        formData
+      );
+      const updatedRequest = response.data?.request;
+      const updatedStatus = updatedRequest?.status || (action === "accept" ? "Accepted" : "Declined");
 
       setWithdrawalRequests((prev) =>
         prev.map((req) =>
-          req.id === requestId || req.driverId === requestId
-            ? { ...req, status: action === "accept" ? "Approved" : "Declined" }
+          req.id === request?.id || req.driverId === request?.driverId
+            ? {
+                ...req,
+                status: updatedStatus,
+                description: updatedRequest?.description || trimmedNote || req.description,
+              }
             : req
         )
       );
-      showAlert("success", `Withdrawal request ${action}ed successfully.`);
+      showAlert(
+        "success",
+        `Withdrawal request ${action === "accept" ? "approved" : "declined"} successfully.`
+      );
       closeModal();
       await fetchWithdrawalRequests();
     } catch (error) {
       console.error(`Error ${action}ing withdrawal request:`, error);
-      showAlert("error", `Failed to ${action} withdrawal request: ${error.message}`);
+      showAlert(
+        "error",
+        error.response?.data?.message || `Failed to ${action} withdrawal request: ${error.message}`
+      );
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -356,35 +395,62 @@ export default function DriversWithdrawal() {
             </div>
 
             {selectedRequest.status === "Pending" && (
-              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                <button
-                  onClick={() => handleWithdrawalAction(selectedRequest.driverId || selectedRequest.id, "accept")}
+              <div style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}>
+                <textarea
+                  placeholder="Add a note (optional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                   style={{
-                    flex: 1,
+                    width: "100%",
                     padding: 10,
-                    backgroundColor: "#28a745",
-                    color: "#fff",
-                    border: "none",
                     borderRadius: 6,
-                    cursor: "pointer",
+                    border: "1px solid #ccc",
+                    fontSize: 15,
+                    resize: "vertical",
                   }}
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleWithdrawalAction(selectedRequest.driverId || selectedRequest.id, "decline")}
-                  style={{
-                    flex: 1,
-                    padding: 10,
-                    backgroundColor: "#dc3545",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                  }}
-                >
-                  Decline
-                </button>
+                />
+
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                  style={{ padding: 5 }}
+                />
+
+                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                  <button
+                    onClick={() => handleWithdrawalAction(selectedRequest, "accept")}
+                    disabled={loadingAction === "accept" || loadingAction === "decline"}
+                    style={{
+                      flex: 1,
+                      padding: 10,
+                      backgroundColor: "#28a745",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: loadingAction ? "not-allowed" : "pointer",
+                      opacity: loadingAction ? 0.7 : 1,
+                    }}
+                  >
+                    {loadingAction === "accept" ? "Processing..." : "Accept"}
+                  </button>
+                  <button
+                    onClick={() => handleWithdrawalAction(selectedRequest, "decline")}
+                    disabled={loadingAction === "accept" || loadingAction === "decline"}
+                    style={{
+                      flex: 1,
+                      padding: 10,
+                      backgroundColor: "#dc3545",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: loadingAction ? "not-allowed" : "pointer",
+                      opacity: loadingAction ? 0.7 : 1,
+                    }}
+                  >
+                    {loadingAction === "decline" ? "Processing..." : "Decline"}
+                  </button>
+                </div>
               </div>
             )}
 
