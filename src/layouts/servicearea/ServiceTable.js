@@ -4,8 +4,9 @@ import { useMaterialUIController } from "context";
 import { useNavigate } from "react-router-dom";
 import { Button, Switch } from "@mui/material";
 import { getAllZones } from "components/commonApi/commonApi";
-import { put } from "api/apiClient";
+import { put, del } from "api/apiClient";
 import { ENDPOINTS } from "api/endPoints";
+import { showAlert } from "components/commonFunction/alertsLoader";
 
 const headerCell = {
   padding: "14px 12px",
@@ -73,6 +74,7 @@ function Table() {
     const search = searchTerm.toLowerCase();
     const formattedDayRange = formatRange(item.range);
     const formattedNightRange = formatRange(item.nightRange);
+    const zoneStoreCount = String(item.storeCount ?? 0);
 
     // Check city filter: if 'All Cities' selected, ignore city filtering
     const cityMatch = selectedCity === "All Cities" || item.city === selectedCity;
@@ -82,7 +84,8 @@ function Table() {
       item.city.toLowerCase().includes(search) ||
       item.address.toLowerCase().includes(search) ||
       formattedDayRange.toLowerCase().includes(search) ||
-      formattedNightRange.toLowerCase().includes(search);
+      formattedNightRange.toLowerCase().includes(search) ||
+      zoneStoreCount.includes(search);
 
     return cityMatch && searchMatch;
   });
@@ -134,6 +137,31 @@ function Table() {
   // Toggle cash on delivery
   const handleToggleCashOnDelivery = (id, currentStatus, newCOD,city) => {
     updateZone(id, { status: currentStatus, cashOnDelivery: newCOD,   city });
+  };
+
+  const handleDeleteZone = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this zone?");
+    if (!confirmDelete) return;
+
+    try {
+      await del(`${ENDPOINTS.DELETE_ZONE}/${id}`);
+      setLocations((prev) => prev.filter((zone) => zone._id !== id));
+      if (currentPage > 1 && currentLocations.length === 1) {
+        setCurrentPage((prev) => prev - 1);
+      }
+      showAlert("success", "Zone deleted successfully");
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+      const apiMessage = error.response?.data?.message;
+      const assignedStoreCount = error.response?.data?.storeCount;
+      const fallbackMessage = "Failed to delete zone";
+      const storeCountMessage =
+        typeof assignedStoreCount === "number"
+          ? ` Assigned stores: ${assignedStoreCount}.`
+          : "";
+
+      showAlert("error", `${apiMessage || fallbackMessage}`);
+    }
   };
 
 
@@ -267,6 +295,7 @@ function Table() {
                   <th style={headerCell}>Day Range</th>
                   <th style={headerCell}>Night Range</th>
                   <th style={headerCell}>City</th>
+                  <th style={headerCell}>Store Count</th>
                   <th style={{ ...headerCell, width: "12%", textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
@@ -320,6 +349,7 @@ function Table() {
                     <td style={bodyCell}>{formatRange(item.range)}</td>
                     <td style={bodyCell}>{formatRange(item.nightRange)}</td>
                     <td style={bodyCell}>{item.city}</td>
+                    <td style={{ ...bodyCell, textAlign: "center" }}>{item.storeCount ?? 0}</td>
                     <td style={bodyCell}>
                       <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                         <button
@@ -335,6 +365,19 @@ function Table() {
                           onClick={() => navigate("/edit-zone", { state: { zone: item } })}
                         >
                           Edit
+                        </button>
+                        <button
+                          style={{
+                            backgroundColor: "#dc3545",
+                            color: "white",
+                            border: "none",
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => handleDeleteZone(item._id)}
+                        >
+                          Delete
                         </button>
                       </div>
                     </td>
