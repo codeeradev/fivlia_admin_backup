@@ -91,7 +91,7 @@ function SellerTable() {
       if (generatedKey) {
         showAlert("success", "Access key generated successfully");
         const redirectUrl = `${process.env.REACT_APP_SELLER_URL}/seller-login?t=adm&slr=${store._id}&k=${generatedKey}`;
-        window.open(redirectUrl, "_blank");
+        window.location.href = redirectUrl;
       } else if (response.status === 403) {
         showAlert("error", "Access denied.");
       } else {
