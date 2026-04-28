@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from 'api/endPoints.js';
+import { API_BASE_URL, getApiBaseUrl } from 'api/endPoints.js';
 import { showAlert } from "components/commonFunction/alertsLoader";
 
 // Create axios instance
@@ -39,7 +39,8 @@ const withAuth = (config = {}) => {
 
 // Request interceptor
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    config.baseURL = await getApiBaseUrl();
     //console.log('API Client: Request interceptor called for:', config.url);
     //console.log('API Client: Config authRequired flag:', config.authRequired);
 
