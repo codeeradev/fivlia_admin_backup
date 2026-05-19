@@ -33,6 +33,7 @@ function Setting() {
     GST_Number: "",
     Platform_Fee: 0,
     Description: "",
+    foodSellerTaxPercent: "",
     Delivery_Charges: 0,
     Delivery_Charges_Gst: 0,
     // codLimit: 0,
@@ -131,6 +132,7 @@ function Setting() {
             GST_Number: result.settings.GST_Number || "",
             Platform_Fee: result.settings.Platform_Fee || 0,
             Description: result.settings.Description || "",
+            foodSellerTaxPercent: result.settings.foodSellerTaxPercent || "",
             Delivery_Charges: result.settings.Delivery_Charges || 0,
             Delivery_Charges_Gst: result.settings.Delivery_Charges_Gst || 0,
             // codLimit: result.settings.codLimit || 0,
@@ -220,6 +222,7 @@ function Setting() {
         "Delivery_Charges",
         "Delivery_Charges_Gst",
         "Platform_Fee",
+        "foodSellerTaxPercent",
         // "codLimit",
         // "minPrice",
         // "maxPrice",
@@ -564,6 +567,14 @@ function Setting() {
                   </MenuItem>
                 ))}
               </Select>
+            </div>
+            <div className="store-input">
+              <label>Food Seller Tax (%)</label>
+              <input
+                type="number"
+                value={formData.foodSellerTaxPercent}
+                onChange={(e) => handleInputChange("foodSellerTaxPercent", e.target.value)}
+              />
             </div>
             {/* <div className="store-input" style={{ flex: "1 1 33%" }}>
               <label>COD Limit</label>
